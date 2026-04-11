@@ -316,32 +316,52 @@
 
     async function loadDropdowns() {
       try {
-        // UPDATE: Mengubah target pencarian dari .select('name') menjadi .select('company')
-        const { data: comps } = await supabaseClient.from('companies').select('company').eq('status', 'Active');
+        // Tarik SEMUA kolom dari tabel (pakai bintang *) agar aman dari salah ketik nama kolom
+        const { data: comps } = await supabaseClient.from('companies').select('*').eq('status', 'Active');
         const { data: locs } = await supabaseClient.from('locations').select('*').eq('status', 'Active');
-        const { data: types } = await supabaseClient.from('inspection_types').select('name').eq('status', 'Active');
+        const { data: types } = await supabaseClient.from('inspection_types').select('*').eq('status', 'Active');
         
         globalLocs = locs || [];
         const cSel = document.getElementById('perusahaan'), uSel = document.getElementById('uCompany');
         cSel.innerHTML = '<option value="">Select Company</option>'; uSel.innerHTML = '<option value="">Pilih</option>';
         
-        // UPDATE: Mengubah c.name menjadi c.company
-        if(comps) comps.forEach(c => { 
-            cSel.innerHTML += `<option value="${c.company}">${c.company}</option>`; 
-            uSel.innerHTML += `<option value="${c.company}">${c.company}</option>`; 
-            globalCompanies.push(c.company); 
-        });
+        globalCompanies = []; // Bersihkan memori lama
+
+        if(comps) {
+          comps.forEach(c => { 
+            // LOGIKA ANTI-ERROR: Pakai c.company, jika tidak ada, otomatis pakai c.name
+            let namaPerusahaan = c.company || c.name || "Error Nama"; 
+            
+            cSel.innerHTML += `<option value="${namaPerusahaan}">${namaPerusahaan}</option>`; 
+            uSel.innerHTML += `<option value="${namaPerusahaan}">${namaPerusahaan}</option>`; 
+            globalCompanies.push(namaPerusahaan); 
+          });
+        }
         
         if(currentUser.level !== 'Admin') cSel.value = currentUser.company;
 
         const lSel = document.getElementById('lokasi'), hlSel = document.getElementById('hLokasi');
         lSel.innerHTML = '<option value="">Select Location</option>'; hlSel.innerHTML = '<option value="">Select Location</option>';
-        [...new Set(globalLocs.map(l => l.lokasi_utama))].forEach(l => { lSel.innerHTML += `<option value="${l}">${l}</option>`; hlSel.innerHTML += `<option value="${l}">${l}</option>`; });
+        [...new Set(globalLocs.map(l => l.lokasi_utama))].forEach(l => { 
+          lSel.innerHTML += `<option value="${l}">${l}</option>`; 
+          hlSel.innerHTML += `<option value="${l}">${l}</option>`; 
+        });
 
         const tSel = document.getElementById('tipeInspeksi');
         tSel.innerHTML = '<option value="">Select Type</option>';
-        if(types) types.forEach(t => tSel.innerHTML += `<option value="${t.name}">${t.name}</option>`);
-      } catch(err) { showToast("Gagal memuat referensi.", "error"); }
+        if(types) {
+          types.forEach(t => {
+            let namaTipe = t.name || t.type_name; // Anti-Error untuk tipe inspeksi
+            tSel.innerHTML += `<option value="${namaTipe}">${namaTipe}</option>`;
+          });
+        }
+
+        document.getElementById('filterCarPic').innerHTML = '<option value="">All Companies</option>' + globalCompanies.map(v => `<option value="${v}">${v}</option>`).join('');
+
+      } catch(err) { 
+        showToast("Gagal memuat referensi.", "error"); 
+        console.error(err);
+      }
     }
 
     function updateSubLoc(locId, subId) {
