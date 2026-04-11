@@ -186,7 +186,6 @@
   <div id="toast">Memproses...</div>
 
   <script>
-    // --- KONFIGURASI UTAMA ---
     const SUPABASE_URL = 'https://bzbdfxyjiainooxoopfq.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_oj9lc25LX7qYmrRGLpNt2A_2ISYheVC';
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -227,37 +226,58 @@
     }
 
     async function loadDropdowns() {
-      const { data: comps } = await supabaseClient.from('companies').select('*').eq('status', 'Active');
-      const { data: locs } = await supabaseClient.from('locations').select('*').eq('status', 'Active');
-      globalLocs = locs || [];
-      const cSel = document.getElementById('perusahaan');
-      if(cSel) {
-        cSel.innerHTML = '<option value="">Select Company</option>';
-        comps.forEach(c => { 
-          let n = c.company || c.name; 
-          cSel.innerHTML += `<option value="${n}">${n}</option>`; 
-          globalCompanies.push(n); 
+      try {
+        const { data: comps } = await supabaseClient.from('companies').select('*').eq('status', 'Active');
+        const { data: locs } = await supabaseClient.from('locations').select('*').eq('status', 'Active');
+        const { data: types } = await supabaseClient.from('inspection_types').select('*').eq('status', 'Active');
+        
+        globalLocs = locs || [];
+        const cSel = document.getElementById('perusahaan');
+        if(cSel) {
+          cSel.innerHTML = '<option value="">Select Company</option>';
+          comps.forEach(c => { 
+            let n = c.company || c.name; 
+            cSel.innerHTML += `<option value="${n}">${n}</option>`; 
+            globalCompanies.push(n); 
+          });
+          if(currentUser.level !== 'Admin') cSel.value = currentUser.company;
+        }
+
+        const lSel = document.getElementById('lokasi'), hlSel = document.getElementById('hLokasi');
+        if(lSel) lSel.innerHTML = '<option value="">Select Location</option>';
+        if(hlSel) hlSel.innerHTML = '<option value="">Select Location</option>';
+        
+        // Perbaikan Logika Deteksi Kolom Lokasi
+        const locNames = [...new Set(globalLocs.map(l => l.lokasi_utama || l.location || l.lokasi))];
+        locNames.forEach(l => { 
+          if(l) {
+            if(lSel) lSel.innerHTML += `<option value="${l}">${l}</option>`;
+            if(hlSel) hlSel.innerHTML += `<option value="${l}">${l}</option>`;
+          }
         });
-        if(currentUser.level !== 'Admin') cSel.value = currentUser.company;
-      }
-      const lSel = document.getElementById('lokasi'), hlSel = document.getElementById('hLokasi');
-      const locNames = [...new Set(globalLocs.map(l => l.lokasi_utama || l.location))];
-      locNames.forEach(l => { 
-        if(lSel) lSel.innerHTML += `<option value="${l}">${l}</option>`;
-        if(hlSel) hlSel.innerHTML += `<option value="${l}">${l}</option>`;
-      });
+
+        const tSel = document.getElementById('tipeInspeksi');
+        if(tSel) {
+          tSel.innerHTML = '<option value="">Select Type</option>';
+          types.forEach(t => {
+            let n = t.name || t.type_name;
+            tSel.innerHTML += `<option value="${n}">${n}</option>`;
+          });
+        }
+      } catch (e) { showToast("Gagal muat referensi", "error"); }
     }
 
     function updateSubLoc(locId, subId) {
       const val = document.getElementById(locId).value, sub = document.getElementById(subId);
       sub.innerHTML = '<option value="">Select Sub Location</option>';
-      globalLocs.filter(i => (i.lokasi_utama || i.location) === val).forEach(i => {
-        let n = i.sub_lokasi || i.sub_location;
-        sub.innerHTML += `<option value="${n}">${n}</option>`;
-      });
+      if(val) {
+        globalLocs.filter(i => (i.lokasi_utama || i.location || i.lokasi) === val).forEach(i => {
+          let n = i.sub_lokasi || i.sub_location || i.sublokasi;
+          sub.innerHTML += `<option value="${n}">${n}</option>`;
+        });
+      }
     }
 
-    // --- JEMBATAN GOOGLE DRIVE (GAS) ---
     async function uploadToDrive(file, prefix, folderType) {
       if(!file) return null;
       const base64 = await new Promise((resolve) => {
@@ -334,8 +354,9 @@
     async function loadCarPage() {
       switchPage('carList');
       const { data } = await supabaseClient.from('car_reports').select('*').order('date_raised', { ascending: false });
+      allCarData = data || [];
       let html = "";
-      data.forEach(c => {
+      allCarData.forEach(c => {
         html += `<tr><td>${c.car_code}</td><td>${new Date(c.date_raised).toLocaleDateString()}</td><td>${c.pic}</td><td>${c.due_date}</td><td>${c.status}</td><td><button class="btn-primary" onclick="openCarDetail('${c.car_code}')">View</button></td></tr>`;
       });
       document.getElementById('carTableBody').innerHTML = html;
@@ -345,6 +366,8 @@
       activeCar = allCarData.find(c => c.car_code === code);
       document.getElementById('detCarCode').innerText = code;
       document.getElementById('detImg').src = activeCar.image_url;
+      document.getElementById('detFinding').innerText = activeCar.finding;
+      document.getElementById('detStatus').innerText = activeCar.status;
       document.getElementById('carModal').classList.remove('hidden');
     }
 
