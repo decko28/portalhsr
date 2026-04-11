@@ -316,7 +316,7 @@
 
     async function loadDropdowns() {
       try {
-        const { data: comps } = await supabaseClient.from('companies').select('name').eq('status', 'Active');
+        const { data: comps } = await supabaseClient.from('companies').select('company').eq('status', 'Active');
         const { data: locs } = await supabaseClient.from('locations').select('*').eq('status', 'Active');
         const { data: types } = await supabaseClient.from('inspection_types').select('name').eq('status', 'Active');
         
