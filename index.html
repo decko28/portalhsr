@@ -412,14 +412,20 @@
 
     function addPica(containerId) {
       let opts = '<option value="">Select PIC</option>' + globalCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
-      let div = document.createElement('div'); div.className = 'pica-item'; div.style = "margin-top:15px; padding-top:15px; border-top:1px solid #ddd;";
+      let div = document.createElement('div'); 
+      div.className = 'pica-item'; 
+      // Mengembalikan desain kotak (box) yang luas dan rapi
+      div.style = "margin-top:15px; padding:20px; background:#fff; border:1px solid #ddd; border-radius:6px;";
       div.innerHTML = `
-        <label>Finding Detail:</label><input type="text" class="pf" required>
-        <label>Action Plan:</label><input type="text" class="pa" required>
-        <div style="display:flex; gap:10px;">
-          <div style="flex:1"><label>PIC:</label><select class="ppic" required>${opts}</select></div>
-          <div style="flex:1"><label>Due Date:</label><input type="date" class="pd" required></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
+          <h4 style="margin:0; color:#213B82;">CAR Detail</h4>
+          <button type="button" class="btn btn-danger" style="padding:5px 10px; font-size:12px;" onclick="this.parentElement.parentElement.remove()">Hapus</button>
         </div>
+        <div class="form-group"><label>Specific Finding (Deskripsikan bahaya):</label><textarea class="pf" rows="2" required></textarea></div>
+        <div class="form-group"><label>Corrective Action Plan (Rencana perbaikan):</label><textarea class="pa" rows="2" required></textarea></div>
+        <div class="form-group"><label>PIC (Person In Charge):</label><select class="ppic" required>${opts}</select></div>
+        <div class="form-group"><label>Due Date:</label><input type="date" class="pd" required></div>
+        <div class="form-group"><label>Status:</label><select class="ps" required><option value="Open">Open</option><option value="In Progress">In Progress</option><option value="Closed">Closed</option></select></div>
       `;
       document.getElementById(containerId).appendChild(div);
     }
@@ -430,7 +436,8 @@
         car_code: "CAR-" + Math.floor(Math.random() * 9000000), source: source,
         finding: el.querySelector('.pf').value, action_plan: el.querySelector('.pa').value,
         pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value,
-        status: "Open", image_url: imageUrl, inspection_code: inspId, date_raised: new Date()
+        status: el.querySelector('.ps').value, // Menarik data dari dropdown status
+        image_url: imageUrl, inspection_code: inspId, date_raised: new Date()
       }));
     }
 
