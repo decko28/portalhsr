@@ -75,7 +75,7 @@
 
     <div class="main-area">
       <div id="page_dashboard" class="page-content">
-        <div class="box-container"><h2 style="color:var(--primary); margin-top:0;">Selamat Datang!</h2><p>Pilih menu sidebar untuk mengelola data HSR.</p></div>
+        <div class="box-container"><h2 style="color:var(--primary); margin-top:0;">Selamat Datang!</h2><p>Gunakan menu sidebar untuk mengelola data HSR.</p></div>
       </div>
 
       <div id="page_formInspection" class="page-content hidden">
@@ -174,15 +174,22 @@
     const SUPABASE_URL = 'https://bzbdfxyjiainooxoopfq.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_oj9lc25LX7qYmrRGLpNt2A_2ISYheVC';
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const gasAPI = "https://script.google.com/macros/s/AKfycbz79Ba5eQcp12kJ1_4DtkCd6_H4HZQcvTbmjEv0jykcosSoBzLE9P5xY6A_9qWg3x73rg/exec";
+    const gasAPI = "MASUKKAN_URL_WEB_APP_APPS_SCRIPT_ANDA_DISINI";
 
-    let currentUser = null, globalCompanies = [], globalLocs = [], allCarData = [], allSimperData = [], uploadFiles = {}, activeSimperId = null;
+    let currentUser = null, globalCompanies = [], globalLocs = [], allSimperData = [], uploadFiles = {}, activeSimperId = null;
 
+    /**
+     * FUNGSI UNIQUE ID - PASTI 9 KARAKTER (Misal: IN-A1B2C3 atau CAR-X9Z1)
+     * Prefix (2-3 karakter) + Sisanya random Alphanumeric hingga total 9 karakter.
+     */
     function generateID(prefix) {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      const remainingLength = 9 - prefix.length - 1; // -1 untuk pemisah dash "-"
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Menghilangkan huruf/angka mirip (O, 0, I, 1)
       let result = '';
-      for (let i = 0; i < 6; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
-      return prefix + "-" + result; // Total 10 Karakter (e.g., SMP-A1B2C3)
+      for (let i = 0; i < remainingLength; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return (prefix + "-" + result).toUpperCase();
     }
 
     function showToast(msg, type='success') {
@@ -249,7 +256,12 @@
         reader.onload = () => resolve(reader.result.split(',')[1]);
         reader.readAsDataURL(file);
       });
-      const payload = { fileName: `${prefix}_${Date.now()}.${file.name.split('.').pop()}`, mimeType: file.type, base64: base64, folderType: folderType };
+      
+      // UNIQUE FILE NAME - PASTI 9 KARAKTER + EKSTENSI
+      const fileExt = file.name.split('.').pop();
+      const uniqueFileName = generateID(prefix) + "." + fileExt;
+
+      const payload = { fileName: uniqueFileName, mimeType: file.type, base64: base64, folderType: folderType };
       const response = await fetch(gasAPI, { method: "POST", body: JSON.stringify(payload) });
       const result = await response.json();
       if(result.status === "success") return result.url;
@@ -272,7 +284,7 @@
         <div class="form-group"><label>Finding:</label><textarea class="pf" rows="2" required></textarea></div>
         <div class="form-group"><label>PIC:</label><select class="ppic" required>${opts}</select></div>
         <div class="form-group"><label>Due Date:</label><input type="date" class="pd" required></div>
-        <button type="button" class="btn-danger" style="width:100%;" onclick="this.parentElement.remove()">Hapus</button>
+        <button type="button" class="btn-danger" style="width:100%; border:none; padding:5px; border-radius:4px; margin-top:5px; cursor:pointer;" onclick="this.parentElement.remove()">Hapus Item</button>
       `;
       document.getElementById(containerId).appendChild(div);
     }
@@ -291,7 +303,7 @@
           await supabaseClient.from('car_reports').insert(cars);
         }
         showToast("Inspeksi Tersimpan!"); location.reload();
-      } catch (err) { showToast("Gagal!", "error"); btn.disabled = false; }
+      } catch (err) { showToast("Gagal simpan data!", "error"); btn.disabled = false; }
     }
 
     async function submitHazard() {
@@ -305,8 +317,8 @@
           const cars = Array.from(items).map(el => ({ car_code: generateID("CAR"), finding: el.querySelector('.pf').value, pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value, status: "Open", image_url: urlB, date_raised: new Date() }));
           await supabaseClient.from('car_reports').insert(cars);
         }
-        showToast("Hazard Tersimpan!"); location.reload();
-      } catch (err) { showToast("Gagal!", "error"); btn.disabled = false; }
+        showToast("Hazard Report Tersimpan!"); location.reload();
+      } catch (err) { showToast("Gagal simpan hazard!", "error"); btn.disabled = false; }
     }
 
     async function loadCarPage() {
@@ -323,11 +335,10 @@
       allSimperData = data || [];
       let html = "";
       allSimperData.forEach(d => {
-        // Tombol aksi dinamis berdasarkan Level Admin
-        let actions = `<a href="${d.file_url}" target="_blank" class="btn-secondary" style="padding:4px 8px; text-decoration:none;">View</a>`;
+        let actions = `<a href="${d.file_url}" target="_blank" class="btn-secondary" style="padding:4px 8px; text-decoration:none; font-size:11px;">View</a>`;
         if (currentUser.level === 'Admin') {
-          actions += ` <button class="btn-primary" style="padding:4px 8px;" onclick="openVerif('${d.id}')">Verif</button>`;
-          actions += ` <button class="btn-danger" style="padding:4px 8px;" onclick="deleteSimper('${d.id}')">Del</button>`;
+          actions += ` <button class="btn-primary" style="padding:4px 8px; font-size:11px; cursor:pointer;" onclick="openVerif('${d.id}')">Verif</button>`;
+          actions += ` <button class="btn-danger" style="padding:4px 8px; font-size:11px; border:none; border-radius:4px; cursor:pointer;" onclick="deleteSimper('${d.id}')">Del</button>`;
         }
         html += `<tr><td>${d.id}</td><td>${d.company}</td><td>${d.validity_score}%</td><td>${d.status}</td><td>${actions}</td></tr>`;
       });
@@ -337,10 +348,10 @@
     async function submitSimper() {
       try {
         const f = document.getElementById('simperFile').files[0];
-        if(!f) throw new Error("Pilih file!");
+        if(!f) throw new Error("File belum dipilih!");
         const url = await uploadToDrive(f, "SMP", "simper_docs");
         await supabaseClient.from('simper_validity').insert([{ id: generateID("SMP"), company: currentUser.company, validity_score: document.getElementById('simperValidity').value, file_url: url, status: "Pending" }]);
-        showToast("SIMPER Terkirim!"); loadSimperPage();
+        showToast("Laporan SIMPER Terkirim!"); loadSimperPage();
       } catch(e) { showToast(e.message, "error"); }
     }
 
@@ -349,13 +360,13 @@
     async function saveVerif() {
       const s = document.getElementById('vStatus').value, n = document.getElementById('vNote').value;
       await supabaseClient.from('simper_validity').update({ status: s, admin_note: n }).eq('id', activeSimperId);
-      showToast("Berhasil Verifikasi!"); document.getElementById('verifModal').classList.add('hidden'); loadSimperPage();
+      showToast("Verifikasi Berhasil!"); document.getElementById('verifModal').classList.add('hidden'); loadSimperPage();
     }
 
     async function deleteSimper(id) {
       if(!confirm("Hapus data SIMPER ini?")) return;
       await supabaseClient.from('simper_validity').delete().eq('id', id);
-      showToast("Data Dihapus!"); loadSimperPage();
+      showToast("Data Berhasil Dihapus!"); loadSimperPage();
     }
 
     async function loadUserPage() {
