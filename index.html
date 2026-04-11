@@ -288,7 +288,7 @@
           currentUser = data;
           document.getElementById('loginPage').classList.add('hidden');
           document.getElementById('mainApp').classList.remove('hidden');
-          document.getElementById('displayUser').innerText = currentUser.email;
+          document.getElementById('displayUser').innerText = currentUser.company;
           document.getElementById('displayLevel').innerText = currentUser.level;
           if(currentUser.level === "Admin") document.getElementById('menuAdminUser').classList.remove('hidden');
           await initData();
@@ -357,7 +357,7 @@
           const cars = Array.from(document.querySelectorAll('#picaContainer > .pica-item')).map(el => ({ car_code: generateID("CAR"), finding: el.querySelector('.pf').value, pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value, status: "Open", image_url: url, date_raised: new Date() }));
           await supabaseClient.from('car_reports').insert(cars);
         }
-        showToast("Inspeksi Berhasil!"); location.reload();
+        showToast("Inspeksi Berhasil!"); clearAllForms();switchPage('formInsection'); // Tetap di halaman yang sama tanpa logout
       } catch(e) { showToast("Gagal!", "error"); } finally { setLoader(false); }
     }
 
@@ -370,7 +370,10 @@
           const cars = Array.from(document.querySelectorAll('#hPicaContainer > .pica-item')).map(el => ({ car_code: generateID("CAR"), finding: el.querySelector('.pf').value, pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value, status: "Open", image_url: url, date_raised: new Date() }));
           await supabaseClient.from('car_reports').insert(cars);
         }
-        showToast("Hazard Report Terkirim!"); location.reload();
+// GANTI MENJADI:
+showToast("Laporan Berhasil!");clearAllForms();switchPage('formhazard'); // Tetap di halaman yang sama tanpa logout
+clearAllForms(); 
+switchPage('formInspection'); // Tetap di halaman yang sama tanpa logout
       } catch(e) { showToast("Gagal!", "error"); } finally { setLoader(false); }
     }
 
@@ -457,7 +460,7 @@
       try {
         const url = await uploadToDrive(document.getElementById('simperFile').files[0], "SMP", "simper_docs");
         await supabaseClient.from('simper_validity').insert([{ id: generateID("SMP"), company: currentUser.company, validity_score: document.getElementById('simperValidity').value, file_url: url, status: "Pending" }]);
-        showToast("SIMPER Terkirim!"); location.reload();
+        showToast("SIMPER Terkirim!"); clearAllForms();switchPage('formsimper')
       } catch(e) { showToast("Gagal!"); } finally { setLoader(false); }
     }
 
