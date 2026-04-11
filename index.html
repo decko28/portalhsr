@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portal K3 STM</title>
+  <title>Portal HSR STM</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -47,12 +48,6 @@
 </head>
 <body>
 
-  <script>
-    const SUPABASE_URL = 'https://bzbdfxyjiainooxoopfq.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_oj9lc25LX7qYmrRGLpNt2A_2ISYheVC';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  </script>
-
   <div id="loginPage" class="login-wrapper">
     <div class="login-box">
       <h3>Portal K3 STM</h3>
@@ -67,7 +62,7 @@
     <div class="sidebar">
       <div class="brand">HSR Portal</div>
       <div class="nav-menu">
-        <div class="nav-item" onclick="switchPage('dashboard')">📊 Dashboard (WIP)</div>
+        <div class="nav-item" onclick="switchPage('dashboard')">📊 Dashboard</div>
         <div class="nav-item" style="border-top:1px solid #eee;">📝 Input Data ▼</div>
         <div class="sub-item" onclick="switchPage('formInspection')">🔍 General Inspection</div>
         <div class="sub-item" onclick="switchPage('formHazard')">⚠️ Hazard Report</div>
@@ -85,7 +80,7 @@
 
     <div class="main-area">
       <div id="page_dashboard" class="page-content">
-        <div class="box-container"><h2 style="color:var(--primary); margin-top:0;">Selamat Datang!</h2><p>Pilih menu di sebelah kiri untuk mengelola data Keselamatan Kerja.</p></div>
+        <div class="box-container"><h2 style="color:var(--primary); margin-top:0;">Selamat Datang di HSR Portal!</h2><p>Pilih menu di sebelah kiri untuk mengelola data Keselamatan Kerja.</p></div>
       </div>
 
       <div id="page_formInspection" class="page-content hidden">
@@ -267,10 +262,15 @@
   <div id="toast">Memproses...</div>
 
   <script>
+    // Inisialisasi Supabase (Bebas dari Reference Error)
+    const SUPABASE_URL = 'https://bzbdfxyjiainooxoopfq.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_oj9lc25LX7qYmrRGLpNt2A_2ISYheVC';
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     let currentUser = null;
     let globalCompanies = [], globalLocs = [];
     let allCarData = [], activeCar = null, activeSimper = null;
-    let uploadFiles = {}; // Menyimpan file mentah
+    let uploadFiles = {}; 
 
     document.getElementById('tanggal').valueAsDate = new Date();
 
@@ -292,10 +292,13 @@
       if(!e || !p) { errDiv.innerText = "Isi email & pass!"; return; }
       
       btn.innerText = "Authenticating..."; errDiv.innerText = "";
+      
       try {
-        const { data, error } = await supabase.from('users').select('*').eq('email', e).eq('password', p).single();
-        if (error || !data) { errDiv.innerText = "Email / Password Salah!"; btn.innerText = "Login"; } 
-        else {
+        const { data, error } = await supabaseClient.from('users').select('*').eq('email', e).eq('password', p).single();
+        if (error || !data) { 
+            errDiv.innerText = "Email / Password Salah!"; 
+            btn.innerText = "Login"; 
+        } else {
           currentUser = data;
           document.getElementById('loginPage').classList.add('hidden');
           document.getElementById('mainApp').classList.remove('hidden');
@@ -305,16 +308,17 @@
           loadDropdowns(); switchPage('dashboard');
         }
       } catch (err) {
-        errDiv.innerText = "Koneksi Gagal. Cek URL/API Key Supabase!";
+        // SISTEM ANTI MACET
+        errDiv.innerText = "Koneksi Gagal. Pastikan internet stabil!";
         btn.innerText = "Login"; console.error(err);
       }
     }
 
     async function loadDropdowns() {
       try {
-        const { data: comps } = await supabase.from('companies').select('name').eq('status', 'Active');
-        const { data: locs } = await supabase.from('locations').select('*').eq('status', 'Active');
-        const { data: types } = await supabase.from('inspection_types').select('name').eq('status', 'Active');
+        const { data: comps } = await supabaseClient.from('companies').select('name').eq('status', 'Active');
+        const { data: locs } = await supabaseClient.from('locations').select('*').eq('status', 'Active');
+        const { data: types } = await supabaseClient.from('inspection_types').select('name').eq('status', 'Active');
         
         globalLocs = locs || [];
         const cSel = document.getElementById('perusahaan'), uSel = document.getElementById('uCompany');
@@ -343,9 +347,9 @@
       if(!file) return null;
       const fileExt = file.name.split('.').pop();
       const fileName = `${prefix}_${Date.now()}.${fileExt}`;
-      const { data, error } = await supabase.storage.from('pica_images').upload(fileName, file);
+      const { data, error } = await supabaseClient.storage.from('pica_images').upload(fileName, file);
       if (error) throw error;
-      const { data: pubData } = supabase.storage.from('pica_images').getPublicUrl(fileName);
+      const { data: pubData } = supabaseClient.storage.from('pica_images').getPublicUrl(fileName);
       return pubData.publicUrl;
     }
 
@@ -407,7 +411,7 @@
         let imageUrl = null;
         if (isTemuan === "Yes") imageUrl = await uploadToSupabase(uploadFiles['imageFile'], "INSP");
 
-        await supabase.from('inspections').insert([{
+        await supabaseClient.from('inspections').insert([{
           id: inspId, date: document.getElementById('tanggal').value, company: document.getElementById('perusahaan').value,
           type: document.getElementById('tipeInspeksi').value, location: document.getElementById('lokasi').value,
           sub_location: document.getElementById('subLokasi').value, has_finding: isTemuan
@@ -415,7 +419,7 @@
 
         if (isTemuan === "Yes") {
           const carPayload = extractCARs('picaContainer', 'Inspection', inspId, imageUrl);
-          await supabase.from('car_reports').insert(carPayload);
+          await supabaseClient.from('car_reports').insert(carPayload);
         }
 
         showToast("Inspeksi Tersimpan!"); form.reset(); togglePicaSection();
@@ -437,7 +441,7 @@
         const urlB = await uploadToSupabase(uploadFiles['hPhotoBefore'], "HZD_B");
         const urlA = uploadFiles['hPhotoAfter'] ? await uploadToSupabase(uploadFiles['hPhotoAfter'], "HZD_A") : null;
 
-        await supabase.from('hazard_reports').insert([{
+        await supabaseClient.from('hazard_reports').insert([{
           id: hId, date: new Date(), reporter: currentUser.email, company: currentUser.company,
           location: document.getElementById('hLokasi').value, sub_location: document.getElementById('hSubLokasi').value,
           type: document.getElementById('hType').value, category: document.getElementById('hCategory').value,
@@ -448,7 +452,7 @@
 
         if (isClosed === "No") {
           const carPayload = extractCARs('hPicaContainer', 'Hazard Report', hId, urlB);
-          await supabase.from('car_reports').insert(carPayload);
+          await supabaseClient.from('car_reports').insert(carPayload);
         }
 
         showToast("Hazard Report Tersimpan!"); form.reset(); toggleHazardCAR();
@@ -462,7 +466,7 @@
     async function loadCarPage() {
       switchPage('carList');
       document.getElementById('carTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;">Mencari data...</td></tr>';
-      let query = supabase.from('car_reports').select('*').order('date_raised', { ascending: false });
+      let query = supabaseClient.from('car_reports').select('*').order('date_raised', { ascending: false });
       if (currentUser.level !== 'Admin') query = query.eq('pic', currentUser.company);
 
       const { data, error } = await query;
@@ -470,7 +474,7 @@
       allCarData = data; let html = "";
       data.forEach(c => {
         let color = c.status.includes("Closed") ? "green" : (c.status==="Overdue"?"red":"blue");
-        html += `<tr><td><b>${c.car_code}</b></td><td>${c.date_raised}</td><td>${c.pic}</td><td>${c.due_date}</td><td style="color:${color}; font-weight:bold;">${c.status}</td><td><button class="btn btn-secondary" style="padding:5px 10px; font-size:12px;" onclick="openCarDetail('${c.car_code}')">View</button></td></tr>`;
+        html += `<tr><td><b>${c.car_code}</b></td><td>${new Date(c.date_raised).toLocaleDateString()}</td><td>${c.pic}</td><td>${c.due_date}</td><td style="color:${color}; font-weight:bold;">${c.status}</td><td><button class="btn btn-secondary" style="padding:5px 10px; font-size:12px;" onclick="openCarDetail('${c.car_code}')">View</button></td></tr>`;
       });
       document.getElementById('carTableBody').innerHTML = html || '<tr><td colspan="6">Belum ada CAR</td></tr>';
     }
@@ -498,8 +502,8 @@
       const btn = document.getElementById('btnSubmitFU'); btn.innerText = "Uploading..."; btn.disabled = true;
       try {
         const fileUrl = await uploadToSupabase(fileInp, "FU");
-        await supabase.from('car_followups').insert([{ car_code: activeCar.car_code, action_taken: act, action_date: new Date(), file_url: fileUrl }]);
-        await supabase.from('car_reports').update({ status: 'Closed' }).eq('car_code', activeCar.car_code);
+        await supabaseClient.from('car_followups').insert([{ car_code: activeCar.car_code, action_taken: act, action_date: new Date(), file_url: fileUrl }]);
+        await supabaseClient.from('car_reports').update({ status: 'Closed' }).eq('car_code', activeCar.car_code);
 
         showToast("CAR Berhasil Ditutup!"); document.getElementById('carModal').classList.add('hidden'); loadCarPage();
       } catch (err) { showToast("Gagal FU: " + err.message, "error"); } 
@@ -510,13 +514,13 @@
       const expData = [["No CAR", "Source", "Raised Date", "PIC", "Due Date", "Status", "Finding", "Action Plan"]];
       allCarData.forEach(r => expData.push([r.car_code, r.source, r.date_raised, r.pic, r.due_date, r.status, r.finding, r.action_plan]));
       const wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet(expData);
-      XLSX.utils.book_append_sheet(wb, ws, "CAR Report"); XLSX.writeFile(wb, "Report_CAR_Supabase.xlsx");
+      XLSX.utils.book_append_sheet(wb, ws, "CAR Report"); XLSX.writeFile(wb, "Report_CAR.xlsx");
     }
 
     // --- 5. SIMPER & USER MGMT ---
     async function loadSimperPage() {
       switchPage('simper');
-      let query = supabase.from('simper_validity').select('*').order('upload_date', { ascending: false });
+      let query = supabaseClient.from('simper_validity').select('*').order('upload_date', { ascending: false });
       if (currentUser.level !== 'Admin') query = query.eq('user_email', currentUser.email);
       const { data } = await query; allSimperData = data || [];
       let html = "";
@@ -534,7 +538,7 @@
       const btn = document.getElementById('btnSubmitSimper'); btn.disabled = true; btn.innerText = "Uploading...";
       try {
         const url = await uploadToSupabase(file, "SMP");
-        await supabase.from('simper_validity').insert([{ id: "SMP-"+Math.floor(Math.random()*900000), upload_date: new Date(), user_email: currentUser.email, company: currentUser.company, file_url: url, validity_score: val, status: "Pending" }]);
+        await supabaseClient.from('simper_validity').insert([{ id: "SMP-"+Math.floor(Math.random()*900000), upload_date: new Date(), user_email: currentUser.email, company: currentUser.company, file_url: url, validity_score: val, status: "Pending" }]);
         showToast("SIMPER Terkirim!"); document.getElementById('simperValidity').value = ""; document.getElementById('simperFile').value = ""; loadSimperPage();
       } catch (err) { showToast("Gagal: " + err.message, "error"); } finally { btn.disabled = false; btn.innerText = "Kirim Laporan"; }
     }
@@ -549,13 +553,13 @@
 
     async function saveSimperVerif() {
       const stat = document.getElementById('sVerifStatus').value, note = document.getElementById('sVerifNote').value;
-      await supabase.from('simper_validity').update({ status: stat, admin_note: note }).eq('id', activeSimper.id);
+      await supabaseClient.from('simper_validity').update({ status: stat, admin_note: note }).eq('id', activeSimper.id);
       showToast("Tersimpan!"); document.getElementById('simperModal').classList.add('hidden'); loadSimperPage();
     }
 
     async function loadUserPage() {
       switchPage('userMgmt');
-      const { data } = await supabase.from('users').select('*'); allUserData = data || [];
+      const { data } = await supabaseClient.from('users').select('*'); allUserData = data || [];
       let html = "";
       allUserData.forEach(u => { html += `<tr><td>${u.email}</td><td>***</td><td>${u.company}</td><td>${u.level}</td><td>${u.status}</td><td><button class="btn btn-secondary" style="padding:4px 8px; font-size:12px;" onclick="openUserModal('${u.email}')">Edit</button></td></tr>`; });
       document.getElementById('userTableBody').innerHTML = html || '<tr><td colspan="6">No Users</td></tr>';
@@ -574,7 +578,7 @@
     async function saveUser() {
       const payload = { email: document.getElementById('uEmail').value, password: document.getElementById('uPassword').value, company: document.getElementById('uCompany').value, level: document.getElementById('uLevel').value, status: document.getElementById('uStatus').value };
       if(!payload.email || !payload.password || !payload.company) return alert("Lengkapi form!");
-      await supabase.from('users').upsert([payload]);
+      await supabaseClient.from('users').upsert([payload]);
       showToast("User Tersimpan!"); document.getElementById('userModal').classList.add('hidden'); loadUserPage();
     }
   </script>
