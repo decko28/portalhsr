@@ -18,56 +18,54 @@
     .spinner { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    /* Layout */
+    /* UI Layout */
     .login-wrapper { position: fixed; top:0; left:0; width: 100vw; height: 100vh; background: var(--primary); display: flex; justify-content: center; align-items: center; z-index: 2000; }
     .login-box { background: white; padding: 40px; border-radius: 8px; width: 100%; max-width: 350px; text-align: center; }
     #mainApp { display: flex; height: 100vh; width: 100vw; }
-    .sidebar { width: 260px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+    .sidebar { width: 260px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; z-index: 100; }
     .brand { padding: 20px; text-align: center; font-weight: bold; font-size: 20px; color: var(--primary); border-bottom: 1px solid #eee; }
     .nav-menu { flex: 1; padding: 10px 0; overflow-y: auto; }
-    .nav-item { padding: 15px 20px; cursor: pointer; font-weight: 600; color: #555; transition: 0.2s; border-left: 4px solid transparent; }
+    .nav-item { padding: 15px 20px; cursor: pointer; font-weight: 600; color: #555; transition: 0.2s; border-left: 4px solid transparent; display: block; }
     .nav-item:hover { background: #f0f4f8; color: var(--primary); border-left: 4px solid var(--primary); }
-    .sub-item { padding: 10px 20px 10px 40px; cursor: pointer; font-size:14px; color: #666; transition: 0.2s; }
-    .sub-item:hover { color: var(--primary); background: #f9f9f9; }
+    .sub-item { padding: 12px 20px 12px 40px; cursor: pointer; font-size:14px; color: #666; transition: 0.2s; display: block; }
+    .sub-item:hover { color: var(--primary); background: #f9f9f9; font-weight: bold; }
     .user-info { padding: 20px; border-top: 1px solid #eee; background: #fafafa; text-align: center; }
-    .main-area { flex: 1; background: #f4f7f6; overflow-y: auto; padding: 30px; }
+    .main-area { flex: 1; background: #f4f7f6; overflow-y: auto; padding: 30px; position: relative; }
     .box-container { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom:25px; }
     
-    /* Stats & Filter */
+    /* Stats & Tables */
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
     .stat-card { background: white; padding: 15px; border-radius: 8px; border-left: 5px solid var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
     .filter-panel { background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-    
     .form-group { margin-bottom: 15px; }
     .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
-    .btn { padding: 10px 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 13px; }
+    .btn { padding: 10px 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.3s; }
     .btn-primary { background: var(--primary); color: white; }
     .btn-success { background: var(--success); color: white; }
     .btn-danger { background: #dc3545; color: white; }
-    
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
     th { background: var(--primary); color: white; }
-    .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 15px; }
     #toast { position: fixed; bottom: -50px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 4px; transition: 0.3s; z-index: 3000; }
     #toast.show { bottom: 20px; }
+    .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 15px; }
   </style>
 </head>
 <body>
 
   <div id="loadingOverlay" class="hidden">
     <div class="spinner"></div>
-    <p style="margin-top:15px; font-weight:bold; color:var(--primary);">Processing... Please wait.</p>
+    <p style="margin-top:15px; font-weight:bold; color:var(--primary);">Processing Data...</p>
   </div>
 
   <div id="loginPage" class="login-wrapper">
     <div class="login-box">
-      <h3>Portal K3 STM</h3>
+      <h3 style="color:var(--primary)">Portal K3 STM</h3>
       <div id="loginError" style="color:#dc3545; font-size:12px; margin-bottom:10px;"></div>
       <div class="form-group"><label>Email</label><input type="email" id="email" value="admin@stm.com"></div>
       <div class="form-group"><label>Password</label><input type="password" id="password" value="admin123"></div>
-      <button class="btn btn-primary" id="btnLogin" style="width:100%" onclick="doLogin()">Login</button>
+      <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Login</button>
     </div>
   </div>
 
@@ -79,20 +77,22 @@
         <div class="nav-item">📝 Input Data ▼</div>
         <div class="sub-item" onclick="switchPage('formInspection')">🔍 General Inspection</div>
         <div class="sub-item" onclick="switchPage('formHazard')">⚠️ Hazard Report</div>
-        <div class="nav-item" id="btnMenuCar" onclick="switchPage('carList')">📋 Corrective Action</div>
-        <div class="nav-item" id="btnMenuSimper" onclick="switchPage('simper')">🪪 SIMPER Validity</div>
+        
+        <div class="nav-item" onclick="switchPage('carList')">📋 Corrective Action</div>
+        <div class="nav-item" onclick="switchPage('simper')">🪪 SIMPER Validity</div>
+        
         <div class="nav-item hidden" id="menuAdminUser" onclick="switchPage('userMgmt')">👥 User Management</div>
       </div>
       <div class="user-info">
-        <div id="displayUser" style="font-weight:bold; font-size:14px;">...</div>
+        <div id="displayUser" style="font-weight:bold; font-size:14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">...</div>
         <div id="displayLevel" style="font-size:11px; color:#666; margin-bottom:10px;">...</div>
-        <button class="btn btn-danger" style="width:100%" onclick="location.reload()">Logout</button>
+        <button class="btn btn-danger" style="width:100%; font-size:12px;" onclick="location.reload()">Logout</button>
       </div>
     </div>
 
     <div class="main-area">
       <div id="page_dashboard" class="page-content">
-        <div class="box-container"><h2>Dashboard</h2><p>Selamat bekerja. Silakan gunakan menu di samping.</p></div>
+        <div class="box-container"><h2>Dashboard</h2><p>Selamat bekerja. Pilih menu di samping untuk melihat atau menginput data.</p></div>
       </div>
 
       <div id="page_formInspection" class="page-content hidden">
@@ -107,11 +107,11 @@
               <select id="adaTemuan" onchange="togglePicaSection()" required><option value="">Pilih</option><option value="Yes">Yes</option><option value="No">No</option></select>
             </div>
             <div id="picaSection" class="hidden" style="background:#f9f9f9; padding:20px; border-radius:8px; border:1px solid #ddd;">
-              <div class="form-group"><label>Foto (Wajib):</label><input type="file" id="imageFile" accept="image/*" onchange="previewImg(this, 'imgPrev')"><img id="imgPrev" src="" class="hidden" style="max-height:150px; margin-top:10px;"></div>
+              <div class="form-group"><label>Foto Temuan (Wajib):</label><input type="file" id="imageFile" accept="image/*" onchange="previewImg(this, 'imgPrev')"><img id="imgPrev" src="" class="hidden" style="max-height:150px; margin-top:10px;"></div>
               <div id="picaContainer"></div>
-              <button type="button" class="btn btn-primary" onclick="addPica('picaContainer')">+ Tambah CAR</button>
+              <button type="button" class="btn btn-primary" onclick="addPica('picaContainer')">+ Tambah Item CAR</button>
             </div>
-            <button type="button" class="btn btn-primary" style="margin-top:20px;" onclick="submitInspection()">Kirim</button>
+            <button type="button" class="btn btn-primary" style="margin-top:20px;" onclick="submitInspection()">Kirim Inspeksi</button>
           </form>
         </div>
       </div>
@@ -122,14 +122,14 @@
           <form id="hazardForm">
             <div class="form-group"><label>Location:</label><select id="hLokasi" onchange="updateSubLoc('hLokasi','hSubLokasi')" required></select></div>
             <div class="form-group"><label>Sub Location:</label><select id="hSubLokasi" required></select></div>
-            <div class="form-group"><label>Deskripsi Bahaya:</label><textarea id="hDesc" rows="3" required></textarea></div>
+            <div class="form-group"><label>Deskripsi:</label><textarea id="hDesc" rows="3" required></textarea></div>
             <div class="form-group"><label>Foto (Wajib):</label><input type="file" id="hPhotoBefore" accept="image/*" onchange="previewImg(this, 'hPrevB')"><img id="hPrevB" src="" class="hidden" style="max-height:150px;"></div>
-            <div class="form-group"><label>Selesai Diatasi?</label><select id="hIsClosed" onchange="toggleHazardCAR()" required><option value="">Pilih</option><option value="Yes">Yes</option><option value="No">No (CAR)</option></select></div>
+            <div class="form-group"><label>Status Selesai?</label><select id="hIsClosed" onchange="toggleHazardCAR()" required><option value="">Pilih</option><option value="Yes">Yes</option><option value="No">No (CAR)</option></select></div>
             <div id="hCarSection" class="hidden" style="background:#f9f9f9; padding:20px; border-radius:8px; border:1px solid #ddd;">
               <div id="hPicaContainer"></div>
-              <button type="button" class="btn btn-primary" onclick="addPica('hPicaContainer')">+ Tambah CAR</button>
+              <button type="button" class="btn btn-primary" onclick="addPica('hPicaContainer')">+ Tambah Item CAR</button>
             </div>
-            <button type="button" class="btn btn-primary" style="margin-top:20px;" onclick="submitHazard()">Kirim</button>
+            <button type="button" class="btn btn-primary" style="margin-top:20px;" onclick="submitHazard()">Kirim Hazard</button>
           </form>
         </div>
       </div>
@@ -140,21 +140,16 @@
             <h2 style="color:var(--primary); margin:0;">Corrective Action Report</h2>
             <button class="btn btn-success" onclick="exportCarToExcel()">📥 Export Excel</button>
           </div>
-
           <div class="stats-grid">
             <div class="stat-card"><div>Total CAR</div><div id="statTotal" style="font-size:24px; font-weight:bold;">0</div></div>
             <div class="stat-card" style="border-color:#28a745;"><div>Follow Up Rate</div><div id="statPercent" style="font-size:24px; font-weight:bold; color:#28a745;">0%</div></div>
           </div>
-
           <div class="filter-panel">
             <div class="form-group"><label>Company</label><select id="fCompany" onchange="updateCarTable()"><option value="">All</option></select></div>
             <div class="form-group"><label>Status</label><select id="fStatus" onchange="updateCarTable()"><option value="">All</option><option>Open</option><option>In Progress</option><option>Closed</option></select></div>
-            <div class="form-group"><label>Raised Start</label><input type="date" id="fRaisedStart" onchange="updateCarTable()"></div>
-            <div class="form-group"><label>Raised End</label><input type="date" id="fRaisedEnd" onchange="updateCarTable()"></div>
-            <div class="form-group"><label>Due Start</label><input type="date" id="fDueStart" onchange="updateCarTable()"></div>
-            <div class="form-group"><label>Due End</label><input type="date" id="fDueEnd" onchange="updateCarTable()"></div>
+            <div class="form-group"><label>Raised (Start)</label><input type="date" id="fRaisedStart" onchange="updateCarTable()"></div>
+            <div class="form-group"><label>Raised (End)</label><input type="date" id="fRaisedEnd" onchange="updateCarTable()"></div>
           </div>
-
           <div style="overflow-x: auto;">
             <table>
               <thead><tr><th>ID CAR</th><th>Raised</th><th>PIC</th><th>Due Date</th><th>Status</th><th>Aksi</th></tr></thead>
@@ -171,28 +166,28 @@
 
       <div id="page_simper" class="page-content hidden">
         <div class="box-container">
-          <h2 style="color:var(--primary);">SIMPER Validity</h2>
+          <h2>SIMPER Validity</h2>
           <form id="simperForm" style="background:#f9f9f9; padding:20px; border-radius:8px; border:1px solid #ddd; margin-bottom:20px;">
             <div class="form-group"><label>Validity (%):</label><input type="number" id="simperValidity" required></div>
             <div class="form-group"><label>File:</label><input type="file" id="simperFile" accept=".pdf,.xlsx,.xls" required></div>
             <button type="button" class="btn btn-primary" onclick="submitSimper()">Submit SIMPER</button>
           </form>
-          <div style="overflow-x: auto;"><table><thead><tr><th>ID</th><th>Company</th><th>Score</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="simperTableBody"></tbody></table></div>
+          <div style="overflow-x: auto;"><table><thead><tr><th>ID</th><th>Company</th><th>Score</th><th>Status</th><th>File</th></tr></thead><tbody id="simperTableBody"></tbody></table></div>
         </div>
       </div>
 
       <div id="page_userMgmt" class="page-content hidden">
-        <div class="box-container"><h2>User Management</h2><table><thead><tr><th>Email</th><th>Company</th><th>Level</th></tr></thead><tbody id="userTableBody"></tbody></table></div>
+        <div class="box-container"><h2>User Management</h2><div style="overflow-x: auto;"><table><thead><tr><th>Email</th><th>Company</th><th>Level</th></tr></thead><tbody id="userTableBody"></tbody></table></div></div>
       </div>
     </div>
   </div>
 
   <div id="carModal" class="modal-overlay hidden">
-    <div style="background:white; width:90%; max-width:500px; padding:20px; border-radius:8px; max-height:90vh; overflow-y:auto;">
+    <div style="background:white; width:90%; max-width:500px; padding:20px; border-radius:8px; position: relative;">
       <h3 id="detCarCode" style="color:var(--primary);"></h3>
       <img id="detImg" src="" style="width:100%; max-height:200px; object-fit:contain; background:#eee; margin-bottom:10px;">
       <p><strong>Finding:</strong> <span id="detFinding"></span></p>
-      <div style="background:#f9f9f9; padding:15px; border:1px solid #ddd; border-radius:6px;">
+      <div style="background:#f9f9f9; padding:15px; border:1px solid #ddd;">
         <h4 style="margin-top:0;">Input Follow Up</h4>
         <div class="form-group"><label>Action Taken:</label><textarea id="fuAction" rows="2"></textarea></div>
         <div class="form-group"><label>Evidence:</label><input type="file" id="fuFile"></div>
@@ -218,18 +213,28 @@
     function showToast(msg, type='success') { const t = document.getElementById('toast'); t.innerText = msg; t.className = 'show'; t.style.background = type === 'success' ? '#28a745' : '#dc3545'; setTimeout(() => t.className = '', 4000); }
     function generateID(pre) { const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let r = ''; for(let i=0; i<(9-pre.length-1); i++) r += c.charAt(Math.floor(Math.random()*c.length)); return (pre+"-"+r).toUpperCase(); }
 
+    /**
+     * FUNGSI UTAMA NAVIGASI (DIPERBAIKI)
+     */
     function switchPage(id) {
+      // 1. Sembunyikan semua halaman
       document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+      
+      // 2. Tampilkan halaman target
       const target = document.getElementById('page_' + id);
       if(target) target.classList.remove('hidden');
+
+      // 3. Jalankan fungsi penarik data sesuai halaman
       if(id === 'carList') loadCarPage();
       if(id === 'simper') loadSimperPage();
       if(id === 'userMgmt') loadUserPage();
+      
+      console.log("Navigating to:", id); // Untuk debugging di console browser
     }
 
     async function doLogin() {
       const e = document.getElementById('email').value, p = document.getElementById('password').value;
-      const btn = document.getElementById('btnLogin');
+      const btn = document.querySelector('#loginPage button');
       btn.innerText = "Checking..."; btn.disabled = true;
       try {
         const { data, error } = await supabaseClient.from('users').select('*').eq('email', e).eq('password', p).single();
@@ -238,7 +243,7 @@
           currentUser = data;
           document.getElementById('loginPage').classList.add('hidden');
           document.getElementById('mainApp').classList.remove('hidden');
-          document.getElementById('displayUser').innerText = currentUser.company;
+          document.getElementById('displayUser').innerText = currentUser.email;
           document.getElementById('displayLevel').innerText = currentUser.level;
           if(currentUser.level === "Admin") document.getElementById('menuAdminUser').classList.remove('hidden');
           initData(); switchPage('dashboard');
@@ -254,8 +259,12 @@
       if(cSel) {
         cSel.innerHTML = '<option value="">Select Company</option>';
         fComp.innerHTML = '<option value="">All Companies</option>';
-        comps.forEach(c => { let n = c.company || c.name; cSel.innerHTML += `<option value="${n}">${n}</option>`; fComp.innerHTML += `<option value="${n}">${n}</option>`; globalCompanies.push(n); });
-        if(currentUser.level !== 'Admin') cSel.value = currentUser.company;
+        (comps || []).forEach(c => { 
+          let n = c.company || c.name; 
+          cSel.innerHTML += `<option value="${n}">${n}</option>`; 
+          fComp.innerHTML += `<option value="${n}">${n}</option>`; 
+          globalCompanies.push(n); 
+        });
       }
       const lSel = document.getElementById('lokasi'), hlSel = document.getElementById('hLokasi');
       const locNames = [...new Set(globalLocs.map(l => l.lokasi_utama || l.location || l.lokasi))];
@@ -285,7 +294,7 @@
 
     function addPica(cid) {
       let opt = '<option value="">PIC</option>' + globalCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
-      let d = document.createElement('div'); d.className = 'pica-item'; d.style = "margin-top:10px; padding:10px; background:#fff; border:1px solid #ddd; border-radius:6px;";
+      let d = document.createElement('div'); d.className = 'pica-item'; d.style = "margin-top:10px; padding:10px; background:#fff; border:1px solid #ddd;";
       d.innerHTML = `<div class="form-group"><label>Finding:</label><textarea class="pf" required></textarea></div><div class="form-group"><label>PIC:</label><select class="ppic" required>${opt}</select></div><div class="form-group"><label>Due Date:</label><input type="date" class="pd" required></div><button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">Hapus</button>`;
       document.getElementById(cid).appendChild(d);
     }
@@ -325,7 +334,6 @@
     function updateCarTable() {
       const fc = document.getElementById('fCompany').value, fs = document.getElementById('fStatus').value;
       const drs = document.getElementById('fRaisedStart').value, dre = document.getElementById('fRaisedEnd').value;
-      const dds = document.getElementById('fDueStart').value, dde = document.getElementById('fDueEnd').value;
 
       filteredCarData = carMasterData.filter(c => {
         let m = true;
@@ -333,8 +341,6 @@
         if(fs && c.status !== fs) m = false;
         if(drs && new Date(c.date_raised) < new Date(drs)) m = false;
         if(dre && new Date(c.date_raised) > new Date(dre)) m = false;
-        if(dds && new Date(c.due_date) < new Date(dds)) m = false;
-        if(dde && new Date(c.due_date) > new Date(dde)) m = false;
         return m;
       });
 
