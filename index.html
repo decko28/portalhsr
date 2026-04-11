@@ -460,7 +460,7 @@ switchPage('formInspection'); // Tetap di halaman yang sama tanpa logout
       try {
         const url = await uploadToDrive(document.getElementById('simperFile').files[0], "SMP", "simper_docs");
         await supabaseClient.from('simper_validity').insert([{ id: generateID("SMP"), company: currentUser.company, validity_score: document.getElementById('simperValidity').value, file_url: url, status: "Pending" }]);
-        showToast("SIMPER Terkirim!"); clearAllForms();switchPage('formsimper')
+        showToast("SIMPER Terkirim!"); clearAllForms();switchPage('formsimper');
       } catch(e) { showToast("Gagal!"); } finally { setLoader(false); }
     }
 
