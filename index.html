@@ -32,7 +32,7 @@
     .btn { padding: 10px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; display: inline-block; text-align: center; }
     .btn-primary { background: var(--primary); color: white; }
     .btn-secondary { background: var(--secondary); color: var(--dark); }
-    .btn-danger { background: #dc3545; color: white; }
+    .btn-danger { background: #dc3545; color: white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;}
     table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
     th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
     th { background: var(--primary); color: white; }
@@ -75,7 +75,7 @@
 
     <div class="main-area">
       <div id="page_dashboard" class="page-content">
-        <div class="box-container"><h2 style="color:var(--primary); margin-top:0;">Selamat Datang!</h2><p>Gunakan menu sidebar untuk mengelola data HSR.</p></div>
+        <div class="box-container"><h2 style="color:var(--primary); margin-top:0;">Selamat Datang!</h2><p>Pilih menu sidebar untuk mengelola data HSR.</p></div>
       </div>
 
       <div id="page_formInspection" class="page-content hidden">
@@ -113,7 +113,10 @@
             <div class="form-group"><label>Sub Location:</label><select id="hSubLokasi" required></select></div>
             <div class="form-group"><label>Tipe:</label><select id="hType" required><option value="">Select</option><option>Unsafe Act</option><option>Unsafe Condition</option></select></div>
             <div class="form-group"><label>Deskripsi:</label><textarea id="hDesc" rows="3" required></textarea></div>
-            <div class="form-group"><label>Foto Temuan (Wajib):</label><input type="file" id="hPhotoBefore" accept="image/*" onchange="previewImg(this, 'hPrevB')"><img id="hPrevB" src="" class="hidden" style="max-height:150px; margin-top:10px; border:1px solid #ccc;"></div>
+            <div class="form-group"><label>Foto Temuan (Wajib):</label>
+                <input type="file" id="hPhotoBefore" accept="image/*" onchange="previewImg(this, 'hPrevB')">
+                <img id="hPrevB" src="" class="hidden" style="max-height:150px; margin-top:10px; border:1px solid #ccc;">
+            </div>
             <div class="form-group"><label>Immediate Action:</label><textarea id="hAction" rows="2"></textarea></div>
             <div style="border-top: 2px dashed #ccc; margin: 30px 0;"></div>
             <div class="form-group"><label>Bahaya berhasil diatasi?</label><select id="hIsClosed" onchange="toggleHazardCAR()" required><option value="">Select</option><option value="Yes">Yes</option><option value="No">No (Butuh CAR)</option></select></div>
@@ -139,9 +142,11 @@
           <h2 style="color:var(--primary); margin-top:0;">SIMPER Validity</h2> 
           <div style="background:#f9f9f9; padding:20px; border-radius:8px; border:1px solid #ddd; margin-bottom:20px;"> 
             <h3 style="margin-top:0;">Upload Rekap SIMPER</h3> 
-            <div class="form-group"><label>Validity (%):</label><input type="number" id="simperValidity" required></div> 
-            <div class="form-group"><label>File (PDF/Excel):</label><input type="file" id="simperFile" accept=".pdf,.xls,.xlsx"></div> 
-            <button class="btn btn-primary" id="btnSubmitSimper" onclick="submitSimper()">Kirim Laporan</button> 
+            <form id="simperForm">
+                <div class="form-group"><label>Validity (%):</label><input type="number" id="simperValidity" required></div> 
+                <div class="form-group"><label>File (PDF/Excel):</label><input type="file" id="simperFile" accept=".pdf,.xls,.xlsx" required></div> 
+                <button type="button" class="btn btn-primary" id="btnSubmitSimper" onclick="submitSimper()">Kirim Laporan</button> 
+            </form>
           </div> 
           <div style="overflow-x: auto;"><table><thead><tr><th>ID</th><th>Company</th><th>Validity</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="simperTableBody"></tbody></table></div>
         </div> 
@@ -153,6 +158,21 @@
           <div style="overflow-x: auto;"><table><thead><tr><th>Email</th><th>Company</th><th>Level</th></tr></thead><tbody id="userTableBody"></tbody></table></div>
         </div> 
       </div>
+    </div>
+  </div>
+
+  <div id="carModal" class="modal-overlay hidden">
+    <div style="background:white; width:90%; max-width:500px; padding:20px; border-radius:8px; max-height:90vh; overflow-y:auto;">
+      <h3 id="detCarCode" style="margin-top:0; color:var(--primary);"></h3>
+      <img id="detImg" src="" style="width:100%; max-height:200px; object-fit:contain; background:#eee; margin-bottom:10px;">
+      <p><strong>Finding:</strong> <span id="detFinding"></span></p>
+      <div id="fuForm" style="background:#f9f9f9; padding:15px; border:1px solid #ddd; border-radius:6px; margin-top:10px;">
+        <h4 style="margin-top:0;">Input Follow Up</h4>
+        <div class="form-group"><label>Action Taken:</label><textarea id="fuAction" rows="2"></textarea></div>
+        <div class="form-group"><label>Evidence (Foto/PDF):</label><input type="file" id="fuFile"></div>
+        <button class="btn btn-primary" style="width:100%;" id="btnSubmitFU" onclick="submitFU()">Submit & Close CAR</button>
+      </div>
+      <button class="btn btn-secondary" style="width:100%; margin-top:10px;" onclick="document.getElementById('carModal').classList.add('hidden')">Tutup</button>
     </div>
   </div>
 
@@ -176,25 +196,18 @@
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     const gasAPI = "https://script.google.com/macros/s/AKfycbz79Ba5eQcp12kJ1_4DtkCd6_H4HZQcvTbmjEv0jykcosSoBzLE9P5xY6A_9qWg3x73rg/exec";
 
-    let currentUser = null, globalCompanies = [], globalLocs = [], allSimperData = [], uploadFiles = {}, activeSimperId = null;
+    let currentUser = null, globalCompanies = [], globalLocs = [], allCarData = [], allSimperData = [], uploadFiles = {}, activeCar = null, activeSimperId = null;
 
-    /**
-     * FUNGSI UNIQUE ID - PASTI 9 KARAKTER (Misal: IN-A1B2C3 atau CAR-X9Z1)
-     * Prefix (2-3 karakter) + Sisanya random Alphanumeric hingga total 9 karakter.
-     */
     function generateID(prefix) {
-      const remainingLength = 9 - prefix.length - 1; // -1 untuk pemisah dash "-"
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Menghilangkan huruf/angka mirip (O, 0, I, 1)
-      let result = '';
-      for (let i = 0; i < remainingLength; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return (prefix + "-" + result).toUpperCase();
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let res = '';
+      for (let i = 0; i < (9 - prefix.length - 1); i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
+      return (prefix + "-" + res).toUpperCase();
     }
 
     function showToast(msg, type='success') {
       const t = document.getElementById('toast');
-      t.innerText = msg; t.className = `show ${type === 'success' ? '' : 'error'}`;
+      t.innerText = msg; t.className = 'show';
       t.style.background = type === 'success' ? '#28a745' : '#dc3545';
       setTimeout(() => t.className = '', 4000);
     }
@@ -202,6 +215,30 @@
     function switchPage(id) {
       document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
       document.getElementById('page_' + id).classList.remove('hidden');
+    }
+
+    // --- LOGIKA CLEAR FORM ---
+    function clearForm(formId, previewImgId) {
+        const form = document.getElementById(formId);
+        if(form) form.reset();
+        
+        // Hapus preview foto jika ada
+        if(previewImgId) {
+            const img = document.getElementById(previewImgId);
+            if(img) { img.src = ""; img.classList.add('hidden'); }
+        }
+        
+        // Reset memori file upload
+        uploadFiles = {};
+        
+        // Bersihkan kontainer CAR dinamis jika ada
+        const pica = document.getElementById('picaContainer');
+        if(pica) pica.innerHTML = "";
+        const hpica = document.getElementById('hPicaContainer');
+        if(hpica) hpica.innerHTML = "";
+
+        // Kembalikan ke menu Dashboard atau refresh dropdown jika perlu
+        document.getElementById('tanggal').valueAsDate = new Date();
     }
 
     async function doLogin() {
@@ -238,6 +275,7 @@
         if(lSel) lSel.innerHTML += `<option value="${l}">${l}</option>`;
         if(hlSel) hlSel.innerHTML += `<option value="${l}">${l}</option>`;
       });
+      document.getElementById('tanggal').valueAsDate = new Date();
     }
 
     function updateSubLoc(locId, subId) {
@@ -251,28 +289,20 @@
 
     async function uploadToDrive(file, prefix, folderType) {
       if(!file) return null;
-      const base64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.readAsDataURL(file);
-      });
-      
-      // UNIQUE FILE NAME - PASTI 9 KARAKTER + EKSTENSI
-      const fileExt = file.name.split('.').pop();
-      const uniqueFileName = generateID(prefix) + "." + fileExt;
-
-      const payload = { fileName: uniqueFileName, mimeType: file.type, base64: base64, folderType: folderType };
+      const base64 = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.readAsDataURL(file); });
+      const payload = { fileName: generateID(prefix) + "." + file.name.split('.').pop(), mimeType: file.type, base64: base64, folderType: folderType };
       const response = await fetch(gasAPI, { method: "POST", body: JSON.stringify(payload) });
-      const result = await response.json();
-      if(result.status === "success") return result.url;
-      throw new Error(result.message);
+      const resJSON = await response.json();
+      if(resJSON.status === "success") return resJSON.url;
+      throw new Error("Gagal Upload");
     }
 
     function previewImg(input, imgId) {
       if (input.files[0]) {
         uploadFiles[input.id] = input.files[0];
-        document.getElementById(imgId).src = URL.createObjectURL(input.files[0]);
-        document.getElementById(imgId).classList.remove('hidden');
+        const prev = document.getElementById(imgId);
+        prev.src = URL.createObjectURL(input.files[0]);
+        prev.classList.remove('hidden');
       }
     }
 
@@ -281,52 +311,76 @@
       let div = document.createElement('div'); div.className = 'pica-item';
       div.style = "margin-top:10px; padding:15px; background:#fff; border:1px solid #ddd; border-radius:6px;";
       div.innerHTML = `
-        <div class="form-group"><label>Finding:</label><textarea class="pf" rows="2" required></textarea></div>
+        <div class="form-group"><label>Finding Detail:</label><textarea class="pf" rows="2" required></textarea></div>
         <div class="form-group"><label>PIC:</label><select class="ppic" required>${opts}</select></div>
         <div class="form-group"><label>Due Date:</label><input type="date" class="pd" required></div>
-        <button type="button" class="btn-danger" style="width:100%; border:none; padding:5px; border-radius:4px; margin-top:5px; cursor:pointer;" onclick="this.parentElement.remove()">Hapus Item</button>
+        <button type="button" class="btn-danger" onclick="this.parentElement.remove()">Hapus Item</button>
       `;
       document.getElementById(containerId).appendChild(div);
     }
 
     async function submitInspection() {
-      const isTemuan = document.getElementById('adaTemuan').value;
+      const isT = document.getElementById('adaTemuan').value;
       const btn = document.getElementById('submitBtn'); btn.disabled = true;
       try {
-        let imageUrl = null;
-        if (isTemuan === "Yes") imageUrl = await uploadToDrive(uploadFiles['imageFile'], "IN", "finding_images");
-        const inspId = generateID("IN");
-        await supabaseClient.from('inspections').insert([{ id: inspId, date: document.getElementById('tanggal').value, company: document.getElementById('perusahaan').value, has_finding: isTemuan }]);
-        if (isTemuan === "Yes") {
-          const items = document.querySelectorAll('#picaContainer > .pica-item');
-          const cars = Array.from(items).map(el => ({ car_code: generateID("CAR"), finding: el.querySelector('.pf').value, pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value, status: "Open", image_url: imageUrl, date_raised: new Date() }));
+        let url = null; if (isT === "Yes") url = await uploadToDrive(uploadFiles['imageFile'], "IN", "finding_images");
+        const id = generateID("IN");
+        await supabaseClient.from('inspections').insert([{ id: id, date: document.getElementById('tanggal').value, company: document.getElementById('perusahaan').value, has_finding: isT }]);
+        if (isT === "Yes") {
+          const cars = Array.from(document.querySelectorAll('#picaContainer > .pica-item')).map(el => ({ car_code: generateID("CAR"), finding: el.querySelector('.pf').value, pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value, status: "Open", image_url: url, date_raised: new Date() }));
           await supabaseClient.from('car_reports').insert(cars);
         }
-        showToast("Inspeksi Tersimpan!"); location.reload();
-      } catch (err) { showToast("Gagal simpan data!", "error"); btn.disabled = false; }
+        showToast("Inspeksi Terkirim!"); 
+        clearForm('mainForm', 'imgPrev');
+        document.getElementById('picaSection').classList.add('hidden');
+      } catch (err) { showToast("Gagal!", "error"); } finally { btn.disabled = false; }
     }
 
     async function submitHazard() {
       const btn = document.getElementById('btnSubmitHazard'); btn.disabled = true;
       try {
-        const urlB = await uploadToDrive(uploadFiles['hPhotoBefore'], "HZ", "finding_images");
-        const hId = generateID("HZD");
-        await supabaseClient.from('hazard_reports').insert([{ id: hId, date: new Date(), reporter: currentUser.email, photo_before: urlB, description: document.getElementById('hDesc').value }]);
+        const url = await uploadToDrive(uploadFiles['hPhotoBefore'], "HZ", "finding_images");
+        await supabaseClient.from('hazard_reports').insert([{ id: generateID("HZD"), date: new Date(), reporter: currentUser.email, photo_before: url, description: document.getElementById('hDesc').value }]);
         if (document.getElementById('hIsClosed').value === "No") {
-          const items = document.querySelectorAll('#hPicaContainer > .pica-item');
-          const cars = Array.from(items).map(el => ({ car_code: generateID("CAR"), finding: el.querySelector('.pf').value, pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value, status: "Open", image_url: urlB, date_raised: new Date() }));
+          const cars = Array.from(document.querySelectorAll('#hPicaContainer > .pica-item')).map(el => ({ car_code: generateID("CAR"), finding: el.querySelector('.pf').value, pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value, status: "Open", image_url: url, date_raised: new Date() }));
           await supabaseClient.from('car_reports').insert(cars);
         }
-        showToast("Hazard Report Tersimpan!"); location.reload();
-      } catch (err) { showToast("Gagal simpan hazard!", "error"); btn.disabled = false; }
+        showToast("Hazard Terkirim!");
+        clearForm('hazardForm', 'hPrevB');
+        document.getElementById('hCarSection').classList.add('hidden');
+      } catch (err) { showToast("Gagal!", "error"); } finally { btn.disabled = false; }
     }
 
     async function loadCarPage() {
       switchPage('carList');
       const { data } = await supabaseClient.from('car_reports').select('*').order('date_raised', { ascending: false });
+      allCarData = data || [];
       let html = "";
-      data.forEach(c => { html += `<tr><td>${c.car_code}</td><td>${c.pic}</td><td>${c.due_date}</td><td>${c.status}</td><td>-</td></tr>`; });
+      allCarData.forEach(c => { html += `<tr><td>${c.car_code}</td><td>${c.pic}</td><td>${c.due_date}</td><td>${c.status}</td><td><button class="btn btn-primary" style="padding:4px 8px; font-size:11px;" onclick="openCarDetail('${c.car_code}')">View</button></td></tr>`; });
       document.getElementById('carTableBody').innerHTML = html;
+    }
+
+    function openCarDetail(code) {
+      activeCar = allCarData.find(c => c.car_code === code);
+      document.getElementById('detCarCode').innerText = "Detail " + code;
+      document.getElementById('detImg').src = activeCar.image_url;
+      document.getElementById('detFinding').innerText = activeCar.finding;
+      document.getElementById('carModal').classList.remove('hidden');
+    }
+
+    async function submitFU() {
+      const btn = document.getElementById('btnSubmitFU'); btn.disabled = true;
+      try {
+        const file = document.getElementById('fuFile').files[0];
+        const url = await uploadToDrive(file, "FU", "followup_images");
+        await supabaseClient.from('car_followups').insert([{ car_code: activeCar.car_code, action_taken: document.getElementById('fuAction').value, file_url: url, action_date: new Date() }]);
+        await supabaseClient.from('car_reports').update({ status: 'Closed' }).eq('car_code', activeCar.car_code);
+        showToast("CAR Berhasil Ditutup!");
+        document.getElementById('carModal').classList.add('hidden');
+        document.getElementById('fuAction').value = "";
+        document.getElementById('fuFile').value = "";
+        loadCarPage();
+      } catch (e) { showToast("Gagal!", "error"); } finally { btn.disabled = false; }
     }
 
     async function loadSimperPage() {
@@ -335,47 +389,39 @@
       allSimperData = data || [];
       let html = "";
       allSimperData.forEach(d => {
-        let actions = `<a href="${d.file_url}" target="_blank" class="btn-secondary" style="padding:4px 8px; text-decoration:none; font-size:11px;">View</a>`;
-        if (currentUser.level === 'Admin') {
-          actions += ` <button class="btn-primary" style="padding:4px 8px; font-size:11px; cursor:pointer;" onclick="openVerif('${d.id}')">Verif</button>`;
-          actions += ` <button class="btn-danger" style="padding:4px 8px; font-size:11px; border:none; border-radius:4px; cursor:pointer;" onclick="deleteSimper('${d.id}')">Del</button>`;
-        }
-        html += `<tr><td>${d.id}</td><td>${d.company}</td><td>${d.validity_score}%</td><td>${d.status}</td><td>${actions}</td></tr>`;
+        let act = `<a href="${d.file_url}" target="_blank" class="btn btn-secondary" style="padding:4px 8px; text-decoration:none; font-size:11px;">View</a>`;
+        if (currentUser.level === 'Admin') act += ` <button class="btn btn-primary" style="padding:4px 8px; font-size:11px;" onclick="openVerif('${d.id}')">Verif</button> <button class="btn-danger" style="font-size:11px;" onclick="deleteSimper('${d.id}')">Del</button>`;
+        html += `<tr><td>${d.id}</td><td>${d.company}</td><td>${d.validity_score}%</td><td>${d.status}</td><td>${act}</td></tr>`;
       });
       document.getElementById('simperTableBody').innerHTML = html;
     }
 
     async function submitSimper() {
+      const btn = document.getElementById('btnSubmitSimper'); btn.disabled = true;
       try {
-        const f = document.getElementById('simperFile').files[0];
-        if(!f) throw new Error("File belum dipilih!");
-        const url = await uploadToDrive(f, "SMP", "simper_docs");
+        const url = await uploadToDrive(document.getElementById('simperFile').files[0], "SMP", "simper_docs");
         await supabaseClient.from('simper_validity').insert([{ id: generateID("SMP"), company: currentUser.company, validity_score: document.getElementById('simperValidity').value, file_url: url, status: "Pending" }]);
-        showToast("Laporan SIMPER Terkirim!"); loadSimperPage();
-      } catch(e) { showToast(e.message, "error"); }
+        showToast("Laporan SIMPER Terkirim!");
+        clearForm('simperForm', null);
+        loadSimperPage();
+      } catch(e) { showToast("Gagal!", "error"); } finally { btn.disabled = false; }
     }
 
     function openVerif(id) { activeSimperId = id; document.getElementById('verifModal').classList.remove('hidden'); }
-
     async function saveVerif() {
-      const s = document.getElementById('vStatus').value, n = document.getElementById('vNote').value;
-      await supabaseClient.from('simper_validity').update({ status: s, admin_note: n }).eq('id', activeSimperId);
-      showToast("Verifikasi Berhasil!"); document.getElementById('verifModal').classList.add('hidden'); loadSimperPage();
+      await supabaseClient.from('simper_validity').update({ status: document.getElementById('vStatus').value, admin_note: document.getElementById('vNote').value }).eq('id', activeSimperId);
+      showToast("Verifikasi Disimpan!"); document.getElementById('verifModal').classList.add('hidden'); loadSimperPage();
     }
-
-    async function deleteSimper(id) {
-      if(!confirm("Hapus data SIMPER ini?")) return;
-      await supabaseClient.from('simper_validity').delete().eq('id', id);
-      showToast("Data Berhasil Dihapus!"); loadSimperPage();
-    }
-
+    async function deleteSimper(id) { if(confirm("Hapus?")) { await supabaseClient.from('simper_validity').delete().eq('id', id); loadSimperPage(); } }
     async function loadUserPage() {
       switchPage('userMgmt');
       const { data } = await supabaseClient.from('users').select('*');
-      let html = "";
-      data.forEach(u => { html += `<tr><td>${u.email}</td><td>${u.company}</td><td>${u.level}</td></tr>`; });
+      let html = ""; data.forEach(u => { html += `<tr><td>${u.email}</td><td>${u.company}</td><td>${u.level}</td></tr>`; });
       document.getElementById('userTableBody').innerHTML = html;
     }
+
+    function togglePicaSection() { document.getElementById('picaSection').classList.toggle('hidden', document.getElementById('adaTemuan').value !== "Yes"); if(document.getElementById('picaContainer').children.length === 0) addPica('picaContainer'); }
+    function toggleHazardCAR() { document.getElementById('hCarSection').classList.toggle('hidden', document.getElementById('hIsClosed').value !== "No"); if(document.getElementById('hPicaContainer').children.length === 0) addPica('hPicaContainer'); }
   </script>
 </body>
 </html>
