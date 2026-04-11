@@ -269,7 +269,14 @@
 
     function setLoader(show) { document.getElementById('loadingOverlay').classList.toggle('hidden', !show); }
     function showToast(msg, type='success') { const t = document.getElementById('toast'); t.innerText = msg; t.className = 'show'; t.style.background = type === 'success' ? '#28a745' : '#dc3545'; setTimeout(() => t.className = '', 4000); }
-    function generateID(pre) { const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let r = ''; const len = 9 - (pre.length + 1); for(let i=0; i<len; i++) r += c.charAt(Math.floor(Math.random()*c.length)); return (pre+"-"+r).toUpperCase(); }
+    function generateID(pre) { 
+      const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
+      let r = ''; 
+      // Logika: 9 Karakter - (Panjang Prefix) - (1 Karakter Strip "-")
+      const randomLen = 9 - (pre.length + 1); 
+      for(let i=0; i<randomLen; i++) r += c.charAt(Math.floor(Math.random()*c.length)); 
+      return (pre + "-" + r).toUpperCase(); 
+    }
 
     function switchPage(id) {
       document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
