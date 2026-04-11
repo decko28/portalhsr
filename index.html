@@ -55,11 +55,15 @@
 </head>
 <body>
 
-  <script>
-    const SUPABASE_URL = 'https://bzbdfxyjiainooxoopfq.supabase.com';
-    const SUPABASE_ANON_KEY = 'sb_publishable_oj9lc25LX7qYmrRGLpNt2A_2ISYheVC';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  </script>
+<script>
+  // Menggunakan Project ID Anda dari layar General Settings
+  const SUPABASE_URL = 'https://bzbdfxyjiainooxoopfq.supabase.com';
+  
+  // Menggunakan Publishable Key Anda yang baru
+  const SUPABASE_ANON_KEY = 'sb_publishable_oj9lc25LX7qYmrRGLpNt2A_2ISYheVC';
+  
+  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+</script>
 
   <div id="loginPage" class="login-wrapper">
     <div class="login-box">
