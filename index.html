@@ -98,7 +98,11 @@
       <div class="user-info">
         <div id="displayUser" style="font-weight:bold; color:var(--primary); font-size:14px; margin-bottom:5px; word-break: break-all;">...</div>
         <div id="displayLevel" style="font-size:12px; color:#888; margin-bottom:15px;">...</div>
-        <button class="btn btn-danger" style="width:100%; padding:8px;" onclick="location.reload()">Logout</button>
+        <button class="btn btn-danger" 
+              style="width: 100%; margin-top: 15px; padding: 12px; font-weight: bold;" 
+              onclick="document.getElementById('carModal').classList.add('hidden')">
+        TUTUP JENDELA
+      </button>
       </div>
     </div>
 
@@ -288,11 +292,13 @@
           currentUser = data;
           document.getElementById('loginPage').classList.add('hidden');
           document.getElementById('mainApp').classList.remove('hidden');
-          document.getElementById('displayUser').innerText = currentUser.company;
+          
+          // PERBAIKAN: Tampilkan Nama Perusahaan, bukan Email
+          document.getElementById('displayUser').innerText = currentUser.company; 
           document.getElementById('displayLevel').innerText = currentUser.level;
+
           if(currentUser.level === "Admin") document.getElementById('menuAdminUser').classList.remove('hidden');
-          await initData();
-          switchPage('formInspection');
+          initData(); switchPage('formInspection');
         }
       } catch(x) { btn.disabled = false; }
     }
@@ -349,7 +355,9 @@
     }
 
     async function submitInspection() {
-      const isT = document.getElementById('adaTemuan').value; if(!isT) return alert("Pilih Status CAR!"); setLoader(true);
+      const isT = document.getElementById('adaTemuan').value; 
+      if(isT === "Yes" && !uploadFiles['imageFile']) return showToast("Foto Wajib!", "error");
+      setLoader(true);
       try {
         let url = (isT === "Yes") ? await uploadToDrive(uploadFiles['imageFile'], "IN", "finding_images") : null;
         await supabaseClient.from('inspections').insert([{ id: generateID("IN"), date: document.getElementById('tanggal').value, company: document.getElementById('perusahaan').value, has_finding: isT }]);
@@ -357,11 +365,14 @@
           const cars = Array.from(document.querySelectorAll('#picaContainer > .pica-item')).map(el => ({ car_code: generateID("CAR"), finding: el.querySelector('.pf').value, pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value, status: "Open", image_url: url, date_raised: new Date() }));
           await supabaseClient.from('car_reports').insert(cars);
         }
-        showToast("Inspeksi Berhasil!"); clearAllForms();switchPage('formInsection'); // Tetap di halaman yang sama tanpa logout
+        showToast("Berhasil!"); 
+        clearAllForms(); // Menghapus isi form tanpa reload
+        switchPage('formInspection'); // Tetap di halaman ini
       } catch(e) { showToast("Gagal!", "error"); } finally { setLoader(false); }
     }
 
     async function submitHazard() {
+      if(!uploadFiles['hPhotoBefore']) return showToast("Foto Wajib!", "error");
       setLoader(true);
       try {
         const url = await uploadToDrive(uploadFiles['hPhotoBefore'], "HZ", "finding_images");
@@ -370,10 +381,9 @@
           const cars = Array.from(document.querySelectorAll('#hPicaContainer > .pica-item')).map(el => ({ car_code: generateID("CAR"), finding: el.querySelector('.pf').value, pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value, status: "Open", image_url: url, date_raised: new Date() }));
           await supabaseClient.from('car_reports').insert(cars);
         }
-// GANTI MENJADI:
-showToast("Laporan Berhasil!");clearAllForms();switchPage('formhazard'); // Tetap di halaman yang sama tanpa logout
-clearAllForms(); 
-switchPage('formInspection'); // Tetap di halaman yang sama tanpa logout
+        showToast("Berhasil!"); 
+        clearAllForms(); 
+        switchPage('formHazard');
       } catch(e) { showToast("Gagal!", "error"); } finally { setLoader(false); }
     }
 
@@ -433,7 +443,7 @@ switchPage('formInspection'); // Tetap di halaman yang sama tanpa logout
         const url = await uploadToDrive(document.getElementById('fuFile').files[0], "FU", "followup_images");
         await supabaseClient.from('car_followups').insert([{ car_code: activeCarId, action_taken: document.getElementById('fuAction').value, file_url: url, action_date: new Date() }]);
         await supabaseClient.from('car_reports').update({ status: 'Closed' }).eq('car_code', activeCarId);
-        showToast("CAR Berhasil Ditutup!"); location.reload();
+        showToast("CAR Berhasil Ditutup!"); clearAllForms(); switchPage('carList'); // Kembali ke halaman
       } catch(e) { showToast("Gagal!"); } finally { setLoader(false); }
     }
 
