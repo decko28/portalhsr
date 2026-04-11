@@ -444,14 +444,40 @@
     }
 
     async function submitFU() {
-      if(!document.getElementById('fuFile').files[0]) return alert("Lampirkan Bukti Perbaikan!");
+      // Validasi: Cek apakah file bukti sudah dipilih
+      if(!document.getElementById('fuFile').files[0]) {
+        return showToast("Mohon lampirkan bukti perbaikan!", "error");
+      }
+
       setLoader(true);
       try {
+        // 1. Upload evidence ke Google Drive
         const url = await uploadToDrive(document.getElementById('fuFile').files[0], "FU", "followup_images");
-        await supabaseClient.from('car_followups').insert([{ car_code: activeCarId, action_taken: document.getElementById('fuAction').value, file_url: url, action_date: new Date() }]);
+        
+        // 2. Simpan data follow up ke tabel car_followups
+        await supabaseClient.from('car_followups').insert([{ 
+          car_code: activeCarId, 
+          action_taken: document.getElementById('fuAction').value, 
+          file_url: url, 
+          action_date: new Date() 
+        }]);
+
+        // 3. Update status CAR menjadi Closed di tabel car_reports
         await supabaseClient.from('car_reports').update({ status: 'Closed' }).eq('car_code', activeCarId);
-        showToast("CAR Berhasil Ditutup!"); clearAllForms(); switchPage('carList'); // Kembali ke halaman
-      } catch(e) { showToast("Gagal!"); } finally { setLoader(false); }
+
+        showToast("CAR Berhasil Ditutup!", "success");
+
+        // --- PERBAIKAN: Jangan pakai location.reload() ---
+        document.getElementById('carModal').classList.add('hidden'); // Tutup modal
+        document.getElementById('fuAction').value = ""; // Bersihkan text perbaikan
+        document.getElementById('fuFile').value = ""; // Bersihkan pilihan file
+        
+        loadCarPage(); // Refresh data tabel CAR saja tanpa logout
+      } catch(e) { 
+        showToast("Gagal memproses penutupan CAR", "error"); 
+      } finally { 
+        setLoader(false); 
+      }
     }
 
     async function deleteCAR(id) { if(confirm("Hapus permanen data CAR ini?")) { await supabaseClient.from('car_reports').delete().eq('car_code', id); loadCarPage(); } }
