@@ -263,8 +263,12 @@
   <div id="toast">Memproses...</div>
 
   <script>
+// 1. URL HARUS menggunakan https:// dan diakhiri .supabase.co
     const SUPABASE_URL = 'https://bzbdfxyjiainooxoopfq.supabase.co';
+    
+    // 2. ANON KEY menggunakan kunci sb_publishable Anda
     const SUPABASE_ANON_KEY = 'sb_publishable_oj9lc25LX7qYmrRGLpNt2A_2ISYheVC';
+    
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let currentUser = null;
