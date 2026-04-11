@@ -8,20 +8,19 @@
   <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  
   <style>
     :root { --primary: #213B82; --secondary: #E3E829; --dark: #2C3338; --light: #f4f7f6; --success: #28a745; }
     body { margin: 0; font-family: 'Inter', sans-serif; background: var(--light); color: var(--dark); overflow-x: hidden; }
     .hidden { display: none !important; }
     
-    /* Animation Loading Overlay */
+    /* Loading Overlay */
     #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
     .spinner { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    /* Layout & Sidebar */
+    /* Layout */
     .login-wrapper { position: fixed; top:0; left:0; width: 100vw; height: 100vh; background: var(--primary); display: flex; justify-content: center; align-items: center; z-index: 2000; }
-    .login-box { background: white; padding: 40px; border-radius: 8px; width: 100%; max-width: 350px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    .login-box { background: white; padding: 40px; border-radius: 8px; width: 100%; max-width: 350px; text-align: center; }
     #mainApp { display: flex; height: 100vh; width: 100vw; }
     .sidebar { width: 260px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
     .brand { padding: 20px; text-align: center; font-weight: bold; font-size: 20px; color: var(--primary); border-bottom: 1px solid #eee; }
@@ -29,30 +28,28 @@
     .nav-item { padding: 15px 20px; cursor: pointer; font-weight: 600; color: #555; transition: 0.2s; border-left: 4px solid transparent; }
     .nav-item:hover { background: #f0f4f8; color: var(--primary); border-left: 4px solid var(--primary); }
     .sub-item { padding: 10px 20px 10px 40px; cursor: pointer; font-size:14px; color: #666; transition: 0.2s; }
+    .sub-item:hover { color: var(--primary); background: #f9f9f9; }
+    .user-info { padding: 20px; border-top: 1px solid #eee; background: #fafafa; text-align: center; }
     .main-area { flex: 1; background: #f4f7f6; overflow-y: auto; padding: 30px; }
     .box-container { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom:25px; }
     
-    /* Stats & Filters */
+    /* Stats & Filter */
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 20px; }
-    .stat-card { background: white; padding: 20px; border-radius: 8px; border-left: 5px solid var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    .filter-panel { background: #eee; padding: 20px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+    .stat-card { background: white; padding: 15px; border-radius: 8px; border-left: 5px solid var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .filter-panel { background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
     
-    /* Form & Elements */
     .form-group { margin-bottom: 15px; }
     .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 13px; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
-    .btn { padding: 10px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+    .btn { padding: 10px 15px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 13px; }
     .btn-primary { background: var(--primary); color: white; }
-    .btn-secondary { background: var(--secondary); color: var(--dark); }
     .btn-success { background: var(--success); color: white; }
     .btn-danger { background: #dc3545; color: white; }
-
-    /* Table & Pagination */
-    table { width: 100%; border-collapse: collapse; font-size: 13px; background: white; }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
-    th { background: var(--primary); color: white; position: sticky; top: 0; }
-    .pagination { display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 20px; }
     
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: var(--primary); color: white; }
+    .pagination { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 15px; }
     #toast { position: fixed; bottom: -50px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 4px; transition: 0.3s; z-index: 3000; }
     #toast.show { bottom: 20px; }
   </style>
@@ -61,16 +58,16 @@
 
   <div id="loadingOverlay" class="hidden">
     <div class="spinner"></div>
-    <p style="margin-top: 15px; font-weight: bold; color: var(--primary);">Mohon Tunggu, Sedang Memproses...</p>
+    <p style="margin-top:15px; font-weight:bold; color:var(--primary);">Processing... Please wait.</p>
   </div>
 
   <div id="loginPage" class="login-wrapper">
     <div class="login-box">
       <h3>Portal K3 STM</h3>
-      <div id="loginError" style="color:#dc3545; font-size:13px; margin-bottom:10px;"></div>
+      <div id="loginError" style="color:#dc3545; font-size:12px; margin-bottom:10px;"></div>
       <div class="form-group"><label>Email</label><input type="email" id="email" value="admin@stm.com"></div>
       <div class="form-group"><label>Password</label><input type="password" id="password" value="admin123"></div>
-      <button class="btn btn-primary" id="btnLogin" onclick="doLogin()" style="width:100%">Login</button>
+      <button class="btn btn-primary" id="btnLogin" style="width:100%" onclick="doLogin()">Login</button>
     </div>
   </div>
 
@@ -82,20 +79,20 @@
         <div class="nav-item">📝 Input Data ▼</div>
         <div class="sub-item" onclick="switchPage('formInspection')">🔍 General Inspection</div>
         <div class="sub-item" onclick="switchPage('formHazard')">⚠️ Hazard Report</div>
-        <div class="nav-item" onclick="loadCarPage()" style="border-top:1px solid #eee;">📋 Corrective Action</div>
-        <div class="nav-item" onclick="loadSimperPage()">🪪 SIMPER Validity</div>
-        <div class="nav-item hidden" id="menuAdminUser" onclick="loadUserPage()" style="border-top:1px solid #eee; color:#dc3545;">👥 User Management</div>
+        <div class="nav-item" id="btnMenuCar" onclick="switchPage('carList')">📋 Corrective Action</div>
+        <div class="nav-item" id="btnMenuSimper" onclick="switchPage('simper')">🪪 SIMPER Validity</div>
+        <div class="nav-item hidden" id="menuAdminUser" onclick="switchPage('userMgmt')">👥 User Management</div>
       </div>
       <div class="user-info">
-        <div id="displayUser" style="font-weight:bold;">...</div>
-        <div id="displayLevel" style="font-size:11px; color:#666;">...</div>
-        <button class="btn-danger" style="width:100%; border:none; padding:5px; border-radius:4px; margin-top:5px; cursor:pointer;" onclick="location.reload()">Logout</button>
+        <div id="displayUser" style="font-weight:bold; font-size:14px;">...</div>
+        <div id="displayLevel" style="font-size:11px; color:#666; margin-bottom:10px;">...</div>
+        <button class="btn btn-danger" style="width:100%" onclick="location.reload()">Logout</button>
       </div>
     </div>
 
     <div class="main-area">
       <div id="page_dashboard" class="page-content">
-        <div class="box-container"><h2>Selamat Datang!</h2><p>Pilih menu di sebelah kiri untuk mengelola data Keselamatan Kerja.</p></div>
+        <div class="box-container"><h2>Dashboard</h2><p>Selamat bekerja. Silakan gunakan menu di samping.</p></div>
       </div>
 
       <div id="page_formInspection" class="page-content hidden">
@@ -106,13 +103,15 @@
             <div class="form-group"><label>Company:</label><select id="perusahaan" required></select></div>
             <div class="form-group"><label>Location:</label><select id="lokasi" onchange="updateSubLoc('lokasi','subLokasi')" required></select></div>
             <div class="form-group"><label>Sub Location:</label><select id="subLokasi" required></select></div>
-            <div class="form-group"><label>Temuan CAR?</label><select id="adaTemuan" onchange="togglePicaSection()" required><option value="">Pilih</option><option value="Yes">Yes</option><option value="No">No</option></select></div>
-            <div id="picaSection" class="hidden" style="background: #f9f9f9; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
-              <div class="form-group"><label>Foto Temuan (Wajib):</label><input type="file" id="imageFile" accept="image/*" onchange="previewImg(this, 'imgPrev')"><img id="imgPrev" src="" class="hidden" style="max-height:150px; margin-top:10px;"></div>
-              <div id="picaContainer"></div>
-              <button type="button" class="btn btn-secondary" onclick="addPica('picaContainer')">+ Tambah Item CAR</button>
+            <div class="form-group"><label>Ada Temuan CAR?</label>
+              <select id="adaTemuan" onchange="togglePicaSection()" required><option value="">Pilih</option><option value="Yes">Yes</option><option value="No">No</option></select>
             </div>
-            <button type="button" id="btnSubmitInsp" class="btn btn-primary" style="margin-top:20px;" onclick="submitInspection()">Kirim Laporan</button>
+            <div id="picaSection" class="hidden" style="background:#f9f9f9; padding:20px; border-radius:8px; border:1px solid #ddd;">
+              <div class="form-group"><label>Foto (Wajib):</label><input type="file" id="imageFile" accept="image/*" onchange="previewImg(this, 'imgPrev')"><img id="imgPrev" src="" class="hidden" style="max-height:150px; margin-top:10px;"></div>
+              <div id="picaContainer"></div>
+              <button type="button" class="btn btn-primary" onclick="addPica('picaContainer')">+ Tambah CAR</button>
+            </div>
+            <button type="button" class="btn btn-primary" style="margin-top:20px;" onclick="submitInspection()">Kirim</button>
           </form>
         </div>
       </div>
@@ -125,139 +124,116 @@
             <div class="form-group"><label>Sub Location:</label><select id="hSubLokasi" required></select></div>
             <div class="form-group"><label>Deskripsi Bahaya:</label><textarea id="hDesc" rows="3" required></textarea></div>
             <div class="form-group"><label>Foto (Wajib):</label><input type="file" id="hPhotoBefore" accept="image/*" onchange="previewImg(this, 'hPrevB')"><img id="hPrevB" src="" class="hidden" style="max-height:150px;"></div>
-            <div class="form-group"><label>Diatasi?</label><select id="hIsClosed" onchange="toggleHazardCAR()" required><option value="">Pilih</option><option value="Yes">Yes</option><option value="No">No (Butuh CAR)</option></select></div>
-            <div id="hCarSection" class="hidden" style="background: #f9f9f9; padding: 20px; border-radius: 8px; border: 1px solid #ddd;">
+            <div class="form-group"><label>Selesai Diatasi?</label><select id="hIsClosed" onchange="toggleHazardCAR()" required><option value="">Pilih</option><option value="Yes">Yes</option><option value="No">No (CAR)</option></select></div>
+            <div id="hCarSection" class="hidden" style="background:#f9f9f9; padding:20px; border-radius:8px; border:1px solid #ddd;">
               <div id="hPicaContainer"></div>
-              <button type="button" class="btn btn-secondary" onclick="addPica('hPicaContainer')">+ Tambah Item CAR</button>
+              <button type="button" class="btn btn-primary" onclick="addPica('hPicaContainer')">+ Tambah CAR</button>
             </div>
-            <button type="button" id="btnSubmitHazard" class="btn btn-primary" style="margin-top:20px;" onclick="submitHazard()">Kirim Hazard Report</button>
+            <button type="button" class="btn btn-primary" style="margin-top:20px;" onclick="submitHazard()">Kirim</button>
           </form>
         </div>
       </div>
 
       <div id="page_carList" class="page-content hidden">
         <div class="box-container">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <h2 style="color:var(--primary); margin:0;">Corrective Action Report</h2>
-            <button class="btn btn-success" onclick="exportCarToExcel()">📥 Export to Excel</button>
+            <button class="btn btn-success" onclick="exportCarToExcel()">📥 Export Excel</button>
           </div>
 
-          <div class="stats-grid" style="margin-top:20px;">
+          <div class="stats-grid">
             <div class="stat-card"><div>Total CAR</div><div id="statTotal" style="font-size:24px; font-weight:bold;">0</div></div>
-            <div class="stat-card" style="border-color: #28a745;"><div>Follow Up Rate</div><div id="statPercent" style="font-size:24px; font-weight:bold; color:#28a745;">0%</div></div>
+            <div class="stat-card" style="border-color:#28a745;"><div>Follow Up Rate</div><div id="statPercent" style="font-size:24px; font-weight:bold; color:#28a745;">0%</div></div>
           </div>
 
           <div class="filter-panel">
-            <div class="form-group"><label>Company:</label><select id="fCompany" onchange="updateCarTable()"><option value="">All</option></select></div>
-            <div class="form-group"><label>Status:</label><select id="fStatus" onchange="updateCarTable()"><option value="">All</option><option>Open</option><option>In Progress</option><option>Closed</option></select></div>
-            <div class="form-group"><label>Raised (Dari):</label><input type="date" id="fRaisedStart" onchange="updateCarTable()"></div>
-            <div class="form-group"><label>Raised (Sampai):</label><input type="date" id="fRaisedEnd" onchange="updateCarTable()"></div>
-            <div class="form-group"><label>Due (Dari):</label><input type="date" id="fDueStart" onchange="updateCarTable()"></div>
-            <div class="form-group"><label>Due (Sampai):</label><input type="date" id="fDueEnd" onchange="updateCarTable()"></div>
+            <div class="form-group"><label>Company</label><select id="fCompany" onchange="updateCarTable()"><option value="">All</option></select></div>
+            <div class="form-group"><label>Status</label><select id="fStatus" onchange="updateCarTable()"><option value="">All</option><option>Open</option><option>In Progress</option><option>Closed</option></select></div>
+            <div class="form-group"><label>Raised Start</label><input type="date" id="fRaisedStart" onchange="updateCarTable()"></div>
+            <div class="form-group"><label>Raised End</label><input type="date" id="fRaisedEnd" onchange="updateCarTable()"></div>
+            <div class="form-group"><label>Due Start</label><input type="date" id="fDueStart" onchange="updateCarTable()"></div>
+            <div class="form-group"><label>Due End</label><input type="date" id="fDueEnd" onchange="updateCarTable()"></div>
           </div>
 
           <div style="overflow-x: auto;">
             <table>
-              <thead><tr><th>ID CAR</th><th>Raised Date</th><th>PIC</th><th>Due Date</th><th>Status</th><th>Aksi</th></tr></thead>
+              <thead><tr><th>ID CAR</th><th>Raised</th><th>PIC</th><th>Due Date</th><th>Status</th><th>Aksi</th></tr></thead>
               <tbody id="carTableBody"></tbody>
             </table>
           </div>
-
           <div class="pagination">
-            <button class="btn btn-secondary" id="btnPrev" onclick="changePage(-1)">Sebelumnya</button>
+            <button class="btn btn-primary" id="btnPrev" onclick="changePage(-1)">Prev</button>
             <span id="pageInfo">Halaman 1</span>
-            <button class="btn btn-secondary" id="btnNext" onclick="changePage(1)">Selanjutnya</button>
+            <button class="btn btn-primary" id="btnNext" onclick="changePage(1)">Next</button>
           </div>
         </div>
       </div>
 
       <div id="page_simper" class="page-content hidden">
-         <div class="box-container">
-           <h2>SIMPER Validity</h2>
-           <form id="simperForm" style="background:#f9f9f9; padding:20px; border-radius:8px; border:1px solid #ddd; margin-bottom:20px;">
-             <div class="form-group"><label>Validity (%):</label><input type="number" id="simperValidity" required></div>
-             <div class="form-group"><label>File (PDF/Excel):</label><input type="file" id="simperFile" accept=".pdf,.xlsx,.xls" required></div>
-             <button type="button" id="btnSubmitSimper" class="btn btn-primary" onclick="submitSimper()">Submit</button>
-           </form>
-           <div style="overflow-x: auto;"><table><thead><tr><th>ID</th><th>Company</th><th>Score</th><th>Status</th><th>File</th></tr></thead><tbody id="simperTableBody"></tbody></table></div>
-         </div>
+        <div class="box-container">
+          <h2 style="color:var(--primary);">SIMPER Validity</h2>
+          <form id="simperForm" style="background:#f9f9f9; padding:20px; border-radius:8px; border:1px solid #ddd; margin-bottom:20px;">
+            <div class="form-group"><label>Validity (%):</label><input type="number" id="simperValidity" required></div>
+            <div class="form-group"><label>File:</label><input type="file" id="simperFile" accept=".pdf,.xlsx,.xls" required></div>
+            <button type="button" class="btn btn-primary" onclick="submitSimper()">Submit SIMPER</button>
+          </form>
+          <div style="overflow-x: auto;"><table><thead><tr><th>ID</th><th>Company</th><th>Score</th><th>Status</th><th>Aksi</th></tr></thead><tbody id="simperTableBody"></tbody></table></div>
+        </div>
       </div>
 
       <div id="page_userMgmt" class="page-content hidden">
-        <div class="box-container"><h2>User Management</h2><div style="overflow-x: auto;"><table><thead><tr><th>Email</th><th>Company</th><th>Level</th></tr></thead><tbody id="userTableBody"></tbody></table></div></div>
+        <div class="box-container"><h2>User Management</h2><table><thead><tr><th>Email</th><th>Company</th><th>Level</th></tr></thead><tbody id="userTableBody"></tbody></table></div>
       </div>
     </div>
   </div>
 
   <div id="carModal" class="modal-overlay hidden">
     <div style="background:white; width:90%; max-width:500px; padding:20px; border-radius:8px; max-height:90vh; overflow-y:auto;">
-      <h3 id="detCarCode" style="margin-top:0; color:var(--primary);"></h3>
+      <h3 id="detCarCode" style="color:var(--primary);"></h3>
       <img id="detImg" src="" style="width:100%; max-height:200px; object-fit:contain; background:#eee; margin-bottom:10px;">
       <p><strong>Finding:</strong> <span id="detFinding"></span></p>
-      <div id="fuForm" style="background:#f9f9f9; padding:15px; border:1px solid #ddd; border-radius:6px; margin-top:10px;">
+      <div style="background:#f9f9f9; padding:15px; border:1px solid #ddd; border-radius:6px;">
         <h4 style="margin-top:0;">Input Follow Up</h4>
         <div class="form-group"><label>Action Taken:</label><textarea id="fuAction" rows="2"></textarea></div>
-        <div class="form-group"><label>Evidence (Foto/PDF):</label><input type="file" id="fuFile"></div>
-        <button class="btn btn-primary" style="width:100%;" onclick="submitFU()">Submit & Close CAR</button>
+        <div class="form-group"><label>Evidence:</label><input type="file" id="fuFile"></div>
+        <button class="btn btn-primary" style="width:100%;" onclick="submitFU()">Submit & Close</button>
       </div>
-      <button class="btn btn-secondary" style="width:100%; margin-top:10px;" onclick="document.getElementById('carModal').classList.add('hidden')">Tutup</button>
+      <button class="btn btn-danger" style="width:100%; margin-top:10px;" onclick="document.getElementById('carModal').classList.add('hidden')">Close</button>
     </div>
   </div>
 
   <div id="toast">Memproses...</div>
 
   <script>
-    // KONFIGURASI SUPABASE
     const SUPABASE_URL = 'https://bzbdfxyjiainooxoopfq.supabase.co';
     const SUPABASE_ANON_KEY = 'sb_publishable_oj9lc25LX7qYmrRGLpNt2A_2ISYheVC';
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    
-    // URL WEB APP APPS SCRIPT ANDA
     const gasAPI = "https://script.google.com/macros/s/AKfycbz79Ba5eQcp12kJ1_4DtkCd6_H4HZQcvTbmjEv0jykcosSoBzLE9P5xY6A_9qWg3x73rg/exec";
 
     let currentUser = null, globalCompanies = [], globalLocs = [], uploadFiles = {};
-    let carMasterData = [], filteredCarData = [];
+    let carMasterData = [], filteredCarData = [], activeCar = null;
     let currentPage = 1, pageSize = 10;
 
-    // --- UTILS ---
     function setLoader(show) { document.getElementById('loadingOverlay').classList.toggle('hidden', !show); }
-    
-    function showToast(msg, type='success') {
-      const t = document.getElementById('toast');
-      t.innerText = msg; t.className = 'show';
-      t.style.background = type === 'success' ? '#28a745' : '#dc3545';
-      setTimeout(() => t.className = '', 4000);
-    }
-
-    function generate9ID(prefix) {
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-      let res = '';
-      const len = 9 - (prefix.length + 1);
-      for(let i=0; i<len; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
-      return (prefix + "-" + res).toUpperCase();
-    }
+    function showToast(msg, type='success') { const t = document.getElementById('toast'); t.innerText = msg; t.className = 'show'; t.style.background = type === 'success' ? '#28a745' : '#dc3545'; setTimeout(() => t.className = '', 4000); }
+    function generateID(pre) { const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let r = ''; for(let i=0; i<(9-pre.length-1); i++) r += c.charAt(Math.floor(Math.random()*c.length)); return (pre+"-"+r).toUpperCase(); }
 
     function switchPage(id) {
       document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
-      document.getElementById('page_' + id).classList.remove('hidden');
+      const target = document.getElementById('page_' + id);
+      if(target) target.classList.remove('hidden');
       if(id === 'carList') loadCarPage();
+      if(id === 'simper') loadSimperPage();
+      if(id === 'userMgmt') loadUserPage();
     }
 
-    function clearForm(formId, prevId) {
-      const f = document.getElementById(formId); if(f) f.reset();
-      if(prevId) { const i = document.getElementById(prevId); i.src=""; i.classList.add('hidden'); }
-      uploadFiles = {}; document.querySelectorAll('.pica-item').forEach(el => el.remove());
-      document.getElementById('tanggal').valueAsDate = new Date();
-    }
-
-    // --- AUTH ---
     async function doLogin() {
       const e = document.getElementById('email').value, p = document.getElementById('password').value;
       const btn = document.getElementById('btnLogin');
-      btn.innerText = "Authenticating..."; btn.disabled = true;
+      btn.innerText = "Checking..."; btn.disabled = true;
       try {
         const { data, error } = await supabaseClient.from('users').select('*').eq('email', e).eq('password', p).single();
-        if(error || !data) { document.getElementById('loginError').innerText = "Email/Password Salah!"; btn.innerText = "Login"; btn.disabled = false; }
+        if(error || !data) { document.getElementById('loginError').innerText = "Gagal Login!"; btn.disabled = false; btn.innerText="Login"; }
         else {
           currentUser = data;
           document.getElementById('loginPage').classList.add('hidden');
@@ -265,96 +241,65 @@
           document.getElementById('displayUser').innerText = currentUser.company;
           document.getElementById('displayLevel').innerText = currentUser.level;
           if(currentUser.level === "Admin") document.getElementById('menuAdminUser').classList.remove('hidden');
-          init(); switchPage('dashboard');
+          initData(); switchPage('dashboard');
         }
-      } catch(ex) { btn.innerText = "Login"; btn.disabled = false; }
+      } catch(x) { btn.disabled = false; }
     }
 
-    async function init() {
+    async function initData() {
       const { data: comps } = await supabaseClient.from('companies').select('*').eq('status', 'Active');
       const { data: locs } = await supabaseClient.from('locations').select('*').eq('status', 'Active');
       globalLocs = locs || [];
-      const cSel = document.getElementById('perusahaan');
-      const fComp = document.getElementById('fCompany');
+      const cSel = document.getElementById('perusahaan'), fComp = document.getElementById('fCompany');
       if(cSel) {
         cSel.innerHTML = '<option value="">Select Company</option>';
         fComp.innerHTML = '<option value="">All Companies</option>';
-        comps.forEach(c => { 
-            let n = c.company || c.name; 
-            cSel.innerHTML += `<option value="${n}">${n}</option>`; 
-            fComp.innerHTML += `<option value="${n}">${n}</option>`;
-            globalCompanies.push(n); 
-        });
+        comps.forEach(c => { let n = c.company || c.name; cSel.innerHTML += `<option value="${n}">${n}</option>`; fComp.innerHTML += `<option value="${n}">${n}</option>`; globalCompanies.push(n); });
         if(currentUser.level !== 'Admin') cSel.value = currentUser.company;
       }
       const lSel = document.getElementById('lokasi'), hlSel = document.getElementById('hLokasi');
       const locNames = [...new Set(globalLocs.map(l => l.lokasi_utama || l.location || l.lokasi))];
-      locNames.forEach(l => { 
-        if(lSel) lSel.innerHTML += `<option value="${l}">${l}</option>`;
-        if(hlSel) hlSel.innerHTML += `<option value="${l}">${l}</option>`;
-      });
+      locNames.forEach(l => { if(lSel) lSel.innerHTML += `<option value="${l}">${l}</option>`; if(hlSel) hlSel.innerHTML += `<option value="${l}">${l}</option>`; });
       document.getElementById('tanggal').valueAsDate = new Date();
     }
 
-    function updateSubLoc(locId, subId) {
-      const val = document.getElementById(locId).value, sub = document.getElementById(subId);
-      sub.innerHTML = '<option value="">Select Sub Location</option>';
-      globalLocs.filter(i => (i.lokasi_utama || i.location || i.lokasi) === val).forEach(i => {
-        let n = i.sub_lokasi || i.sub_location || i.sublokasi;
-        sub.innerHTML += `<option value="${n}">${n}</option>`;
-      });
+    function updateSubLoc(lid, sid) {
+      const v = document.getElementById(lid).value, s = document.getElementById(sid);
+      s.innerHTML = '<option value="">Select Sub</option>';
+      globalLocs.filter(i => (i.lokasi_utama || i.location || i.lokasi) === v).forEach(i => { let n = i.sub_lokasi || i.sub_location || i.sublokasi; s.innerHTML += `<option value="${n}">${n}</option>`; });
     }
 
-    // --- UPLOAD DRIVE ---
-    async function uploadToDrive(file, prefix, folderType) {
+    async function uploadToDrive(file, pre, type) {
       if(!file) return null;
-      const base64 = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.readAsDataURL(file); });
-      const uniqueName = generate9ID(prefix) + "." + file.name.split('.').pop();
-      const payload = { fileName: uniqueName, mimeType: file.type, base64: base64, folderType: folderType };
-      const response = await fetch(gasAPI, { method: "POST", body: JSON.stringify(payload) });
-      const resJSON = await response.json();
-      if(resJSON.status === "success") return resJSON.url;
-      throw new Error("Upload Failed");
+      const b64 = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.readAsDataURL(file); });
+      const name = generateID(pre) + "." + file.name.split('.').pop();
+      const res = await fetch(gasAPI, { method: "POST", body: JSON.stringify({ fileName: name, mimeType: file.type, base64: b64, folderType: type }) });
+      const json = await res.json();
+      if(json.status === "success") return json.url;
+      throw new Error("Upload Gagal");
     }
 
-    function previewImg(input, imgId) {
-      if (input.files[0]) {
-        uploadFiles[input.id] = input.files[0];
-        const prev = document.getElementById(imgId);
-        prev.src = URL.createObjectURL(input.files[0]);
-        prev.classList.remove('hidden');
-      }
-    }
-
-    // --- FORM LOGIC ---
+    function previewImg(input, id) { if(input.files[0]) { uploadFiles[input.id] = input.files[0]; const p = document.getElementById(id); p.src = URL.createObjectURL(input.files[0]); p.classList.remove('hidden'); } }
     function togglePicaSection() { document.getElementById('picaSection').classList.toggle('hidden', document.getElementById('adaTemuan').value !== "Yes"); if(document.getElementById('picaContainer').children.length === 0) addPica('picaContainer'); }
     function toggleHazardCAR() { document.getElementById('hCarSection').classList.toggle('hidden', document.getElementById('hIsClosed').value !== "No"); if(document.getElementById('hPicaContainer').children.length === 0) addPica('hPicaContainer'); }
 
-    function addPica(containerId) {
-      let opts = '<option value="">Select PIC</option>' + globalCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
-      let div = document.createElement('div'); div.className = 'pica-item';
-      div.style = "margin-top:10px; padding:15px; background:#fff; border:1px solid #ddd; border-radius:6px;";
-      div.innerHTML = `
-        <div class="form-group"><label>Finding:</label><textarea class="pf" rows="2" required></textarea></div>
-        <div class="form-group"><label>PIC Responsible:</label><select class="ppic" required>${opts}</select></div>
-        <div class="form-group"><label>Due Date:</label><input type="date" class="pd" required></div>
-        <button type="button" class="btn-danger" style="width:100%;" onclick="this.parentElement.remove()">Hapus</button>
-      `;
-      document.getElementById(containerId).appendChild(div);
+    function addPica(cid) {
+      let opt = '<option value="">PIC</option>' + globalCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
+      let d = document.createElement('div'); d.className = 'pica-item'; d.style = "margin-top:10px; padding:10px; background:#fff; border:1px solid #ddd; border-radius:6px;";
+      d.innerHTML = `<div class="form-group"><label>Finding:</label><textarea class="pf" required></textarea></div><div class="form-group"><label>PIC:</label><select class="ppic" required>${opt}</select></div><div class="form-group"><label>Due Date:</label><input type="date" class="pd" required></div><button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">Hapus</button>`;
+      document.getElementById(cid).appendChild(d);
     }
 
     async function submitInspection() {
-      const isT = document.getElementById('adaTemuan').value;
-      setLoader(true);
+      const isT = document.getElementById('adaTemuan').value; setLoader(true);
       try {
         let url = null; if(isT === "Yes") url = await uploadToDrive(uploadFiles['imageFile'], "IN", "finding_images");
-        const id = generate9ID("IN");
-        await supabaseClient.from('inspections').insert([{ id: id, date: document.getElementById('tanggal').value, company: document.getElementById('perusahaan').value, has_finding: isT }]);
+        await supabaseClient.from('inspections').insert([{ id: generateID("IN"), date: document.getElementById('tanggal').value, company: document.getElementById('perusahaan').value, has_finding: isT }]);
         if(isT === "Yes") {
-          const cars = Array.from(document.querySelectorAll('#picaContainer > .pica-item')).map(el => ({ car_code: generate9ID("CAR"), finding: el.querySelector('.pf').value, pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value, status: "Open", image_url: url, date_raised: new Date() }));
+          const cars = Array.from(document.querySelectorAll('#picaContainer > .pica-item')).map(el => ({ car_code: generateID("CAR"), finding: el.querySelector('.pf').value, pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value, status: "Open", image_url: url, date_raised: new Date() }));
           await supabaseClient.from('car_reports').insert(cars);
         }
-        showToast("Inspeksi Berhasil!"); clearForm('mainForm', 'imgPrev');
+        showToast("Tersimpan!"); location.reload();
       } catch(e) { showToast("Gagal!", "error"); } finally { setLoader(false); }
     }
 
@@ -362,148 +307,98 @@
       setLoader(true);
       try {
         const url = await uploadToDrive(uploadFiles['hPhotoBefore'], "HZ", "finding_images");
-        await supabaseClient.from('hazard_reports').insert([{ id: generate9ID("HZD"), date: new Date(), reporter: currentUser.email, photo_before: url, description: document.getElementById('hDesc').value }]);
+        await supabaseClient.from('hazard_reports').insert([{ id: generateID("HZD"), date: new Date(), reporter: currentUser.email, photo_before: url, description: document.getElementById('hDesc').value }]);
         if(document.getElementById('hIsClosed').value === "No") {
-          const cars = Array.from(document.querySelectorAll('#hPicaContainer > .pica-item')).map(el => ({ car_code: generate9ID("CAR"), finding: el.querySelector('.pf').value, pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value, status: "Open", image_url: url, date_raised: new Date() }));
+          const cars = Array.from(document.querySelectorAll('#hPicaContainer > .pica-item')).map(el => ({ car_code: generateID("CAR"), finding: el.querySelector('.pf').value, pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value, status: "Open", image_url: url, date_raised: new Date() }));
           await supabaseClient.from('car_reports').insert(cars);
         }
-        showToast("Hazard Report Berhasil!"); clearForm('hazardForm', 'hPrevB');
+        showToast("Tersimpan!"); location.reload();
       } catch(e) { showToast("Gagal!", "error"); } finally { setLoader(false); }
     }
 
-    // --- CAR MANAGEMENT (FILTER & PAGINATION) ---
     async function loadCarPage() {
       setLoader(true);
-      const { data, error } = await supabaseClient.from('car_reports').select('*').order('date_raised', { ascending: false });
-      setLoader(false);
-      if(error) return showToast("Gagal muat data", "error");
-      carMasterData = data || [];
-      updateCarTable();
+      const { data } = await supabaseClient.from('car_reports').select('*').order('date_raised', { ascending: false });
+      carMasterData = data || []; updateCarTable(); setLoader(false);
     }
 
     function updateCarTable() {
-      const fComp = document.getElementById('fCompany').value;
-      const fStat = document.getElementById('fStatus').value;
-      const dRStart = document.getElementById('fRaisedStart').value;
-      const dREnd = document.getElementById('fRaisedEnd').value;
-      const dDStart = document.getElementById('fDueStart').value;
-      const dDEnd = document.getElementById('fDueEnd').value;
+      const fc = document.getElementById('fCompany').value, fs = document.getElementById('fStatus').value;
+      const drs = document.getElementById('fRaisedStart').value, dre = document.getElementById('fRaisedEnd').value;
+      const dds = document.getElementById('fDueStart').value, dde = document.getElementById('fDueEnd').value;
 
       filteredCarData = carMasterData.filter(c => {
-        let match = true;
-        if(fComp && c.pic !== fComp) match = false;
-        if(fStat && c.status !== fStat) match = false;
-        if(dRStart && new Date(c.date_raised) < new Date(dRStart)) match = false;
-        if(dREnd && new Date(c.date_raised) > new Date(dREnd)) match = false;
-        if(dDStart && new Date(c.due_date) < new Date(dDStart)) match = false;
-        if(dDEnd && new Date(c.due_date) > new Date(dDEnd)) match = false;
-        return match;
+        let m = true;
+        if(fc && c.pic !== fc) m = false;
+        if(fs && c.status !== fs) m = false;
+        if(drs && new Date(c.date_raised) < new Date(drs)) m = false;
+        if(dre && new Date(c.date_raised) > new Date(dre)) m = false;
+        if(dds && new Date(c.due_date) < new Date(dds)) m = false;
+        if(dde && new Date(c.due_date) > new Date(dde)) m = false;
+        return m;
       });
 
-      // Update Stats
-      const total = filteredCarData.length;
-      const closed = filteredCarData.filter(c => c.status === 'Closed').length;
-      const percent = total === 0 ? 0 : Math.round((closed / total) * 100);
-      document.getElementById('statTotal').innerText = total;
-      document.getElementById('statPercent').innerText = percent + "%";
-
-      currentPage = 1;
-      renderTable();
+      document.getElementById('statTotal').innerText = filteredCarData.length;
+      const closed = filteredCarData.filter(x => x.status === 'Closed').length;
+      document.getElementById('statPercent').innerText = (filteredCarData.length === 0 ? 0 : Math.round((closed / filteredCarData.length) * 100)) + "%";
+      currentPage = 1; renderCarRows();
     }
 
-    function renderTable() {
-      const start = (currentPage - 1) * pageSize;
-      const end = start + pageSize;
-      const paginatedData = filteredCarData.slice(start, end);
-      
+    function renderCarRows() {
+      const start = (currentPage - 1) * pageSize, data = filteredCarData.slice(start, start + pageSize);
       let html = "";
-      paginatedData.forEach(c => {
-        html += `<tr>
-          <td>${c.car_code}</td>
-          <td>${new Date(c.date_raised).toLocaleDateString()}</td>
-          <td>${c.pic}</td>
-          <td>${c.due_date}</td>
-          <td style="font-weight:bold; color:${c.status==='Closed'?'green':'red'}">${c.status}</td>
-          <td><button class="btn btn-primary" style="padding:4px 8px; font-size:11px;" onclick="openCarDetail('${c.car_code}')">View</button></td>
-        </tr>`;
-      });
-      document.getElementById('carTableBody').innerHTML = html || '<tr><td colspan="6" style="text-align:center;">Tidak ada data ditemukan</td></tr>';
-      
-      document.getElementById('pageInfo').innerText = `Halaman ${currentPage} dari ${Math.ceil(filteredCarData.length / pageSize) || 1}`;
+      data.forEach(c => { html += `<tr><td>${c.car_code}</td><td>${new Date(c.date_raised).toLocaleDateString()}</td><td>${c.pic}</td><td>${c.due_date}</td><td>${c.status}</td><td><button class="btn btn-primary" onclick="openCarDetail('${c.car_code}')">View</button></td></tr>`; });
+      document.getElementById('carTableBody').innerHTML = html || '<tr><td colspan="6">No Data</td></tr>';
+      document.getElementById('pageInfo').innerText = `Hal ${currentPage} / ${Math.ceil(filteredCarData.length / pageSize) || 1}`;
       document.getElementById('btnPrev').disabled = currentPage === 1;
-      document.getElementById('btnNext').disabled = end >= filteredCarData.length;
+      document.getElementById('btnNext').disabled = start + pageSize >= filteredCarData.length;
     }
 
-    function changePage(step) {
-      currentPage += step;
-      renderTable();
-    }
+    function changePage(s) { currentPage += s; renderCarRows(); }
 
     function openCarDetail(code) {
-      const c = carMasterData.find(x => x.car_code === code);
-      activeCar = c;
-      document.getElementById('detCarCode').innerText = "Detail " + code;
-      document.getElementById('detImg').src = c.image_url;
-      document.getElementById('detFinding').innerText = c.finding;
+      activeCar = carMasterData.find(x => x.car_code === code);
+      document.getElementById('detCarCode').innerText = code;
+      document.getElementById('detImg').src = activeCar.image_url;
+      document.getElementById('detFinding').innerText = activeCar.finding;
       document.getElementById('carModal').classList.remove('hidden');
     }
 
     async function submitFU() {
       setLoader(true);
       try {
-        const file = document.getElementById('fuFile').files[0];
-        const url = await uploadToDrive(file, "FU", "followup_images");
+        const url = await uploadToDrive(document.getElementById('fuFile').files[0], "FU", "followup_images");
         await supabaseClient.from('car_followups').insert([{ car_code: activeCar.car_code, action_taken: document.getElementById('fuAction').value, file_url: url, action_date: new Date() }]);
         await supabaseClient.from('car_reports').update({ status: 'Closed' }).eq('car_code', activeCar.car_code);
-        showToast("CAR Closed!"); document.getElementById('carModal').classList.add('hidden'); loadCarPage();
-      } catch(e) { showToast("Gagal!", "error"); } finally { setLoader(false); }
+        showToast("Closed!"); location.reload();
+      } catch(e) { showToast("Gagal!"); } finally { setLoader(false); }
     }
 
-    // --- EXCEL EXPORT (SEMUA DATA FILTERED) ---
     function exportCarToExcel() {
-      if(filteredCarData.length === 0) return alert("Tidak ada data untuk diexport!");
-      
-      const dataToExport = filteredCarData.map(c => ({
-        "ID CAR": c.car_code,
-        "Raised Date": new Date(c.date_raised).toLocaleDateString(),
-        "PIC": c.pic,
-        "Due Date": c.due_date,
-        "Status": c.status,
-        "Finding Detail": c.finding,
-        "Image Link": c.image_url
-      }));
-
-      const ws = XLSX.utils.json_to_sheet(dataToExport);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "CAR_Reports");
-      XLSX.writeFile(wb, `CAR_Report_${new Date().toLocaleDateString()}.xlsx`);
+      const data = filteredCarData.map(c => ({ "ID CAR": c.car_code, "Raised": c.date_raised, "PIC": c.pic, "Due": c.due_date, "Status": c.status, "Finding": c.finding }));
+      const ws = XLSX.utils.json_to_sheet(data), wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "CAR"); XLSX.writeFile(wb, "CAR_Report.xlsx");
     }
 
-    // --- SIMPER VALIDITY ---
     async function loadSimperPage() {
       const { data } = await supabaseClient.from('simper_validity').select('*').order('id', { ascending: false });
-      let html = "";
-      (data || []).forEach(d => {
-        html += `<tr><td>${d.id}</td><td>${d.company}</td><td>${d.validity_score}%</td><td>${d.status}</td><td><a href="${d.file_url}" target="_blank">File</a></td></tr>`;
-      });
+      let html = ""; (data || []).forEach(d => { html += `<tr><td>${d.id}</td><td>${d.company}</td><td>${d.validity_score}%</td><td>${d.status}</td><td><a href="${d.file_url}" target="_blank">File</a></td></tr>`; });
       document.getElementById('simperTableBody').innerHTML = html;
     }
 
     async function submitSimper() {
       setLoader(true);
       try {
-        const f = document.getElementById('simperFile').files[0];
-        const url = await uploadToDrive(f, "SMP", "simper_docs");
-        await supabaseClient.from('simper_validity').insert([{ id: generate9ID("SMP"), company: currentUser.company, validity_score: document.getElementById('simperValidity').value, file_url: url, status: "Pending" }]);
-        showToast("SIMPER Terkirim!"); clearForm('simperForm', null); loadSimperPage();
-      } catch(e) { showToast("Gagal!", "error"); } finally { setLoader(false); }
+        const url = await uploadToDrive(document.getElementById('simperFile').files[0], "SMP", "simper_docs");
+        await supabaseClient.from('simper_validity').insert([{ id: generateID("SMP"), company: currentUser.company, validity_score: document.getElementById('simperValidity').value, file_url: url, status: "Pending" }]);
+        showToast("Terkirim!"); location.reload();
+      } catch(e) { showToast("Gagal!"); } finally { setLoader(false); }
     }
 
     async function loadUserPage() {
       const { data } = await supabaseClient.from('users').select('*');
-      let html = "";
-      (data || []).forEach(u => { html += `<tr><td>${u.email}</td><td>${u.company}</td><td>${u.level}</td></tr>`; });
-      document.getElementById('userTableBody').innerHTML = html;
+      let h = ""; (data || []).forEach(u => { h += `<tr><td>${u.email}</td><td>${u.company}</td><td>${u.level}</td></tr>`; });
+      document.getElementById('userTableBody').innerHTML = h;
     }
   </script>
 </body>
