@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal K3 - Web App Mandiri</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root { --primary: #213B82; --secondary: #E3E829; --dark: #2C3338; --light: #f4f7f6; }
+    body { margin: 0; font-family: 'Inter', sans-serif; background: var(--light); color: var(--dark); overflow-x: hidden; }
+    .hidden { display: none !important; }
+    
+    /* Login Screen */
+    .login-wrapper { position: fixed; top:0; left:0; width: 100vw; height: 100vh; background: var(--primary); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+    .login-box { background: white; padding: 40px; border-radius: 8px; width: 100%; max-width: 350px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    .login-box h3 { color: var(--primary); margin-bottom: 20px; }
+    
+    /* Layout & Sidebar */
+    #mainApp { display: flex; height: 100vh; width: 100vw; }
+    .sidebar { width: 250px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; }
+    .brand { padding: 20px; text-align: center; font-weight: bold; font-size: 20px; color: var(--primary); border-bottom: 1px solid #eee; }
+    .nav-menu { flex: 1; padding: 10px 0; overflow-y: auto; }
+    .nav-item { padding: 15px 20px; cursor: pointer; font-weight: 600; color: #555; transition: 0.2s; }
+    .nav-item:hover { background: #f0f4f8; color: var(--primary); }
+    .user-info { padding: 20px; border-top: 1px solid #eee; background: #fafafa; text-align: center; }
+    .user-info button { background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; }
+    
+    /* Main Content */
+    .main-area { flex: 1; background: #f4f7f6; overflow-y: auto; padding: 30px; }
+    .box-container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin: 0 auto; max-width: 1000px; }
+    
+    /* Form & Buttons */
+    .form-group { margin-bottom: 15px; text-align: left; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; box-sizing: border-box; }
+    .btn { padding: 10px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; display: inline-block; text-align: center; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-secondary { background: var(--secondary); color: var(--dark); }
+    .btn-danger { background: #dc3545; color: white; padding: 5px 10px; font-size: 12px; }
+    
+    /* Table */
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+    th { background: var(--primary); color: white; }
+    
+    #toast { position: fixed; bottom: -50px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 12px 24px; border-radius: 4px; transition: 0.3s; z-index: 3000; font-weight: bold; }
+    #toast.show { bottom: 20px; }
+    #toast.success { background: #28a745; }
+    #toast.error { background: #dc3545; }
+  </style>
+</head>
+<body>
+
+  <script>
+    const SUPABASE_URL = 'MASUKKAN_URL_SUPABASE_ANDA';
+    const SUPABASE_ANON_KEY = 'MASUKKAN_ANON_KEY_SUPABASE_ANDA';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  </script>
+
+  <div id="loginPage" class="login-wrapper">
+    <div class="login-box">
+      <h3>Portal K3</h3>
+      <div id="loginError" style="color:red; font-size:13px; font-weight:bold; margin-bottom:10px;"></div>
+      <div class="form-group"><label>Email</label><input type="email" id="email" value="admin@stm.com"></div>
+      <div class="form-group"><label>Password</label><input type="password" id="password" value="admin123"></div>
+      <button class="btn btn-primary" id="btnLogin" onclick="doLogin()" style="width:100%">Login</button>
+    </div>
+  </div>
+
+  <div id="mainApp" class="hidden">
+    <div class="sidebar">
+      <div class="brand">Portal K3 STM</div>
+      <div class="nav-menu">
+        <div class="nav-item" onclick="switchPage('formInspection')">🔍 Input General Inspection</div>
+        <div class="nav-item" onclick="loadCarPage()">📋 Laporan CAR</div>
+      </div>
+      <div class="user-info">
+        <div id="displayUser" style="font-weight:bold;">...</div>
+        <div id="displayLevel" style="margin-bottom:10px; font-size:13px; color:#666;">...</div>
+        <button onclick="location.reload()">Logout</button>
+      </div>
+    </div>
+
+    <div class="main-area">
+      <div id="page_formInspection" class="page-content">
+        <div class="box-container">
+          <h2 style="color:var(--primary); border-bottom:2px solid #eee; padding-bottom:10px;">General Inspection</h2>
+          <form id="mainForm">
+            <div class="form-group"><label>Tanggal:</label><input type="date" id="tanggal" required></div>
+            <div class="form-group"><label>Company:</label><select id="perusahaan" required></select></div>
+            <div class="form-group"><label>Inspection Type:</label><select id="tipeInspeksi" required></select></div>
+            <div class="form-group"><label>Location:</label><select id="lokasi" required></select></div>
+            
+            <div style="border-top: 2px dashed #ccc; margin: 30px 0;"></div>
+            <div class="form-group">
+              <label>Apakah ada temuan bahaya (CAR)?</label>
+              <select id="adaTemuan" onchange="togglePicaSection()" required><option value="">Pilih</option><option value="Yes">Yes</option><option value="No">No</option></select>
+            </div>
+
+            <div id="picaSection" class="hidden" style="background: #fdfdfd; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+              <h3 style="margin-top:0; color:#dc3545;">Detail CAR</h3>
+              <div class="form-group">
+                <label>Foto Temuan <span style="color:red;">(Wajib)</span>:</label>
+                <input type="file" id="imageFile" accept="image/*" onchange="previewImg(this)">
+                <img id="imagePreview" src="" class="hidden" style="max-height:150px; margin-top:10px; border-radius:4px;">
+              </div>
+              <div id="picaContainer"></div>
+              <button type="button" class="btn btn-secondary" onclick="addPica()" style="margin-top:10px;">+ Tambah Item CAR</button>
+            </div>
+            <button type="button" class="btn btn-primary" style="margin-top:30px;" id="submitBtn" onclick="submitData()">Kirim Laporan</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="page_carList" class="page-content hidden">
+        <div class="box-container">
+          <h2 style="margin-top:0; color:var(--primary);">Corrective Action Report</h2>
+          <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+            <button class="btn btn-secondary" onclick="exportTableToExcel()">📥 Export Excel</button>
+            <button class="btn btn-primary" onclick="loadCarPage()">🔄 Refresh Data</button>
+          </div>
+          <div style="overflow-x: auto;">
+            <table>
+              <thead><tr><th>No CAR</th><th>Tgl Dilaporkan</th><th>PIC</th><th>Due Date</th><th>Status</th><th>Aksi</th></tr></thead>
+              <tbody id="carTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="carModal" class="hidden" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.8); z-index:1000; display:flex; justify-content:center; align-items:center;">
+    <div style="background:white; width:95%; max-width:500px; border-radius:8px; padding:20px;">
+      <h3 style="margin-top:0;">Detail CAR: <span id="detCarCode"></span></h3>
+      <img id="detImg" src="" style="width:100%; max-height:200px; object-fit:contain; background:#eee; margin-bottom:10px;">
+      <p><strong>Finding:</strong> <span id="detFinding"></span></p>
+      <p><strong>Action Plan:</strong> <span id="detAction"></span></p>
+      <p><strong>Status:</strong> <span id="detStatus" style="font-weight:bold; color:var(--primary);"></span></p>
+      
+      <div id="fuForm" class="hidden" style="background:#f9f9f9; padding:15px; border-radius:4px; margin-top:15px; border:1px solid #ddd;">
+          <h4 style="margin-top:0;">Input Follow Up</h4>
+          <div class="form-group"><label>Action Taken:</label><textarea id="fuAction" rows="2"></textarea></div>
+          <div class="form-group"><label>Evidence (Foto/PDF):</label><input type="file" id="fuFile"></div>
+          <button class="btn btn-primary" id="btnSubmitFU" onclick="submitFU()">Submit Follow Up</button>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:15px;">
+        <button id="btnTampilkanFU" class="btn btn-secondary" style="flex:1;" onclick="document.getElementById('fuForm').classList.remove('hidden')">Lakukan Follow Up</button>
+        <button class="btn btn-danger" style="flex:1;" onclick="document.getElementById('carModal').classList.add('hidden')">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast">Memproses...</div>
+
+  <script>
+    let currentUser = null;
+    let globalCompanies = [];
+    let allCarData = [];
+    let activeCar = null;
+    let fileToUpload = null; // Menyimpan file mentah
+
+    document.getElementById('tanggal').valueAsDate = new Date();
+
+    function showToast(msg, type='success') {
+      const t = document.getElementById('toast');
+      t.innerText = msg;
+      t.className = `show ${type}`;
+      setTimeout(() => t.className = '', 4000);
+    }
+
+    function switchPage(id) {
+      document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
+      document.getElementById('page_' + id).classList.remove('hidden');
+    }
+
+    // 1. FUNGSI LOGIN (Tarik dari tabel users Supabase)
+    async function doLogin() {
+      const e = document.getElementById('email').value;
+      const p = document.getElementById('password').value;
+      const btn = document.getElementById('btnLogin');
+      btn.innerText = "Authenticating...";
+
+      const { data, error } = await supabase.from('users').select('*').eq('email', e).eq('password', p).single();
+      
+      if (error || !data) {
+        document.getElementById('loginError').innerText = "Email atau Password Salah!";
+        btn.innerText = "Login";
+      } else {
+        currentUser = data;
+        document.getElementById('loginPage').classList.add('hidden');
+        document.getElementById('mainApp').classList.remove('hidden');
+        document.getElementById('displayUser').innerText = currentUser.company;
+        document.getElementById('displayLevel').innerText = currentUser.level;
+        loadDropdowns();
+      }
+    }
+
+    // 2. LOAD REFERENSI (Tarik dari tabel Supabase)
+    async function loadDropdowns() {
+      const { data: comps } = await supabase.from('companies').select('name').eq('status', 'Active');
+      const { data: locs } = await supabase.from('locations').select('lokasi_utama').eq('status', 'Active');
+      const { data: types } = await supabase.from('inspection_types').select('name').eq('status', 'Active');
+
+      const cSel = document.getElementById('perusahaan');
+      cSel.innerHTML = '<option value="">Select Company</option>';
+      comps.forEach(c => { cSel.innerHTML += `<option value="${c.name}">${c.name}</option>`; globalCompanies.push(c.name); });
+      if(currentUser.level !== 'Admin') cSel.value = currentUser.company;
+
+      const lSel = document.getElementById('lokasi');
+      lSel.innerHTML = '<option value="">Select Location</option>';
+      [...new Set(locs.map(l => l.lokasi_utama))].forEach(l => lSel.innerHTML += `<option value="${l}">${l}</option>`);
+
+      const tSel = document.getElementById('tipeInspeksi');
+      tSel.innerHTML = '<option value="">Select Type</option>';
+      types.forEach(t => tSel.innerHTML += `<option value="${t.name}">${t.name}</option>`);
+    }
+
+    // 3. FUNGSI UI CAR FORM
+    function togglePicaSection() {
+      const isTemuan = document.getElementById('adaTemuan').value;
+      const sec = document.getElementById('picaSection');
+      if (isTemuan === "Yes") { sec.classList.remove('hidden'); if(document.getElementById('picaContainer').children.length === 0) addPica(); } 
+      else { sec.classList.add('hidden'); document.getElementById('picaContainer').innerHTML = ""; fileToUpload = null; document.getElementById('imagePreview').classList.add('hidden'); }
+    }
+
+    function addPica() {
+      let opts = '<option value="">Select PIC</option>' + globalCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
+      let div = document.createElement('div'); div.style = "margin-top:15px; padding-top:15px; border-top:1px solid #ddd;";
+      div.innerHTML = `
+        <label>Finding:</label><input type="text" class="pf" required>
+        <label>Action Plan:</label><input type="text" class="pa" required>
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1"><label>PIC:</label><select class="ppic" required>${opts}</select></div>
+          <div style="flex:1"><label>Due Date:</label><input type="date" class="pd" required></div>
+        </div>
+      `;
+      document.getElementById('picaContainer').appendChild(div);
+    }
+
+    function previewImg(input) {
+      fileToUpload = input.files[0];
+      if (fileToUpload) {
+        document.getElementById('imagePreview').src = URL.createObjectURL(fileToUpload);
+        document.getElementById('imagePreview').classList.remove('hidden');
+      }
+    }
+
+    // 4. UPLOAD FOTO KE SUPABASE STORAGE
+    async function uploadImageToSupabase(file, prefix) {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${prefix}_${Date.now()}.${fileExt}`;
+      const { data, error } = await supabase.storage.from('pica_images').upload(fileName, file);
+      if (error) throw error;
+      const { data: pubData } = supabase.storage.from('pica_images').getPublicUrl(fileName);
+      return pubData.publicUrl;
+    }
+
+    // 5. SIMPAN DATA KE DATABASE SUPABASE
+    async function submitData() {
+      const form = document.getElementById('mainForm');
+      const isTemuan = document.getElementById('adaTemuan').value;
+      if(!form.checkValidity()) return form.reportValidity();
+      if(isTemuan === "Yes" && !fileToUpload) return alert("Wajib lampirkan foto temuan!");
+
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = true; btn.innerText = "Mengirim Data...";
+      showToast("Sedang memproses data...", "success");
+
+      try {
+        const inspId = "IN-" + Math.floor(Math.random() * 900000);
+        let imageUrl = null;
+
+        // Jika ada temuan, upload foto dulu
+        if (isTemuan === "Yes") {
+           imageUrl = await uploadImageToSupabase(fileToUpload, "CAR");
+        }
+
+        // Insert ke tabel Inspeksi
+        await supabase.from('inspections').insert([{
+          id: inspId, date: document.getElementById('tanggal').value, company: document.getElementById('perusahaan').value,
+          type: document.getElementById('tipeInspeksi').value, location: document.getElementById('lokasi').value, has_finding: isTemuan
+        }]);
+
+        // Insert ke tabel CAR
+        if (isTemuan === "Yes") {
+          const items = document.querySelectorAll('#picaContainer > div');
+          const carPayload = Array.from(items).map(el => ({
+            car_code: "CAR-" + Math.floor(Math.random() * 900000),
+            source: "Inspection", finding: el.querySelector('.pf').value, action_plan: el.querySelector('.pa').value,
+            pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value, status: "Open",
+            image_url: imageUrl, inspection_code: inspId, date_raised: new Date()
+          }));
+          await supabase.from('car_reports').insert(carPayload);
+        }
+
+        showToast("Data Berhasil Disimpan!", "success");
+        form.reset(); fileToUpload = null; document.getElementById('imagePreview').classList.add('hidden'); togglePicaSection();
+      } catch (err) {
+        showToast("Error: " + err.message, "error");
+      } finally {
+        btn.disabled = false; btn.innerText = "Kirim Laporan";
+      }
+    }
+
+    // 6. LOAD & RENDER TABEL CAR DARI SUPABASE
+    async function loadCarPage() {
+      switchPage('carList');
+      document.getElementById('carTableBody').innerHTML = '<tr><td colspan="6" style="text-align:center;">Menarik Data...</td></tr>';
+      
+      let query = supabase.from('car_reports').select('*').order('date_raised', { ascending: false });
+      // Filter level user
+      if (currentUser.level !== 'Admin') { query = query.eq('pic', currentUser.company); }
+
+      const { data, error } = await query;
+      if (error) { showToast("Error memuat CAR", "error"); return; }
+      
+      allCarData = data;
+      let html = "";
+      data.forEach(c => {
+        let color = c.status === "Closed" ? "green" : "red";
+        html += `<tr>
+          <td><b>${c.car_code}</b></td><td>${c.date_raised}</td><td>${c.pic}</td><td>${c.due_date}</td>
+          <td style="color:${color}; font-weight:bold;">${c.status}</td>
+          <td><button class="btn btn-secondary" onclick="openCarDetail('${c.car_code}')">View</button></td>
+        </tr>`;
+      });
+      document.getElementById('carTableBody').innerHTML = html || '<tr><td colspan="6">Tidak ada data CAR</td></tr>';
+    }
+
+    // 7. DETAIL CAR & FOLLOW UP
+    function openCarDetail(code) {
+      activeCar = allCarData.find(c => c.car_code === code);
+      document.getElementById('detCarCode').innerText = activeCar.car_code;
+      document.getElementById('detFinding').innerText = activeCar.finding;
+      document.getElementById('detAction').innerText = activeCar.action_plan;
+      document.getElementById('detStatus').innerText = activeCar.status;
+      
+      const img = document.getElementById('detImg');
+      if(activeCar.image_url) { img.src = activeCar.image_url; img.classList.remove('hidden'); } else { img.classList.add('hidden'); }
+
+      document.getElementById('fuForm').classList.add('hidden');
+      document.getElementById('btnTampilkanFU').style.display = (activeCar.status === "Closed") ? "none" : "block";
+      document.getElementById('carModal').classList.remove('hidden');
+    }
+
+    async function submitFU() {
+      const act = document.getElementById('fuAction').value;
+      const fileInp = document.getElementById('fuFile').files[0];
+      if(!act || !fileInp) return alert("Isi Action dan pilih file Bukti!");
+
+      const btn = document.getElementById('btnSubmitFU');
+      btn.innerText = "Uploading..."; btn.disabled = true;
+
+      try {
+        const fileUrl = await uploadImageToSupabase(fileInp, "FU");
+        
+        // Simpan log Follow Up
+        await supabase.from('car_followups').insert([{ car_code: activeCar.car_code, action_taken: act, action_date: new Date(), file_url: fileUrl }]);
+        
+        // Update Status CAR jadi Closed
+        await supabase.from('car_reports').update({ status: 'Closed' }).eq('car_code', activeCar.car_code);
+
+        showToast("CAR Berhasil Ditutup!", "success");
+        document.getElementById('carModal').classList.add('hidden');
+        loadCarPage(); // Refresh tabel
+      } catch (err) {
+        showToast("Gagal FU: " + err.message, "error");
+      } finally {
+        btn.innerText = "Submit Follow Up"; btn.disabled = false;
+      }
+    }
+
+    // 8. FUNGSI EXPORT EXCEL
+    function exportTableToExcel() {
+      const expData = [["No CAR", "Raised Date", "PIC", "Due Date", "Status", "Finding", "Action Plan"]];
+      allCarData.forEach(r => expData.push([r.car_code, r.date_raised, r.pic, r.due_date, r.status, r.finding, r.action_plan]));
+      const wb = XLSX.utils.book_new(), ws = XLSX.utils.aoa_to_sheet(expData);
+      XLSX.utils.book_append_sheet(wb, ws, "CAR Report");
+      XLSX.writeFile(wb, "Report_CAR_Supabase.xlsx");
+    }
+  </script>
+</body>
+</html>
