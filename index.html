@@ -170,12 +170,17 @@
 
   <div id="toast">Memproses...</div>
 
-  <script>
-    const SUPABASE_URL = 'https://bzbdfxyjiainooxoopfq.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_oj9lc25LX7qYmrRGLpNt2A_2ISYheVC';
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const gasAPI = "https://script.google.com/macros/s/AKfycbz79Ba5eQcp12kJ1_4DtkCd6_H4HZQcvTbmjEv0jykcosSoBzLE9P5xY6A_9qWg3x73rg/exec";
+  <script src="config.js"></script>
 
+<script>
+    // Sekarang variabel mengambil data dari CONFIG di file terpisah
+    const SUPABASE_URL = CONFIG.SUPABASE_URL;
+    const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const gasAPI = CONFIG.GAS_API;
+
+    // ... sisanya kode logika aplikasi tetap sama ...
+</script>
     let currentUser = null, globalCompanies = [], globalLocs = [], uploadFiles = {};
     let carMasterData = [], activeCarId = null;
 
