@@ -263,12 +263,8 @@
   <div id="toast">Memproses...</div>
 
   <script>
-// 1. URL HARUS menggunakan https:// dan diakhiri .supabase.co
     const SUPABASE_URL = 'https://bzbdfxyjiainooxoopfq.supabase.co';
-    
-    // 2. ANON KEY menggunakan kunci sb_publishable Anda
     const SUPABASE_ANON_KEY = 'sb_publishable_oj9lc25LX7qYmrRGLpNt2A_2ISYheVC';
-    
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     let currentUser = null;
@@ -375,14 +371,15 @@
       }
     }
 
-    // --- 2. UPLOAD FILE ---
-    async function uploadToSupabase(file, prefix) {
+    // --- 2. UPLOAD FILE DENGAN BUCKET DINAMIS ---
+    // Diperbarui agar menerima parameter nama bucket (folder) yang spesifik
+    async function uploadToSupabase(file, prefix, targetBucket) {
       if(!file) return null;
       const fileExt = file.name.split('.').pop();
       const fileName = `${prefix}_${Date.now()}.${fileExt}`;
-      const { data, error } = await supabaseClient.storage.from('pica_images').upload(fileName, file);
+      const { data, error } = await supabaseClient.storage.from(targetBucket).upload(fileName, file);
       if (error) throw error;
-      const { data: pubData } = supabaseClient.storage.from('pica_images').getPublicUrl(fileName);
+      const { data: pubData } = supabaseClient.storage.from(targetBucket).getPublicUrl(fileName);
       return pubData.publicUrl;
     }
 
@@ -448,7 +445,9 @@
       try {
         const inspId = "IN-" + Math.floor(Math.random() * 900000);
         let imageUrl = null;
-        if (isTemuan === "Yes") imageUrl = await uploadToSupabase(uploadFiles['imageFile'], "INSP");
+        
+        // PENGGUNAAN BUCKET: finding_images
+        if (isTemuan === "Yes") imageUrl = await uploadToSupabase(uploadFiles['imageFile'], "INSP", "finding_images");
 
         await supabaseClient.from('inspections').insert([{
           id: inspId, date: document.getElementById('tanggal').value, company: document.getElementById('perusahaan').value,
@@ -477,8 +476,10 @@
       const btn = document.getElementById('btnSubmitHazard'); btn.disabled = true; btn.innerText = "Processing...";
       try {
         const hId = "HZD-" + Math.floor(Math.random() * 900000);
-        const urlB = await uploadToSupabase(uploadFiles['hPhotoBefore'], "HZD_B");
-        const urlA = uploadFiles['hPhotoAfter'] ? await uploadToSupabase(uploadFiles['hPhotoAfter'], "HZD_A") : null;
+        
+        // PENGGUNAAN BUCKET: finding_images
+        const urlB = await uploadToSupabase(uploadFiles['hPhotoBefore'], "HZD_B", "finding_images");
+        const urlA = uploadFiles['hPhotoAfter'] ? await uploadToSupabase(uploadFiles['hPhotoAfter'], "HZD_A", "finding_images") : null;
 
         await supabaseClient.from('hazard_reports').insert([{
           id: hId, date: new Date(), reporter: currentUser.email, company: currentUser.company,
@@ -540,7 +541,9 @@
 
       const btn = document.getElementById('btnSubmitFU'); btn.innerText = "Uploading..."; btn.disabled = true;
       try {
-        const fileUrl = await uploadToSupabase(fileInp, "FU");
+        // PENGGUNAAN BUCKET: followup_images
+        const fileUrl = await uploadToSupabase(fileInp, "FU", "followup_images");
+        
         await supabaseClient.from('car_followups').insert([{ car_code: activeCar.car_code, action_taken: act, action_date: new Date(), file_url: fileUrl }]);
         await supabaseClient.from('car_reports').update({ status: 'Closed' }).eq('car_code', activeCar.car_code);
 
@@ -576,7 +579,9 @@
       if(!val || !file) return alert("Lengkapi data!");
       const btn = document.getElementById('btnSubmitSimper'); btn.disabled = true; btn.innerText = "Uploading...";
       try {
-        const url = await uploadToSupabase(file, "SMP");
+        // PENGGUNAAN BUCKET: simper_docs
+        const url = await uploadToSupabase(file, "SMP", "simper_docs");
+        
         await supabaseClient.from('simper_validity').insert([{ id: "SMP-"+Math.floor(Math.random()*900000), upload_date: new Date(), user_email: currentUser.email, company: currentUser.company, file_url: url, validity_score: val, status: "Pending" }]);
         showToast("SIMPER Terkirim!"); document.getElementById('simperValidity').value = ""; document.getElementById('simperFile').value = ""; loadSimperPage();
       } catch (err) { showToast("Gagal: " + err.message, "error"); } finally { btn.disabled = false; btn.innerText = "Kirim Laporan"; }
