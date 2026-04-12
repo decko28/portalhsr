@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>HSR Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ============================================================
@@ -498,7 +499,7 @@ tbody tr:hover { background: var(--surface2); }
 <body>
 
 <!-- ══ LOADING ══ -->
-<div id="loadingOverlay">
+<div id="loadingOverlay" class="hidden">
   <div class="spinner"></div>
 </div>
 <div id="toast"></div>
@@ -650,6 +651,48 @@ tbody tr:hover { background: var(--surface2); }
         </div>
         <div class="form-row">
           <div class="form-group">
+            <label class="form-label">Tipe Hazard</label>
+            <select id="hType" class="form-input">
+              <option value="">Pilih Tipe</option>
+              <option value="Unsafe Act">Unsafe Act</option>
+              <option value="Unsafe Condition">Unsafe Condition</option>
+              <option value="Near Miss">Near Miss</option>
+              <option value="Incident">Incident</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kategori</label>
+            <select id="hCategory" class="form-input">
+              <option value="">Pilih Kategori</option>
+              <option value="Electrical">Electrical</option>
+              <option value="Mechanical">Mechanical</option>
+              <option value="Chemical">Chemical</option>
+              <option value="Ergonomic">Ergonomic</option>
+              <option value="Fire">Fire</option>
+              <option value="Working at Height">Working at Height</option>
+              <option value="Housekeeping">Housekeeping</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Risk Level</label>
+            <select id="hRiskLevel" class="form-input">
+              <option value="">Pilih Risk Level</option>
+              <option value="Low">🟢 Low</option>
+              <option value="Medium">🟡 Medium</option>
+              <option value="High">🔴 High</option>
+              <option value="Critical">⛔ Critical</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Immediate Action</label>
+            <input id="hImmediateAction" type="text" class="form-input" placeholder="Tindakan langsung yang sudah diambil..."/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
             <label class="form-label">Lokasi</label>
             <select id="hLokasi" class="form-input" onchange="updateSubLoc('hLokasi','hSubLokasi')"></select>
           </div>
@@ -658,14 +701,25 @@ tbody tr:hover { background: var(--surface2); }
             <select id="hSubLokasi" class="form-input"></select>
           </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Foto Hazard (Wajib)</label>
-          <div class="file-drop">
-            <input type="file" accept="image/*" id="hPhotoBefore" onchange="previewImg(this,'prevHazardImg')"/>
-            <div class="file-drop-icon">📸</div>
-            <div class="file-drop-text">Klik atau drag foto ke sini<br><strong>JPG, PNG, WebP</strong></div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Foto Before (Wajib)</label>
+            <div class="file-drop">
+              <input type="file" accept="image/*" id="hPhotoBefore" onchange="previewImg(this,'prevHazardImg')"/>
+              <div class="file-drop-icon">📸</div>
+              <div class="file-drop-text">Foto kondisi bahaya<br><strong>JPG, PNG, WebP</strong></div>
+            </div>
+            <img id="prevHazardImg" class="preview-img hidden"/>
           </div>
-          <img id="prevHazardImg" class="preview-img hidden"/>
+          <div class="form-group">
+            <label class="form-label">Foto After (Opsional)</label>
+            <div class="file-drop">
+              <input type="file" accept="image/*" id="hPhotoAfter" onchange="previewImg(this,'prevHazardAfterImg')"/>
+              <div class="file-drop-icon">📷</div>
+              <div class="file-drop-text">Foto setelah perbaikan<br><strong>JPG, PNG, WebP</strong></div>
+            </div>
+            <img id="prevHazardAfterImg" class="preview-img hidden"/>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Status Selesai?</label>
@@ -992,7 +1046,7 @@ tbody tr:hover { background: var(--surface2); }
 const SUPABASE_URL = CONFIG.SUPABASE_URL;
 const SUPABASE_KEY = CONFIG.SUPABASE_ANON_KEY;
 const GAS_API      = CONFIG.GAS_API;
-const SIMPER_THRESHOLD = 80; // persen
+const SIMPER_THRESHOLD = 80;
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -1124,8 +1178,8 @@ async function initData() {
   const sfEl = document.getElementById('sfCompany');
   if (sfEl) sfEl.innerHTML = allCompOption;
 
-  // Locations
-  const locNames = [...new Set(globalLocs.map(l => l.location || l.lokasi))];
+  // Locations — DB pakai kolom 'lokasi' dan 'sub_lokasi'
+  const locNames = [...new Set(globalLocs.map(l => l.lokasi).filter(Boolean))];
   const locOpts  = '<option value="">Pilih Lokasi</option>' +
     locNames.map(l => `<option value="${l}">${l}</option>`).join('');
   ['lokasi','hLokasi'].forEach(id => {
@@ -1206,8 +1260,9 @@ function updateSubLoc(locId, subId) {
   const v = document.getElementById(locId).value;
   const s = document.getElementById(subId);
   s.innerHTML = '<option value="">Pilih Sub Lokasi</option>';
-  globalLocs.filter(i => (i.location || i.lokasi) === v)
-    .forEach(i => { s.innerHTML += `<option value="${i.sub_location}">${i.sub_location}</option>`; });
+  // DB pakai kolom 'lokasi' dan 'sub_lokasi'
+  globalLocs.filter(i => i.lokasi === v)
+    .forEach(i => { s.innerHTML += `<option value="${i.sub_lokasi}">${i.sub_lokasi}</option>`; });
 }
 
 /* ══ ADD PICA ITEM ══ */
@@ -1223,6 +1278,10 @@ function addPica(containerId) {
     <div class="form-group">
       <label class="form-label">Finding / Temuan</label>
       <input type="text" class="form-input pf" placeholder="Deskripsi temuan..."/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Action Plan</label>
+      <input type="text" class="form-input pap" placeholder="Rencana tindakan perbaikan..."/>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -1253,8 +1312,7 @@ async function submitInspection() {
       location: document.getElementById('lokasi').value,
       sub_location: document.getElementById('subLokasi').value,
       has_finding: isT,
-      image_url: url,
-      submitted_by: currentUser.email
+      image_url: url
     }]);
     if (error) throw error;
 
@@ -1262,14 +1320,16 @@ async function submitInspection() {
       const items = Array.from(document.querySelectorAll('#picaContainer > .pica-item'));
       if (items.length === 0) { showToast('Tambah minimal 1 CAR item!', 'error'); return; }
       const cars = items.map(el => ({
-        car_code: generateID('CAR'),
-        finding:  el.querySelector('.pf').value,
-        pic:      el.querySelector('.ppic').value,
-        due_date: el.querySelector('.pd').value,
-        status:   'Open',
-        image_url: url,
+        car_code:    generateID('CAR'),
+        finding:     el.querySelector('.pf').value,
+        action_plan: el.querySelector('.pap').value,
+        pic:         el.querySelector('.ppic').value,
+        due_date:    el.querySelector('.pd').value,
+        status:      'Open',
+        image_url:   url,
         inspection_code: insCode,
-        company:  document.getElementById('perusahaan').value,
+        source:      insCode,
+        company:     document.getElementById('perusahaan').value,
         date_raised: new Date().toISOString()
       }));
       await supabaseClient.from('car_reports').insert(cars);
@@ -1286,24 +1346,35 @@ async function submitInspection() {
 
 /* ══ SUBMIT HAZARD ══ */
 async function submitHazard() {
-  if (!uploadFiles['hPhotoBefore']) return showToast('Foto wajib diupload!', 'error');
+  if (!uploadFiles['hPhotoBefore']) return showToast('Foto Before wajib diupload!', 'error');
   const desc = document.getElementById('hDesc').value.trim();
   if (!desc) return showToast('Deskripsi hazard wajib diisi!', 'error');
   setLoader(true);
   try {
-    const url  = await uploadToDrive(uploadFiles['hPhotoBefore'], 'HZ', 'finding_images');
-    const hzId = generateID('HZD');
+    const urlBefore = await uploadToDrive(uploadFiles['hPhotoBefore'], 'HZ', 'finding_images');
+    let urlAfter = null;
+    if (uploadFiles['hPhotoAfter']) {
+      urlAfter = await uploadToDrive(uploadFiles['hPhotoAfter'], 'HZA', 'finding_images');
+    }
+
+    const hzId     = generateID('HZD');
     const isClosed = document.getElementById('hIsClosed').value === 'Yes';
+
     const { error } = await supabaseClient.from('hazard_reports').insert([{
-      id: hzId,
-      date: new Date().toISOString(),
-      reporter: currentUser.email,
-      company:  currentUser.company,
-      location: document.getElementById('hLokasi').value,
-      sub_location: document.getElementById('hSubLokasi').value,
-      photo_before: url,
-      description: desc,
-      status: isClosed ? 'Closed' : 'Open'
+      id:               hzId,
+      date:             new Date().toISOString(),
+      reporter:         currentUser.email,
+      company:          currentUser.company,
+      location:         document.getElementById('hLokasi').value,
+      sub_location:     document.getElementById('hSubLokasi').value,
+      type:             document.getElementById('hType').value,
+      category:         document.getElementById('hCategory').value,
+      risk_level:       document.getElementById('hRiskLevel').value,
+      immediate_action: document.getElementById('hImmediateAction').value,
+      description:      desc,
+      photo_before:     urlBefore,
+      photo_after:      urlAfter,
+      status:           isClosed ? 'Closed' : 'Open'
     }]);
     if (error) throw error;
 
@@ -1311,14 +1382,15 @@ async function submitHazard() {
       const items = Array.from(document.querySelectorAll('#hPicaContainer > .pica-item'));
       if (items.length === 0) { showToast('Tambah minimal 1 CAR item!', 'error'); return; }
       const cars = items.map(el => ({
-        car_code:   generateID('CAR'),
-        finding:    el.querySelector('.pf').value,
-        pic:        el.querySelector('.ppic').value,
-        due_date:   el.querySelector('.pd').value,
-        status:     'Open',
-        image_url:  url,
-        company:    currentUser.company,
-        source:     hzId,
+        car_code:    generateID('CAR'),
+        finding:     el.querySelector('.pf').value,
+        action_plan: el.querySelector('.pap').value,
+        pic:         el.querySelector('.ppic').value,
+        due_date:    el.querySelector('.pd').value,
+        status:      'Open',
+        image_url:   urlBefore,
+        company:     currentUser.company,
+        source:      hzId,
         date_raised: new Date().toISOString()
       }));
       await supabaseClient.from('car_reports').insert(cars);
@@ -1478,7 +1550,8 @@ function updateScorePreview() {
 async function loadSimperPage() {
   setLoader(true);
   try {
-    let query = supabaseClient.from('simper').select('*').order('submitted_at', { ascending: false });
+    // Tabel di DB: simper_validity, sort by upload_date
+    let query = supabaseClient.from('simper_validity').select('*').order('upload_date', { ascending: false });
 
     if (!['Admin','Superadmin'].includes(currentUser.level)) {
       query = query.eq('company', currentUser.company);
@@ -1524,7 +1597,9 @@ function renderSimperTable() {
   const isAdmin = ['Admin','Superadmin'].includes(currentUser.level);
 
   tbody.innerHTML = filtered.map(s => {
-    const submitted = s.submitted_at ? new Date(s.submitted_at).toLocaleDateString('id-ID') : '—';
+    // DB kolom: upload_date, validity_score, user_email
+    const submitted = s.upload_date ? new Date(s.upload_date).toLocaleDateString('id-ID') : '—';
+    const score     = parseFloat(s.validity_score) || 0;
     const status    = s.status || 'Pending';
     const barColor  = status === 'Valid' ? 'var(--teal)' : status === 'Tidak Valid' ? 'var(--red)' : 'var(--amber)';
     return `<tr>
@@ -1533,9 +1608,9 @@ function renderSimperTable() {
       <td>${s.period || '—'}</td>
       <td>
         <div style="display:flex; align-items:center; gap:8px;">
-          <strong style="font-family:'Syne',sans-serif">${s.score}%</strong>
+          <strong style="font-family:'Syne',sans-serif">${score}%</strong>
           <div class="score-bar-wrap" style="width:60px; margin:0;">
-            <div class="score-bar-fill" style="width:${s.score}%; background:${barColor}"></div>
+            <div class="score-bar-fill" style="width:${score}%; background:${barColor}"></div>
           </div>
         </div>
       </td>
@@ -1549,7 +1624,7 @@ function renderSimperTable() {
 }
 
 async function submitSimper() {
-  const company = document.getElementById('sCompany').value;  // dari hidden input, sudah di-lock
+  const company = document.getElementById('sCompany').value;
   const period  = document.getElementById('sPeriod').value;
   const score   = parseFloat(document.getElementById('sScore').value);
 
@@ -1565,16 +1640,17 @@ async function submitSimper() {
     }
 
     const simId = generateID('SIM');
-    const { error } = await supabaseClient.from('simper').insert([{
-      id:           simId,
-      company:      company,
-      period:       period,
-      score:        score,
-      status:       'Pending',      // ← selalu Pending, admin yang konfirmasi
-      admin_note:   null,
-      file_url:     fileUrl,
-      submitted_by: currentUser.email,
-      submitted_at: new Date().toISOString()
+    // Tabel: simper_validity | Kolom: validity_score, upload_date, user_email
+    const { error } = await supabaseClient.from('simper_validity').insert([{
+      id:             simId,
+      company:        company,
+      period:         period,
+      validity_score: score,
+      status:         'Pending',
+      admin_note:     null,
+      file_url:       fileUrl,
+      user_email:     currentUser.email,
+      upload_date:    new Date().toISOString()
     }]);
     if (error) throw error;
 
@@ -1598,24 +1674,26 @@ function openSimperDetail(id) {
   const s = simperMasterData.find(x => x.id === id);
   activeSimperModalId = id;
 
+  // Pakai nama kolom DB: validity_score, user_email, upload_date
+  const score = parseFloat(s.validity_score) || 0;
+
   document.getElementById('sdId').innerText          = s.id;
   document.getElementById('sdCompany').innerText     = s.company || '—';
   document.getElementById('sdPeriod').innerText      = s.period || '—';
-  document.getElementById('sdSubmittedBy').innerText = s.submitted_by || '—';
-  document.getElementById('sdScore').innerText       = s.score;
+  document.getElementById('sdSubmittedBy').innerText = s.user_email || '—';
+  document.getElementById('sdScore').innerText       = score;
 
   const status   = s.status || 'Pending';
-  const barColor = status === 'Valid' ? 'linear-gradient(90deg,var(--teal),#22d3ee)'
+  const barColor = status === 'Valid'       ? 'linear-gradient(90deg,var(--teal),#22d3ee)'
                  : status === 'Tidak Valid' ? 'linear-gradient(90deg,var(--red),#f97316)'
-                 : 'linear-gradient(90deg,var(--amber),#fbbf24)';
-  document.getElementById('sdBar').style.width      = s.score + '%';
+                 :                           'linear-gradient(90deg,var(--amber),#fbbf24)';
+  document.getElementById('sdBar').style.width      = score + '%';
   document.getElementById('sdBar').style.background = barColor;
 
   const badge = document.getElementById('sdBadge');
   badge.className = 'badge ' + (status === 'Valid' ? 'badge-valid' : status === 'Tidak Valid' ? 'badge-invalid' : 'badge-pending');
   badge.innerText = status;
 
-  // File rekap
   const fileSection = document.getElementById('sdFileSection');
   if (s.file_url) {
     fileSection.style.display = '';
@@ -1624,7 +1702,6 @@ function openSimperDetail(id) {
     fileSection.style.display = 'none';
   }
 
-  // Admin note display
   const noteDisplay = document.getElementById('sdNoteDisplay');
   if (s.admin_note) {
     noteDisplay.style.display = '';
@@ -1633,7 +1710,6 @@ function openSimperDetail(id) {
     noteDisplay.style.display = 'none';
   }
 
-  // Admin section — hanya untuk Admin/Superadmin
   const adminSection = document.getElementById('sdAdminSection');
   if (['Admin','Superadmin'].includes(currentUser.level)) {
     adminSection.style.display = '';
@@ -1653,7 +1729,7 @@ async function submitSimperStatus() {
   if (!newStatus) return showToast('Pilih status!', 'error');
   setLoader(true);
   try {
-    const { error } = await supabaseClient.from('simper')
+    const { error } = await supabaseClient.from('simper_validity')
       .update({ status: newStatus, admin_note: note || null })
       .eq('id', activeSimperModalId);
     if (error) throw error;
@@ -1721,11 +1797,17 @@ function clearInspectionForm() {
 
 function clearHazardForm() {
   document.getElementById('hDesc').value = '';
+  document.getElementById('hType').value = '';
+  document.getElementById('hCategory').value = '';
+  document.getElementById('hRiskLevel').value = '';
+  document.getElementById('hImmediateAction').value = '';
   document.getElementById('hIsClosed').value = '';
   document.getElementById('hCarSection').style.display = 'none';
   document.getElementById('hPicaContainer').innerHTML = '';
   document.getElementById('prevHazardImg').classList.add('hidden');
+  document.getElementById('prevHazardAfterImg').classList.add('hidden');
   delete uploadFiles['hPhotoBefore'];
+  delete uploadFiles['hPhotoAfter'];
 }
 </script>
 </body>
