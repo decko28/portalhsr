@@ -989,9 +989,9 @@ tbody tr:hover { background: var(--surface2); }
 /* ══════════════════════════════════════════════════════
    SUPABASE INIT — ganti dengan credentials Anda
 ══════════════════════════════════════════════════════ */
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
-const GAS_API      = 'YOUR_GAS_API_URL';
+const SUPABASE_URL = CONFIG.SUPABASE_URL;
+const SUPABASE_KEY = CONFIG.SUPABASE_ANON_KEY;
+const GAS_API      = CONFIG.GAS_API;
 const SIMPER_THRESHOLD = 80; // persen
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
