@@ -1,337 +1,1732 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portal HSR STM</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    :root { --primary: #213B82; --secondary: #E3E829; --dark: #2C3338; --light: #f4f7f6; --success: #28a745; }
-    body { margin: 0; font-family: 'Inter', sans-serif; background: var(--light); color: var(--dark); overflow-x: hidden; }
-    .hidden { display: none !important; }
-    
-    /* Loading Overlay */
-    #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
-    .spinner { width: 50px; height: 50px; border: 5px solid #f3f3f3; border-top: 5px solid var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HSR Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+/* ============================================================
+   DESIGN SYSTEM — Industrial Safety meets Clean Data
+   Palette: Deep teal + Amber accent + Off-white
+   Font: Syne (display) + DM Sans (body)
+   ============================================================ */
+:root {
+  --bg:        #0d1117;
+  --surface:   #161b22;
+  --surface2:  #1f2730;
+  --border:    #2d3748;
+  --teal:      #0ea5a0;
+  --teal-dim:  #0a7a76;
+  --amber:     #f59e0b;
+  --amber-dim: #d97706;
+  --red:       #ef4444;
+  --green:     #22c55e;
+  --text:      #e2e8f0;
+  --muted:     #8b9ab0;
+  --white:     #ffffff;
+  --radius:    12px;
+  --radius-sm: 8px;
+  --shadow:    0 4px 24px rgba(0,0,0,0.4);
+  --glow-teal: 0 0 20px rgba(14,165,160,0.25);
+}
 
-    /* Layout & Sidebar */
-    #mainApp { display: flex; height: 100vh; width: 100vw; }
-    .sidebar { width: 260px; background: white; border-right: 1px solid #ddd; display: flex; flex-direction: column; z-index: 100; }
-    .brand { padding: 25px; text-align: center; font-weight: bold; font-size: 22px; color: var(--primary); border-bottom: 1px solid #eee; }
-    .nav-menu { flex: 1; padding: 15px 0; overflow-y: auto; }
-    .nav-item { padding: 15px 25px; cursor: pointer; font-weight: 600; color: #555; display: block; border-left: 4px solid transparent; text-decoration: none; }
-    .nav-item:hover { background: #f0f4f8; color: var(--primary); border-left: 4px solid var(--primary); }
-    .sub-menu { background: #fafafa; padding-bottom: 10px; }
-    .sub-item { padding: 12px 25px 12px 50px; cursor: pointer; font-size: 14px; color: #666; display: block; }
-    .user-info { padding: 20px; border-top: 1px solid #eee; background: #fafafa; }
-    
-    .main-area { flex: 1; background: #f4f7f6; overflow-y: auto; padding: 35px; position: relative; }
-    .box-container { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; }
-    
-    /* Form */
-    .form-group { margin-bottom: 20px; }
-    .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; }
-    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
-    
-    .btn { padding: 12px 24px; border: none; border-radius: 6px; font-weight: 700; cursor: pointer; transition: 0.3s; }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-danger { background: #dc3545; color: white; }
-    
-    /* Modal Pop-up Tengah */
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 2000; }
-    .modal-box { background: white; width: 90%; max-width: 550px; padding: 30px; border-radius: 12px; max-height: 90vh; overflow-y: auto; }
-    
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
-    th { background: #f8f9fa; color: var(--primary); }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    #toast { position: fixed; bottom: -60px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 15px 30px; border-radius: 50px; transition: 0.4s; z-index: 3000; }
-    #toast.show { bottom: 30px; }
-  </style>
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ── LOADING OVERLAY ── */
+#loadingOverlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(13,17,23,0.88);
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+#loadingOverlay.hidden { display: none; }
+.spinner {
+  width: 48px; height: 48px;
+  border: 3px solid var(--border);
+  border-top-color: var(--teal);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── TOAST ── */
+#toast {
+  position: fixed; bottom: 28px; right: 28px; z-index: 9998;
+  padding: 14px 22px; border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+  color: #fff; box-shadow: var(--shadow);
+  transform: translateY(80px); opacity: 0;
+  transition: all 0.35s cubic-bezier(.175,.885,.32,1.275);
+  pointer-events: none;
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+
+/* ============================================================
+   LOGIN PAGE
+   ============================================================ */
+#loginPage {
+  min-height: 100vh;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  background: radial-gradient(ellipse at 30% 20%, rgba(14,165,160,0.12) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 80%, rgba(245,158,11,0.08) 0%, transparent 50%),
+              var(--bg);
+}
+.login-card {
+  width: 100%; max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 48px 40px;
+  box-shadow: var(--shadow), var(--glow-teal);
+  animation: slideUp 0.5s ease;
+}
+@keyframes slideUp {
+  from { opacity:0; transform: translateY(24px); }
+  to   { opacity:1; transform: translateY(0); }
+}
+.login-logo {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 36px;
+}
+.login-logo-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  background: linear-gradient(135deg, var(--teal), var(--teal-dim));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.login-logo-text {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px; font-weight: 800;
+  color: var(--white);
+  letter-spacing: -0.5px;
+}
+.login-logo-text span { color: var(--teal); }
+.login-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px; font-weight: 700;
+  color: var(--white); margin-bottom: 6px;
+}
+.login-sub { color: var(--muted); font-size: 14px; margin-bottom: 32px; }
+.form-group { margin-bottom: 18px; }
+.form-label {
+  display: block; font-size: 12px; font-weight: 500;
+  color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px;
+  margin-bottom: 8px;
+}
+.form-input {
+  width: 100%; padding: 13px 16px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 15px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+.form-input:focus {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 3px rgba(14,165,160,0.15);
+}
+.form-input::placeholder { color: var(--muted); }
+.btn-primary {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, var(--teal), var(--teal-dim));
+  color: #fff; border: none; border-radius: var(--radius-sm);
+  font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 600;
+  cursor: pointer; letter-spacing: 0.3px;
+  transition: opacity 0.2s, transform 0.15s;
+  margin-top: 8px;
+}
+.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); }
+.login-error {
+  color: var(--red); font-size: 13px; margin-top: 12px;
+  text-align: center; min-height: 20px;
+}
+
+/* ============================================================
+   MAIN APP LAYOUT
+   ============================================================ */
+#mainApp { display: flex; min-height: 100vh; }
+#mainApp.hidden { display: none; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 260px; flex-shrink: 0;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0;
+  z-index: 100; transition: transform 0.3s;
+}
+.sidebar-header {
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebar-logo {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 20px;
+}
+.sidebar-logo-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: linear-gradient(135deg, var(--teal), var(--teal-dim));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+.sidebar-logo-text {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px; font-weight: 800;
+  color: var(--white); letter-spacing: -0.3px;
+}
+.sidebar-logo-text span { color: var(--teal); }
+.user-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+.user-card-name {
+  font-weight: 600; font-size: 13px; color: var(--white);
+  margin-bottom: 2px;
+}
+.user-card-badge {
+  display: inline-block;
+  background: rgba(14,165,160,0.15);
+  color: var(--teal);
+  font-size: 11px; font-weight: 500;
+  padding: 2px 8px; border-radius: 20px;
+  border: 1px solid rgba(14,165,160,0.3);
+}
+
+.sidebar-nav { flex: 1; padding: 16px 12px; overflow-y: auto; }
+.nav-section-label {
+  font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 1.2px; color: var(--muted);
+  padding: 0 8px; margin: 16px 0 6px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: var(--radius-sm);
+  color: var(--muted); font-size: 14px; font-weight: 400;
+  cursor: pointer; transition: all 0.18s;
+  margin-bottom: 2px; border: 1px solid transparent;
+}
+.nav-item:hover { background: var(--surface2); color: var(--text); }
+.nav-item.active {
+  background: rgba(14,165,160,0.12);
+  color: var(--teal); font-weight: 500;
+  border-color: rgba(14,165,160,0.2);
+}
+.nav-item-icon { font-size: 16px; width: 20px; text-align: center; }
+
+.sidebar-footer {
+  padding: 16px 12px;
+  border-top: 1px solid var(--border);
+}
+.btn-logout {
+  width: 100%; padding: 10px 12px;
+  background: transparent; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--muted);
+  font-family: 'DM Sans', sans-serif; font-size: 13px;
+  cursor: pointer; transition: all 0.18s;
+  display: flex; align-items: center; gap: 8px; justify-content: center;
+}
+.btn-logout:hover {
+  border-color: var(--red); color: var(--red);
+  background: rgba(239,68,68,0.08);
+}
+
+/* ── MAIN CONTENT ── */
+.main-content {
+  flex: 1; margin-left: 260px;
+  padding: 32px; min-height: 100vh;
+  background: radial-gradient(ellipse at 70% 10%, rgba(14,165,160,0.05) 0%, transparent 50%), var(--bg);
+}
+
+/* ── PAGE HEADER ── */
+.page-header { margin-bottom: 28px; }
+.page-header h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px; font-weight: 700; color: var(--white);
+  letter-spacing: -0.5px;
+}
+.page-header p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+/* ── CARD ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+.card-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px; font-weight: 700; color: var(--white);
+  margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
+}
+.card-title-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--teal); flex-shrink: 0;
+}
+
+/* ── FORM ELEMENTS ── */
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+select.form-input { appearance: none; cursor: pointer; }
+
+.form-section-title {
+  font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--teal); margin: 24px 0 14px;
+  padding-bottom: 8px; border-bottom: 1px solid rgba(14,165,160,0.2);
+}
+
+/* ── FILE INPUT ── */
+.file-drop {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: 24px; text-align: center;
+  cursor: pointer; transition: all 0.2s;
+  position: relative;
+}
+.file-drop:hover { border-color: var(--teal); background: rgba(14,165,160,0.04); }
+.file-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.file-drop-icon { font-size: 28px; margin-bottom: 8px; }
+.file-drop-text { font-size: 13px; color: var(--muted); }
+.file-drop-text strong { color: var(--teal); }
+.preview-img {
+  width: 100%; max-height: 180px; object-fit: cover;
+  border-radius: var(--radius-sm); margin-top: 12px;
+  border: 1px solid var(--border);
+}
+.preview-img.hidden { display: none; }
+
+/* ── CAR ITEM ── */
+.pica-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 18px; margin-bottom: 12px;
+  animation: fadeIn 0.25s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: translateY(0); } }
+.pica-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.pica-label {
+  font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.6px; color: var(--amber);
+}
+.btn-remove {
+  background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25);
+  color: var(--red); padding: 4px 12px; border-radius: 6px;
+  font-size: 12px; cursor: pointer; transition: all 0.18s;
+}
+.btn-remove:hover { background: rgba(239,68,68,0.2); }
+
+/* ── BUTTONS ── */
+.btn-submit {
+  padding: 13px 28px;
+  background: linear-gradient(135deg, var(--teal), var(--teal-dim));
+  color: #fff; border: none; border-radius: var(--radius-sm);
+  font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: opacity 0.2s, transform 0.15s;
+  letter-spacing: 0.3px;
+}
+.btn-submit:hover { opacity: 0.9; transform: translateY(-1px); }
+
+.btn-add {
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px dashed var(--teal);
+  color: var(--teal); border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-add:hover { background: rgba(14,165,160,0.1); }
+
+.btn-secondary {
+  padding: 10px 20px;
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--text); border-radius: var(--radius-sm);
+  font-family: 'DM Sans', sans-serif; font-size: 13px;
+  cursor: pointer; transition: all 0.18s;
+}
+.btn-secondary:hover { border-color: var(--teal); color: var(--teal); }
+
+.btn-amber {
+  padding: 6px 14px;
+  background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
+  color: var(--amber); border-radius: 6px; font-size: 12px;
+  cursor: pointer; transition: all 0.18s; font-family: 'DM Sans', sans-serif;
+}
+.btn-amber:hover { background: rgba(245,158,11,0.2); }
+
+/* ── TABLE ── */
+.table-wrap { overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; }
+thead { background: var(--surface2); }
+th {
+  padding: 12px 16px; text-align: left;
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+td { padding: 14px 16px; font-size: 13px; border-bottom: 1px solid var(--border); }
+tr:last-child td { border-bottom: none; }
+tbody tr { transition: background 0.15s; }
+tbody tr:hover { background: var(--surface2); }
+
+/* ── BADGES ── */
+.badge {
+  display: inline-block; padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px;
+}
+.badge-open  { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+.badge-closed { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.2); }
+.badge-valid { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.2); }
+.badge-invalid { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+.badge-pending { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.2); }
+.badge-warning { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.2); }
+
+/* ── FILTER BAR ── */
+.filter-bar {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 20px; align-items: flex-end;
+}
+.filter-bar .form-group { margin-bottom: 0; min-width: 180px; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(13,17,23,0.82); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.hidden { display: none; }
+.modal-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 16px; padding: 28px; width: 100%; max-width: 520px;
+  box-shadow: var(--shadow); animation: slideUp 0.3s ease;
+  max-height: 90vh; overflow-y: auto;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.modal-title {
+  font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; color: var(--white);
+}
+.modal-close {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--muted); width: 32px; height: 32px; border-radius: 8px;
+  cursor: pointer; font-size: 16px; transition: all 0.18s;
+  display: flex; align-items: center; justify-content: center;
+}
+.modal-close:hover { border-color: var(--red); color: var(--red); }
+
+/* ── CAR DETAIL MODAL ── */
+.car-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+.car-detail-item label {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.6px; color: var(--muted); display: block; margin-bottom: 4px;
+}
+.car-detail-item p { font-size: 14px; color: var(--text); }
+.car-finding-box {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px;
+  font-size: 14px; color: var(--text); margin-bottom: 16px; line-height: 1.6;
+}
+.car-img { width: 100%; border-radius: var(--radius-sm); margin-bottom: 16px; border: 1px solid var(--border); }
+
+/* ── SIMPER SCORE DISPLAY ── */
+.score-display {
+  display: flex; align-items: baseline; gap: 4px; margin: 8px 0;
+}
+.score-big {
+  font-family: 'Syne', sans-serif; font-size: 36px; font-weight: 800; color: var(--white);
+}
+.score-pct { font-size: 18px; color: var(--muted); }
+
+.score-bar-wrap {
+  background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden; margin: 10px 0;
+}
+.score-bar-fill {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, var(--teal), #22d3ee);
+  transition: width 0.6s ease;
+}
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align: center; padding: 48px 20px; color: var(--muted);
+}
+.empty-state-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; }
+
+/* ── PAGE VISIBILITY ── */
+.page { display: none; }
+.page.active { display: block; animation: fadeIn 0.3s ease; }
+
+/* ── DIVIDER ── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .main-content { margin-left: 0; padding: 20px; }
+  .form-row, .form-row-3 { grid-template-columns: 1fr; }
+}
+</style>
 </head>
 <body>
 
-  <div id="loadingOverlay" class="hidden"><div class="spinner"></div><p style="margin-top:20px; font-weight:bold; color:var(--primary);">Processing...</p></div>
+<!-- ══ LOADING ══ -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+</div>
+<div id="toast"></div>
 
-  <div id="loginPage" style="position:fixed; top:0; left:0; width:100vw; height:100vh; background:var(--primary); display:flex; justify-content:center; align-items:center; z-index:3000;">
-    <div style="background:white; padding:45px; border-radius:15px; width:100%; max-width:380px; text-align:center;">
-      <h2 style="color:var(--primary)">HSR PORTAL</h2>
-      <div id="loginError" style="color:#dc3545; font-size:13px; margin-bottom:15px; font-weight:600;"></div>
-      <div class="form-group"><input type="email" id="email" placeholder="Email" value="admin@stm.com"></div>
-      <div class="form-group"><input type="password" id="password" placeholder="Password" value="admin123"></div>
-      <button class="btn btn-primary" style="width:100%" onclick="doLogin()">SIGN IN</button>
+<!-- ══════════════════════════════════════════
+     LOGIN
+══════════════════════════════════════════ -->
+<div id="loginPage">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="login-logo-icon">🛡️</div>
+      <div class="login-logo-text">HSR<span>Portal</span></div>
     </div>
+    <div class="login-title">Selamat datang</div>
+    <div class="login-sub">Masuk untuk mengakses portal HSR perusahaan Anda.</div>
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input id="email" type="email" class="form-input" placeholder="nama@perusahaan.com"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input id="password" type="password" class="form-input" placeholder="••••••••"
+             onkeydown="if(event.key==='Enter') doLogin()"/>
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Masuk ke Portal</button>
+    <div class="login-error" id="loginError"></div>
   </div>
+</div>
 
-  <div id="mainApp" class="hidden">
-    <div class="sidebar">
-      <div class="brand">HSR Portal</div>
-      <div class="nav-menu">
-        <div class="nav-item">📝 Input Data</div>
-        <div class="sub-menu">
-            <div class="sub-item" onclick="switchPage('formInspection')">🔍 General Inspection</div>
-            <div class="sub-item" onclick="switchPage('formHazard')">⚠️ Hazard Report</div>
-        </div>
-        <div class="nav-item" onclick="switchPage('carList')">📋 Corrective Action</div>
-        <div class="nav-item" onclick="switchPage('simper')">🪪 SIMPER Validity</div>
-        <div class="nav-item hidden" id="menuAdminUser" onclick="switchPage('userMgmt')">👥 User Management</div>
+<!-- ══════════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════════ -->
+<div id="mainApp" class="hidden">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">🛡️</div>
+        <div class="sidebar-logo-text">HSR<span>Portal</span></div>
       </div>
-      <div class="user-info">
-        <div id="displayUser" style="font-weight:bold; color:var(--primary); font-size:14px; margin-bottom:5px;">...</div>
-        <div id="displayLevel" style="font-size:12px; color:#888; margin-bottom:15px;">...</div>
-        <button class="btn btn-danger" style="width:100%; padding:8px;" onclick="location.reload()">Logout</button>
+      <div class="user-card">
+        <div class="user-card-name" id="displayUser">—</div>
+        <span class="user-card-badge" id="displayLevel">—</span>
       </div>
     </div>
 
-    <div class="main-area">
-      <div id="page_formInspection" class="page-content hidden">
-        <div class="box-container">
-          <h2 style="color:var(--primary); margin-top:0;">General Inspection</h2>
-          <form id="mainForm">
-            <div class="form-group"><label>Tanggal Inspeksi:</label><input type="date" id="tanggal" required></div>
-            <div class="form-group"><label>Company:</label><select id="perusahaan" required></select></div>
-            <div class="form-group"><label>Lokasi:</label><select id="lokasi" onchange="updateSubLoc('lokasi','subLokasi')" required></select></div>
-            <div class="form-group"><label>Sub Lokasi:</label><select id="subLokasi" required></select></div>
-            <div class="form-group"><label>Ada Temuan CAR?</label>
-              <select id="adaTemuan" onchange="togglePicaSection()" required><option value="">Pilih</option><option value="Yes">Yes</option><option value="No">No</option></select>
-            </div>
-            <div id="picaSection" class="hidden" style="background:#fcfcfc; padding:20px; border:1px solid #ddd; border-radius:10px;">
-              <div class="form-group"><label>Foto (Wajib):</label><input type="file" id="imageFile" accept="image/*" onchange="previewImg(this, 'imgPrev')"><img id="imgPrev" src="" class="hidden" style="max-height:150px; margin-top:10px;"></div>
-              <div id="picaContainer"></div>
-              <button type="button" class="btn btn-secondary" onclick="addPica('picaContainer')">+ Tambah Item CAR</button>
-            </div>
-            <button type="button" class="btn btn-primary" style="margin-top:20px;" onclick="submitInspection()">KIRIM INSPEKSI</button>
-          </form>
-        </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Input Data</div>
+      <div class="nav-item active" onclick="switchPage('formInspection')" id="nav-formInspection">
+        <span class="nav-item-icon">📝</span> General Inspection
+      </div>
+      <div class="nav-item" onclick="switchPage('formHazard')" id="nav-formHazard">
+        <span class="nav-item-icon">⚠️</span> Hazard Report
       </div>
 
-      <div id="page_formHazard" class="page-content hidden">
-        <div class="box-container">
-          <h2 style="color:var(--primary); margin-top:0;">Hazard Report</h2>
-          <form id="hazardForm">
-            <div class="form-group"><label>Deskripsi:</label><textarea id="hDesc" rows="3" required></textarea></div>
-            <div class="form-group"><label>Lokasi:</label><select id="hLokasi" onchange="updateSubLoc('hLokasi','hSubLokasi')" required></select></div>
-            <div class="form-group"><label>Sub Lokasi:</label><select id="hSubLokasi" required></select></div>
-            <div class="form-group"><label>Foto (Wajib):</label><input type="file" id="hPhotoBefore" accept="image/*" onchange="previewImg(this, 'hPrevB')"><img id="hPrevB" src="" class="hidden" style="max-height:150px;"></div>
-            <div class="form-group"><label>Status Selesai?</label><select id="hIsClosed" onchange="toggleHazardCAR()" required><option value="">Pilih</option><option value="Yes">Yes (Closed)</option><option value="No">No (Butuh CAR)</option></select></div>
-            <div id="hCarSection" class="hidden" style="background:#fcfcfc; padding:20px; border:1px solid #ddd; border-radius:10px;">
-              <div id="hPicaContainer"></div>
-              <button type="button" class="btn btn-secondary" onclick="addPica('hPicaContainer')">+ Tambah Item CAR</button>
-            </div>
-            <button type="button" class="btn btn-primary" style="margin-top:20px;" onclick="submitHazard()">KIRIM HAZARD</button>
-          </form>
-        </div>
+      <div class="nav-section-label">Laporan</div>
+      <div class="nav-item" onclick="switchPage('carList')" id="nav-carList">
+        <span class="nav-item-icon">📋</span> Corrective Action
+      </div>
+      <div class="nav-item" onclick="switchPage('simper')" id="nav-simper">
+        <span class="nav-item-icon">🪪</span> SIMPER Validity
       </div>
 
-      <div id="page_carList" class="page-content hidden">
-        <div class="box-container">
-          <h2 style="color:var(--primary); margin:0;">Corrective Action Report</h2>
-          <div class="filter-panel">
-            <select id="fCompany" onchange="updateCarTable()"><option value="">All Companies</option></select>
-            <select id="fStatus" onchange="updateCarTable()"><option value="">All Status</option><option>Open</option><option>Closed</option></select>
+      <div class="nav-section-label" id="adminNavLabel" style="display:none">Admin</div>
+      <div class="nav-item" onclick="switchPage('userMgmt')" id="nav-userMgmt" style="display:none">
+        <span class="nav-item-icon">👥</span> User Management
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="btn-logout" onclick="doLogout()">
+        <span>🚪</span> Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="main-content">
+
+    <!-- ══ PAGE: GENERAL INSPECTION ══ -->
+    <div id="page_formInspection" class="page active">
+      <div class="page-header">
+        <h1>General Inspection</h1>
+        <p>Catat hasil inspeksi keselamatan di lapangan</p>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-dot"></span>Detail Inspeksi</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Tanggal Inspeksi</label>
+            <input id="tanggal" type="date" class="form-input"/>
           </div>
-          <div style="overflow-x: auto;">
-            <table><thead><tr><th>ID</th><th>RAISED</th><th>PIC</th><th>DUE</th><th>STATUS</th><th>AKSI</th></tr></thead><tbody id="carTableBody"></tbody></table>
+          <div class="form-group">
+            <label class="form-label">Company</label>
+            <select id="perusahaan" class="form-input"></select>
           </div>
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Lokasi</label>
+            <select id="lokasi" class="form-input" onchange="updateSubLoc('lokasi','subLokasi')"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sub Lokasi</label>
+            <select id="subLokasi" class="form-input"></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ada Temuan CAR?</label>
+          <select id="adaTemuan" class="form-input" onchange="togglePicaSection()">
+            <option value="">Pilih</option>
+            <option value="Yes">Yes — Ada Temuan</option>
+            <option value="No">No — Clear</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Foto Inspeksi (Wajib)</label>
+          <div class="file-drop">
+            <input type="file" accept="image/*" id="imageFile" onchange="previewImg(this,'prevInspImg')"/>
+            <div class="file-drop-icon">📸</div>
+            <div class="file-drop-text">Klik atau drag foto ke sini<br><strong>JPG, PNG, WebP</strong></div>
+          </div>
+          <img id="prevInspImg" class="preview-img hidden"/>
+        </div>
+
+        <div id="picaSection" style="display:none">
+          <div class="form-section-title">⚡ CAR Items</div>
+          <div id="picaContainer"></div>
+          <button class="btn-add" onclick="addPica('picaContainer')">+ Tambah Item CAR</button>
+        </div>
+
+        <hr class="divider"/>
+        <button class="btn-submit" onclick="submitInspection()">Kirim Inspeksi</button>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: HAZARD REPORT ══ -->
+    <div id="page_formHazard" class="page">
+      <div class="page-header">
+        <h1>Hazard Report</h1>
+        <p>Laporkan potensi bahaya di area kerja</p>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-dot"></span>Detail Hazard</div>
+        <div class="form-group">
+          <label class="form-label">Deskripsi Bahaya</label>
+          <input id="hDesc" type="text" class="form-input" placeholder="Jelaskan potensi bahaya yang ditemukan..."/>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Lokasi</label>
+            <select id="hLokasi" class="form-input" onchange="updateSubLoc('hLokasi','hSubLokasi')"></select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Sub Lokasi</label>
+            <select id="hSubLokasi" class="form-input"></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Foto Hazard (Wajib)</label>
+          <div class="file-drop">
+            <input type="file" accept="image/*" id="hPhotoBefore" onchange="previewImg(this,'prevHazardImg')"/>
+            <div class="file-drop-icon">📸</div>
+            <div class="file-drop-text">Klik atau drag foto ke sini<br><strong>JPG, PNG, WebP</strong></div>
+          </div>
+          <img id="prevHazardImg" class="preview-img hidden"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status Selesai?</label>
+          <select id="hIsClosed" class="form-input" onchange="toggleHazardCAR()">
+            <option value="">Pilih</option>
+            <option value="Yes">Yes — Closed</option>
+            <option value="No">No — Butuh CAR</option>
+          </select>
+        </div>
+
+        <div id="hCarSection" style="display:none">
+          <div class="form-section-title">⚡ CAR Items</div>
+          <div id="hPicaContainer"></div>
+          <button class="btn-add" onclick="addPica('hPicaContainer')">+ Tambah Item CAR</button>
+        </div>
+
+        <hr class="divider"/>
+        <button class="btn-submit" onclick="submitHazard()">Kirim Hazard Report</button>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: CAR LIST ══ -->
+    <div id="page_carList" class="page">
+      <div class="page-header">
+        <h1>Corrective Action Report</h1>
+        <p>Monitor dan kelola tindakan perbaikan</p>
       </div>
 
-      <div id="page_simper" class="page-content hidden">
-        <div class="box-container">
-          <h2>SIMPER Validity</h2>
-          <form id="simperForm" style="background:#f9f9f9; padding:20px; border:1px solid #ddd; border-radius:10px; margin-bottom:20px; display:flex; gap:15px; align-items:flex-end;">
-            <div style="flex:1;"><label>Score (%):</label><input type="number" id="simperValidity" required></div>
-            <div style="flex:1;"><label>File Rekap:</label><input type="file" id="simperFile" accept=".pdf,.xlsx,.xls" required></div>
-            <button type="button" class="btn btn-primary" onclick="submitSimper()">SUBMIT</button>
-          </form>
-          <div style="overflow-x: auto;"><table><thead><tr><th>ID</th><th>COMPANY</th><th>SCORE</th><th>STATUS</th><th>AKSI</th></tr></thead><tbody id="simperTableBody"></tbody></table></div>
+      <!-- Stats -->
+      <div id="carStats" style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px;"></div>
+
+      <div class="card">
+        <div class="filter-bar">
+          <div class="form-group">
+            <label class="form-label">Filter PIC (Company Bertanggung Jawab)</label>
+            <select id="fPIC" class="form-input" onchange="updateCarTable()">
+              <option value="">Semua PIC</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Filter Status</label>
+            <select id="fStatus" class="form-input" onchange="updateCarTable()">
+              <option value="">Semua Status</option>
+              <option value="Open">Open</option>
+              <option value="Closed">Closed</option>
+            </select>
+          </div>
+        </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>CAR Code</th>
+                <th>Tanggal</th>
+                <th>Company</th>
+                <th>PIC</th>
+                <th>Due Date</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="carTableBody"></tbody>
+          </table>
+        </div>
+        <div id="carEmptyState" class="empty-state hidden">
+          <div class="empty-state-icon">📋</div>
+          <p>Tidak ada data CAR ditemukan</p>
         </div>
       </div>
     </div>
-  </div>
 
-  <div id="carModal" class="modal-overlay hidden">
-    <div class="modal-box">
-      <h3 id="detCarCode" style="margin-top:0; color:var(--primary);"></h3>
-      <img id="detImg" src="" style="width:100%; max-height:250px; object-fit:contain; background:#f8f9fa; border-radius:8px; margin:15px 0;">
-      <p id="detFinding" style="font-size:14px; margin-bottom:20px;"></p>
-      <div id="fuSection" style="background:#f4f7f6; padding:20px; border-radius:10px; border:1px solid #ddd;">
-        <h4 style="margin-top:0;">Close CAR</h4>
-        <div class="form-group"><label>Action Taken:</label><textarea id="fuAction" rows="3" required></textarea></div>
-        <div class="form-group"><label>Evidence:</label><input type="file" id="fuFile"></div>
-        <button class="btn btn-primary" style="width:100%;" onclick="submitFU()">SUBMIT & CLOSE</button>
+    <!-- ══ PAGE: SIMPER ══ -->
+    <div id="page_simper" class="page">
+      <div class="page-header">
+        <h1>SIMPER Validity</h1>
+        <p>Submit dan pantau skor validitas SIMPER perusahaan</p>
       </div>
-      <button class="btn btn-danger" style="width:100%; margin-top:15px;" onclick="document.getElementById('carModal').classList.add('hidden')">TUTUP</button>
+
+      <!-- Submit Form -->
+      <div class="card" id="simperFormCard">
+        <div class="card-title"><span class="card-title-dot"></span>Submit SIMPER Baru</div>
+
+        <!-- Info company — readonly untuk non-admin -->
+        <div class="form-group">
+          <label class="form-label">Company</label>
+          <div id="sCompanyDisplay" style="
+            padding: 13px 16px; background: var(--surface2); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); color: var(--text); font-size: 15px;
+            display: flex; align-items: center; gap: 8px;">
+            <span style="color:var(--teal)">🏢</span>
+            <span id="sCompanyName">—</span>
+            <span style="margin-left:auto; font-size:11px; color:var(--muted); background:var(--surface);
+              padding:2px 8px; border-radius:20px; border:1px solid var(--border);">Otomatis dari akun</span>
+          </div>
+          <!-- Hidden input yang tetap terkirim -->
+          <input type="hidden" id="sCompany"/>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Periode (Bulan/Tahun)</label>
+          <input id="sPeriod" type="month" class="form-input"/>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Score (%)</label>
+          <input id="sScore" type="number" min="0" max="100" class="form-input"
+                 placeholder="0 – 100" oninput="updateScorePreview()"/>
+          <div id="scorePreviewWrap" style="display:none; margin-top:12px;">
+            <div class="score-display">
+              <span class="score-big" id="scoreBigNum">—</span>
+              <span class="score-pct">%</span>
+            </div>
+            <div class="score-bar-wrap">
+              <div class="score-bar-fill" id="scoreBarFill" style="width:0%"></div>
+            </div>
+            <div style="font-size:12px; color:var(--muted); margin-top:4px;">Score akan dikonfirmasi oleh Admin</div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">File Rekap (Opsional)</label>
+          <div class="file-drop">
+            <input type="file" id="sFile" onchange="updateSimperFileName(this)"/>
+            <div class="file-drop-icon">📄</div>
+            <div class="file-drop-text" id="sFileName">Klik untuk upload file rekap<br><strong>PDF, Excel, Word</strong></div>
+          </div>
+        </div>
+        <hr class="divider"/>
+        <button class="btn-submit" onclick="submitSimper()">Submit SIMPER</button>
+      </div>
+
+      <!-- SIMPER Table -->
+      <div class="card">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;">
+          <div class="card-title" style="margin-bottom:0"><span class="card-title-dot"></span>Rekap SIMPER</div>
+          <div class="filter-bar" style="margin-bottom:0">
+            <div class="form-group" style="min-width:160px;">
+              <select id="sfCompany" class="form-input" onchange="renderSimperTable()">
+                <option value="">Semua Company</option>
+              </select>
+            </div>
+            <div class="form-group" style="min-width:140px;">
+              <select id="sfStatus" class="form-input" onchange="renderSimperTable()">
+                <option value="">Semua Status</option>
+                <option value="Pending">Pending</option>
+                <option value="Valid">Valid</option>
+                <option value="Tidak Valid">Tidak Valid</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Company</th>
+                <th>Periode</th>
+                <th>Score</th>
+                <th>Status</th>
+                <th>Submitted</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="simperTableBody"></tbody>
+          </table>
+        </div>
+        <div id="simperEmptyState" class="empty-state hidden">
+          <div class="empty-state-icon">🪪</div>
+          <p>Belum ada data SIMPER</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: USER MANAGEMENT ══ -->
+    <div id="page_userMgmt" class="page">
+      <div class="page-header">
+        <h1>User Management</h1>
+        <p>Kelola akses pengguna portal</p>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-dot"></span>Tambah User Baru</div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">Email</label>
+            <input id="uEmail" type="email" class="form-input" placeholder="email@company.com"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Password</label>
+            <input id="uPass" type="password" class="form-input" placeholder="••••••••"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Company</label>
+            <select id="uCompany" class="form-input"></select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Level Akses</label>
+          <select id="uLevel" class="form-input">
+            <option value="User">User</option>
+            <option value="Admin">Admin</option>
+            <option value="Superadmin">Superadmin</option>
+          </select>
+        </div>
+        <hr class="divider"/>
+        <button class="btn-submit" onclick="submitNewUser()">Simpan User</button>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="card-title-dot"></span>Daftar User</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Email</th><th>Company</th><th>Level</th><th>Aksi</th></tr></thead>
+            <tbody id="userTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main><!-- /main-content -->
+</div><!-- /mainApp -->
+
+<!-- ══ CAR DETAIL MODAL ══ -->
+<div id="carModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">Detail CAR — <span id="detCarCode" style="color:var(--teal)"></span></div>
+      <button class="modal-close" onclick="document.getElementById('carModal').classList.add('hidden')">✕</button>
+    </div>
+    <img id="detImg" class="car-img" src="" alt=""/>
+    <div class="car-detail-grid">
+      <div class="car-detail-item"><label>Company</label><p id="detCompany">—</p></div>
+      <div class="car-detail-item"><label>PIC</label><p id="detPIC">—</p></div>
+      <div class="car-detail-item"><label>Due Date</label><p id="detDue">—</p></div>
+      <div class="car-detail-item"><label>Status</label><p id="detStatus">—</p></div>
+    </div>
+    <div style="margin-bottom:8px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.6px; color:var(--muted)">Finding</div>
+    <div class="car-finding-box" id="detFinding">—</div>
+
+    <div id="fuSection">
+      <div class="form-section-title">✅ Close CAR — Follow Up</div>
+      <div class="form-group">
+        <label class="form-label">Action Taken</label>
+        <input id="fuAction" type="text" class="form-input" placeholder="Jelaskan tindakan perbaikan..."/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Evidence (Foto)</label>
+        <div class="file-drop">
+          <input type="file" id="fuFile" accept="image/*"/>
+          <div class="file-drop-icon">📸</div>
+          <div class="file-drop-text">Upload bukti foto<br><strong>Wajib</strong></div>
+        </div>
+      </div>
+      <hr class="divider"/>
+      <button class="btn-submit" onclick="submitFU()">Submit & Close CAR</button>
     </div>
   </div>
+</div>
 
-  <div id="toast">Memproses...</div>
+<!-- ══ SIMPER DETAIL MODAL ══ -->
+<div id="simperModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">Detail SIMPER</div>
+      <button class="modal-close" onclick="document.getElementById('simperModal').classList.add('hidden')">✕</button>
+    </div>
+    <div class="car-detail-grid">
+      <div class="car-detail-item"><label>ID</label><p id="sdId">—</p></div>
+      <div class="car-detail-item"><label>Company</label><p id="sdCompany">—</p></div>
+      <div class="car-detail-item"><label>Periode</label><p id="sdPeriod">—</p></div>
+      <div class="car-detail-item"><label>Submitted By</label><p id="sdSubmittedBy" style="font-size:12px;">—</p></div>
+    </div>
+    <div style="margin-bottom:16px;">
+      <div class="score-display">
+        <span class="score-big" id="sdScore">—</span>
+        <span class="score-pct">%</span>
+        <span id="sdBadge" class="badge" style="margin-left:10px;"></span>
+      </div>
+      <div class="score-bar-wrap" style="margin-top:4px;">
+        <div class="score-bar-fill" id="sdBar" style="width:0%"></div>
+      </div>
+    </div>
+    <div id="sdFileSection" style="display:none; margin-bottom:16px;">
+      <a id="sdFileLink" href="#" target="_blank" class="btn-secondary" style="display:inline-block;">
+        📄 Download File Rekap
+      </a>
+    </div>
 
-  <script src="config.js"></script>
+    <!-- Admin-only: set status manual -->
+    <div id="sdAdminSection" style="display:none;">
+      <div class="form-section-title">🔐 Konfirmasi Status — Admin</div>
+      <div style="font-size:13px; color:var(--muted); margin-bottom:14px;">
+        Tentukan apakah SIMPER ini Valid atau Tidak Valid berdasarkan verifikasi dokumen.
+      </div>
+      <div class="form-row" style="margin-bottom:14px;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Status</label>
+          <select id="sdStatusSelect" class="form-input">
+            <option value="Pending">Pending</option>
+            <option value="Valid">Valid</option>
+            <option value="Tidak Valid">Tidak Valid</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">Catatan Admin (Opsional)</label>
+          <input id="sdNote" type="text" class="form-input" placeholder="Misal: dokumen kurang lengkap"/>
+        </div>
+      </div>
+      <button class="btn-submit" onclick="submitSimperStatus()">Simpan Status</button>
+    </div>
+
+    <!-- Existing admin note if already reviewed -->
+    <div id="sdNoteDisplay" style="display:none; margin-top:12px;">
+      <div style="font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:0.6px; color:var(--muted); margin-bottom:4px;">Catatan Admin</div>
+      <div class="car-finding-box" id="sdNoteText">—</div>
+    </div>
+  </div>
+</div>
 
 <script>
-    // Sekarang variabel mengambil data dari CONFIG di file terpisah
-    const SUPABASE_URL = CONFIG.SUPABASE_URL;
-    const SUPABASE_ANON_KEY = CONFIG.SUPABASE_ANON_KEY;
-    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const gasAPI = CONFIG.GAS_API;
+/* ══════════════════════════════════════════════════════
+   SUPABASE INIT — ganti dengan credentials Anda
+══════════════════════════════════════════════════════ */
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const GAS_API      = 'YOUR_GAS_API_URL';
+const SIMPER_THRESHOLD = 80; // persen
 
-    // ... sisanya kode logika aplikasi tetap sama ...
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+/* ══ STATE ══ */
+let currentUser    = null;
+let globalCompanies = [];
+let globalLocs      = [];
+let uploadFiles     = {};
+let carMasterData   = [];
+let simperMasterData = [];
+let activeCarId     = null;
+
+/* ══ UTILS ══ */
+function setLoader(show) {
+  document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.innerText = msg;
+  t.style.background = type === 'success' ? '#0ea5a0'
+                     : type === 'warning'  ? '#f59e0b'
+                     : '#ef4444';
+  t.className = 'show';
+  setTimeout(() => t.className = '', 4000);
+}
+
+function generateID(pre) {
+  const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let r = '';
+  const len = 9 - (pre.length + 1);
+  for (let i = 0; i < len; i++) r += c[Math.floor(Math.random() * c.length)];
+  return `${pre}-${r}`;
+}
+
+function statusBadge(s) {
+  if (s === 'Open')   return `<span class="badge badge-open">Open</span>`;
+  if (s === 'Closed') return `<span class="badge badge-closed">Closed</span>`;
+  return `<span class="badge">${s}</span>`;
+}
+
+function simperBadge(score) {
+  const valid = score >= SIMPER_THRESHOLD;
+  return valid
+    ? `<span class="badge badge-valid">Valid</span>`
+    : `<span class="badge badge-invalid">Tidak Valid</span>`;
+}
+
+function simperStatus(score) {
+  return score >= SIMPER_THRESHOLD ? 'Valid' : 'Tidak Valid';
+}
+
+/* ══ LOGIN ══ */
+async function doLogin() {
+  const e = document.getElementById('email').value.trim();
+  const p = document.getElementById('password').value;
+  document.getElementById('loginError').innerText = '';
+  if (!e || !p) { document.getElementById('loginError').innerText = 'Email dan password wajib diisi.'; return; }
+  setLoader(true);
+  try {
+    const { data, error } = await supabaseClient
+      .from('users').select('*').eq('email', e).eq('password', p).single();
+    if (error || !data) {
+      document.getElementById('loginError').innerText = 'Email atau password salah.';
+    } else {
+      currentUser = data;
+      document.getElementById('loginPage').style.display = 'none';
+      document.getElementById('mainApp').classList.remove('hidden');
+      document.getElementById('displayUser').innerText  = currentUser.company;
+      document.getElementById('displayLevel').innerText = currentUser.level;
+
+      // Show admin nav if superadmin
+      if (['Admin','Superadmin'].includes(currentUser.level)) {
+        document.getElementById('adminNavLabel').style.display = '';
+        document.getElementById('nav-userMgmt').style.display  = '';
+      }
+      await initData();
+      switchPage('formInspection');
+    }
+  } catch (x) {
+    document.getElementById('loginError').innerText = 'Terjadi kesalahan, coba lagi.';
+  } finally {
+    setLoader(false);
+  }
+}
+
+function doLogout() {
+  currentUser = null;
+  globalCompanies = []; globalLocs = []; uploadFiles = {};
+  carMasterData = []; simperMasterData = [];
+  document.getElementById('loginPage').style.display = '';
+  document.getElementById('mainApp').classList.add('hidden');
+  document.getElementById('email').value = '';
+  document.getElementById('password').value = '';
+}
+
+/* ══ INIT DATA ══ */
+async function initData() {
+  const [{ data: comps }, { data: locs }] = await Promise.all([
+    supabaseClient.from('companies').select('*').eq('status', 'Active'),
+    supabaseClient.from('locations').select('*').eq('status', 'Active'),
+  ]);
+
+  globalLocs = locs || [];
+  globalCompanies = (comps || []).map(c => c.company || c.name);
+
+  // Populate company selects
+  const compOptions = '<option value="">Pilih Company</option>' +
+    globalCompanies.map(n => `<option value="${n}">${n}</option>`).join('');
+
+  ['perusahaan','uCompany','sCompany'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = compOptions;
+  });
+
+  // Pre-fill SIMPER company from user's own company (locked)
+  document.getElementById('sCompany').value = currentUser.company;
+  document.getElementById('sCompanyName').innerText = currentUser.company;
+
+  // Pre-select user's company for inspection form if non-admin
+  if (!['Admin','Superadmin'].includes(currentUser.level)) {
+    const el = document.getElementById('perusahaan');
+    if (el) { el.value = currentUser.company; el.disabled = true; }
+  }
+
+  // Filter selects — sfCompany untuk filter tabel SIMPER
+  const allCompOption = '<option value="">Semua Company</option>' +
+    globalCompanies.map(n => `<option value="${n}">${n}</option>`).join('');
+  const sfEl = document.getElementById('sfCompany');
+  if (sfEl) sfEl.innerHTML = allCompOption;
+
+  // Locations
+  const locNames = [...new Set(globalLocs.map(l => l.location || l.lokasi))];
+  const locOpts  = '<option value="">Pilih Lokasi</option>' +
+    locNames.map(l => `<option value="${l}">${l}</option>`).join('');
+  ['lokasi','hLokasi'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = locOpts;
+  });
+
+  // Set today's date
+  document.getElementById('tanggal').valueAsDate = new Date();
+
+  // Set period to this month
+  const now = new Date();
+  document.getElementById('sPeriod').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+}
+
+/* ══ NAVIGATION ══ */
+function switchPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const target = document.getElementById('page_' + id);
+  if (target) target.classList.add('active');
+  const navEl = document.getElementById('nav-' + id);
+  if (navEl) navEl.classList.add('active');
+
+  if (id === 'carList')  loadCarPage();
+  if (id === 'simper')   loadSimperPage();
+  if (id === 'userMgmt') loadUsers();
+}
+
+/* ══ FILE UTILS ══ */
+function previewImg(input, imgId) {
+  if (input.files[0]) {
+    uploadFiles[input.id] = input.files[0];
+    const img = document.getElementById(imgId);
+    img.src = URL.createObjectURL(input.files[0]);
+    img.classList.remove('hidden');
+  }
+}
+
+function updateSimperFileName(input) {
+  if (input.files[0]) {
+    uploadFiles['sFile'] = input.files[0];
+    document.getElementById('sFileName').innerHTML =
+      `✅ <strong>${input.files[0].name}</strong>`;
+  }
+}
+
+async function uploadToDrive(file, pre, type) {
+  if (!file) return null;
+  const b64 = await new Promise(res => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.readAsDataURL(file);
+  });
+  const name = generateID(pre) + '.' + file.name.split('.').pop();
+  const res  = await fetch(GAS_API, {
+    method: 'POST',
+    body: JSON.stringify({ fileName: name, mimeType: file.type, base64: b64, folderType: type })
+  });
+  const json = await res.json();
+  return json.url;
+}
+
+/* ══ FORM TOGGLES ══ */
+function togglePicaSection() {
+  const show = document.getElementById('adaTemuan').value === 'Yes';
+  document.getElementById('picaSection').style.display = show ? '' : 'none';
+  if (show && document.getElementById('picaContainer').children.length === 0) addPica('picaContainer');
+}
+
+function toggleHazardCAR() {
+  const show = document.getElementById('hIsClosed').value === 'No';
+  document.getElementById('hCarSection').style.display = show ? '' : 'none';
+  if (show && document.getElementById('hPicaContainer').children.length === 0) addPica('hPicaContainer');
+}
+
+function updateSubLoc(locId, subId) {
+  const v = document.getElementById(locId).value;
+  const s = document.getElementById(subId);
+  s.innerHTML = '<option value="">Pilih Sub Lokasi</option>';
+  globalLocs.filter(i => (i.location || i.lokasi) === v)
+    .forEach(i => { s.innerHTML += `<option value="${i.sub_location}">${i.sub_location}</option>`; });
+}
+
+/* ══ ADD PICA ITEM ══ */
+function addPica(containerId) {
+  const picOpts = globalCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
+  const d = document.createElement('div');
+  d.className = 'pica-item';
+  d.innerHTML = `
+    <div class="pica-header">
+      <span class="pica-label">⚡ CAR Item</span>
+      <button class="btn-remove" onclick="this.closest('.pica-item').remove()">Hapus</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Finding / Temuan</label>
+      <input type="text" class="form-input pf" placeholder="Deskripsi temuan..."/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">PIC (Company)</label>
+        <select class="form-input ppic"><option value="">Pilih PIC</option>${picOpts}</select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Due Date</label>
+        <input type="date" class="form-input pd"/>
+      </div>
+    </div>`;
+  document.getElementById(containerId).appendChild(d);
+}
+
+/* ══ SUBMIT INSPECTION ══ */
+async function submitInspection() {
+  const isT = document.getElementById('adaTemuan').value;
+  if (!isT) return showToast('Pilih status temuan!', 'error');
+  if (!uploadFiles['imageFile']) return showToast('Foto wajib diupload!', 'error');
+  setLoader(true);
+  try {
+    const url     = await uploadToDrive(uploadFiles['imageFile'], 'IN', 'finding_images');
+    const insCode = generateID('IN');
+    const { error } = await supabaseClient.from('inspections').insert([{
+      id: insCode,
+      date: document.getElementById('tanggal').value,
+      company: document.getElementById('perusahaan').value,
+      location: document.getElementById('lokasi').value,
+      sub_location: document.getElementById('subLokasi').value,
+      has_finding: isT,
+      image_url: url,
+      submitted_by: currentUser.email
+    }]);
+    if (error) throw error;
+
+    if (isT === 'Yes') {
+      const items = Array.from(document.querySelectorAll('#picaContainer > .pica-item'));
+      if (items.length === 0) { showToast('Tambah minimal 1 CAR item!', 'error'); return; }
+      const cars = items.map(el => ({
+        car_code: generateID('CAR'),
+        finding:  el.querySelector('.pf').value,
+        pic:      el.querySelector('.ppic').value,
+        due_date: el.querySelector('.pd').value,
+        status:   'Open',
+        image_url: url,
+        inspection_code: insCode,
+        company:  document.getElementById('perusahaan').value,
+        date_raised: new Date().toISOString()
+      }));
+      await supabaseClient.from('car_reports').insert(cars);
+    }
+    showToast('Inspeksi berhasil dikirim! ✅');
+    clearInspectionForm();
+  } catch (e) {
+    console.error(e);
+    showToast('Gagal menyimpan data!', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+/* ══ SUBMIT HAZARD ══ */
+async function submitHazard() {
+  if (!uploadFiles['hPhotoBefore']) return showToast('Foto wajib diupload!', 'error');
+  const desc = document.getElementById('hDesc').value.trim();
+  if (!desc) return showToast('Deskripsi hazard wajib diisi!', 'error');
+  setLoader(true);
+  try {
+    const url  = await uploadToDrive(uploadFiles['hPhotoBefore'], 'HZ', 'finding_images');
+    const hzId = generateID('HZD');
+    const isClosed = document.getElementById('hIsClosed').value === 'Yes';
+    const { error } = await supabaseClient.from('hazard_reports').insert([{
+      id: hzId,
+      date: new Date().toISOString(),
+      reporter: currentUser.email,
+      company:  currentUser.company,
+      location: document.getElementById('hLokasi').value,
+      sub_location: document.getElementById('hSubLokasi').value,
+      photo_before: url,
+      description: desc,
+      status: isClosed ? 'Closed' : 'Open'
+    }]);
+    if (error) throw error;
+
+    if (!isClosed) {
+      const items = Array.from(document.querySelectorAll('#hPicaContainer > .pica-item'));
+      if (items.length === 0) { showToast('Tambah minimal 1 CAR item!', 'error'); return; }
+      const cars = items.map(el => ({
+        car_code:   generateID('CAR'),
+        finding:    el.querySelector('.pf').value,
+        pic:        el.querySelector('.ppic').value,
+        due_date:   el.querySelector('.pd').value,
+        status:     'Open',
+        image_url:  url,
+        company:    currentUser.company,
+        source:     hzId,
+        date_raised: new Date().toISOString()
+      }));
+      await supabaseClient.from('car_reports').insert(cars);
+    }
+    showToast('Hazard report berhasil dikirim! ✅');
+    clearHazardForm();
+  } catch (e) {
+    console.error(e);
+    showToast('Gagal menyimpan data!', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+/* ══ CAR PAGE ══ */
+async function loadCarPage() {
+  setLoader(true);
+  try {
+    let query = supabaseClient.from('car_reports').select('*').order('date_raised', { ascending: false });
+
+    // Non-admin hanya lihat company mereka sendiri
+    if (!['Admin','Superadmin'].includes(currentUser.level)) {
+      query = query.eq('company', currentUser.company);
+    }
+
+    const { data } = await query;
+    carMasterData = data || [];
+
+    // Populate PIC filter dari kolom pic (company bertanggung jawab)
+    const pics = [...new Set(carMasterData.map(c => c.pic).filter(Boolean))].sort();
+    const fPIC = document.getElementById('fPIC');
+    fPIC.innerHTML = '<option value="">Semua PIC</option>' +
+      pics.map(p => `<option value="${p}">${p}</option>`).join('');
+
+    renderCarStats();
+    updateCarTable();
+  } catch (e) {
+    console.error(e);
+    showToast('Gagal memuat data CAR', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+function renderCarStats() {
+  const total  = carMasterData.length;
+  const open   = carMasterData.filter(c => c.status === 'Open').length;
+  const closed = carMasterData.filter(c => c.status === 'Closed').length;
+  const now    = new Date();
+  const overdue = carMasterData.filter(c => c.status === 'Open' && c.due_date && new Date(c.due_date) < now).length;
+
+  document.getElementById('carStats').innerHTML = `
+    <div class="card" style="margin:0; text-align:center; padding:20px;">
+      <div style="font-size:32px; font-family:'Syne',sans-serif; font-weight:800; color:var(--white)">${total}</div>
+      <div style="font-size:12px; color:var(--muted); margin-top:4px; text-transform:uppercase; letter-spacing:0.8px">Total CAR</div>
+    </div>
+    <div class="card" style="margin:0; text-align:center; padding:20px; border-color:rgba(239,68,68,0.3)">
+      <div style="font-size:32px; font-family:'Syne',sans-serif; font-weight:800; color:#f87171">${open}</div>
+      <div style="font-size:12px; color:var(--muted); margin-top:4px; text-transform:uppercase; letter-spacing:0.8px">Open</div>
+    </div>
+    <div class="card" style="margin:0; text-align:center; padding:20px; border-color:rgba(34,197,94,0.3)">
+      <div style="font-size:32px; font-family:'Syne',sans-serif; font-weight:800; color:#4ade80">${closed}</div>
+      <div style="font-size:12px; color:var(--muted); margin-top:4px; text-transform:uppercase; letter-spacing:0.8px">Closed</div>
+    </div>`;
+}
+
+function updateCarTable() {
+  const fPIC = document.getElementById('fPIC').value;
+  const fs   = document.getElementById('fStatus').value;
+
+  const filtered = carMasterData.filter(c => {
+    // Filter by pic = company yang bertanggung jawab (PIC)
+    const matchPIC    = !fPIC || (c.pic || '') === fPIC;
+    const matchStatus = !fs   || c.status === fs;
+    return matchPIC && matchStatus;
+  });
+
+  const tbody = document.getElementById('carTableBody');
+  const empty = document.getElementById('carEmptyState');
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  tbody.innerHTML = filtered.map(c => {
+    const dueDate = c.due_date ? new Date(c.due_date).toLocaleDateString('id-ID') : '—';
+    const raised  = c.date_raised ? new Date(c.date_raised).toLocaleDateString('id-ID') : '—';
+    const isOverdue = c.status === 'Open' && c.due_date && new Date(c.due_date) < new Date();
+    return `<tr>
+      <td><strong style="color:var(--teal); font-family:'Syne',sans-serif">${c.car_code}</strong></td>
+      <td>${raised}</td>
+      <td>${c.company || '—'}</td>
+      <td>${c.pic || '—'}</td>
+      <td style="color:${isOverdue ? 'var(--red)' : 'inherit'}">${dueDate}${isOverdue ? ' ⚠️' : ''}</td>
+      <td>${statusBadge(c.status)}</td>
+      <td><button class="btn-amber" onclick="openCarDetail('${c.car_code}')">Lihat</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function openCarDetail(code) {
+  const c = carMasterData.find(x => x.car_code === code);
+  activeCarId = code;
+  document.getElementById('detCarCode').innerText = code;
+  document.getElementById('detImg').src = c.image_url || '';
+  document.getElementById('detFinding').innerText = c.finding || '—';
+  document.getElementById('detCompany').innerText = c.company || '—';
+  document.getElementById('detPIC').innerText = c.pic || '—';
+  document.getElementById('detDue').innerText = c.due_date || '—';
+  document.getElementById('detStatus').innerHTML = statusBadge(c.status);
+  document.getElementById('fuSection').style.display = c.status === 'Closed' ? 'none' : '';
+  document.getElementById('carModal').classList.remove('hidden');
+}
+
+async function submitFU() {
+  const action = document.getElementById('fuAction').value.trim();
+  const file   = document.getElementById('fuFile').files[0];
+  if (!action) return showToast('Action taken wajib diisi!', 'error');
+  if (!file)   return showToast('Evidence foto wajib!', 'error');
+  setLoader(true);
+  try {
+    const url = await uploadToDrive(file, 'FU', 'followup_images');
+    await supabaseClient.from('car_followups').insert([{
+      car_code: activeCarId,
+      action_taken: action,
+      file_url: url,
+      action_date: new Date().toISOString(),
+      closed_by: currentUser.email
+    }]);
+    await supabaseClient.from('car_reports').update({ status: 'Closed' }).eq('car_code', activeCarId);
+    showToast('CAR berhasil ditutup! ✅');
+    document.getElementById('carModal').classList.add('hidden');
+    await loadCarPage();
+  } catch (e) {
+    console.error(e);
+    showToast('Gagal menutup CAR!', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+/* ══ SIMPER ══ */
+function updateScorePreview() {
+  const val = parseFloat(document.getElementById('sScore').value);
+  const wrap = document.getElementById('scorePreviewWrap');
+  if (isNaN(val) || val < 0 || val > 100) { wrap.style.display = 'none'; return; }
+  wrap.style.display = '';
+  document.getElementById('scoreBigNum').innerText = val;
+  document.getElementById('scoreBarFill').style.width = val + '%';
+  // Neutral teal bar — status tidak ditentukan otomatis
+  document.getElementById('scoreBarFill').style.background = 'linear-gradient(90deg, var(--teal), #22d3ee)';
+}
+
+async function loadSimperPage() {
+  setLoader(true);
+  try {
+    let query = supabaseClient.from('simper').select('*').order('submitted_at', { ascending: false });
+
+    if (!['Admin','Superadmin'].includes(currentUser.level)) {
+      query = query.eq('company', currentUser.company);
+    }
+    const { data } = await query;
+    simperMasterData = data || [];
+    renderSimperTable();
+  } catch (e) {
+    console.error(e);
+    showToast('Gagal memuat data SIMPER', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+function simperBadgeFromStatus(status) {
+  if (status === 'Valid')       return `<span class="badge badge-valid">Valid</span>`;
+  if (status === 'Tidak Valid') return `<span class="badge badge-invalid">Tidak Valid</span>`;
+  return `<span class="badge badge-pending">Pending</span>`;
+}
+
+function renderSimperTable() {
+  const fc = document.getElementById('sfCompany').value;
+  const fs = document.getElementById('sfStatus').value;
+
+  const filtered = simperMasterData.filter(s => {
+    const status = s.status || 'Pending';
+    const matchC = !fc || s.company === fc;
+    const matchS = !fs || status === fs;
+    return matchC && matchS;
+  });
+
+  const tbody = document.getElementById('simperTableBody');
+  const empty = document.getElementById('simperEmptyState');
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '';
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  const isAdmin = ['Admin','Superadmin'].includes(currentUser.level);
+
+  tbody.innerHTML = filtered.map(s => {
+    const submitted = s.submitted_at ? new Date(s.submitted_at).toLocaleDateString('id-ID') : '—';
+    const status    = s.status || 'Pending';
+    const barColor  = status === 'Valid' ? 'var(--teal)' : status === 'Tidak Valid' ? 'var(--red)' : 'var(--amber)';
+    return `<tr>
+      <td><strong style="color:var(--teal); font-family:'Syne',sans-serif; font-size:12px">${s.id}</strong></td>
+      <td>${s.company || '—'}</td>
+      <td>${s.period || '—'}</td>
+      <td>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <strong style="font-family:'Syne',sans-serif">${s.score}%</strong>
+          <div class="score-bar-wrap" style="width:60px; margin:0;">
+            <div class="score-bar-fill" style="width:${s.score}%; background:${barColor}"></div>
+          </div>
+        </div>
+      </td>
+      <td>${simperBadgeFromStatus(status)}</td>
+      <td>${submitted}</td>
+      <td>
+        <button class="btn-amber" onclick="openSimperDetail('${s.id}')">Detail</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function submitSimper() {
+  const company = document.getElementById('sCompany').value;  // dari hidden input, sudah di-lock
+  const period  = document.getElementById('sPeriod').value;
+  const score   = parseFloat(document.getElementById('sScore').value);
+
+  if (!company) return showToast('Company tidak terdeteksi, coba logout dan login ulang!', 'error');
+  if (!period)  return showToast('Pilih periode!', 'error');
+  if (isNaN(score) || score < 0 || score > 100) return showToast('Score harus antara 0–100!', 'error');
+
+  setLoader(true);
+  try {
+    let fileUrl = null;
+    if (uploadFiles['sFile']) {
+      fileUrl = await uploadToDrive(uploadFiles['sFile'], 'SIM', 'simper_files');
+    }
+
+    const simId = generateID('SIM');
+    const { error } = await supabaseClient.from('simper').insert([{
+      id:           simId,
+      company:      company,
+      period:       period,
+      score:        score,
+      status:       'Pending',      // ← selalu Pending, admin yang konfirmasi
+      admin_note:   null,
+      file_url:     fileUrl,
+      submitted_by: currentUser.email,
+      submitted_at: new Date().toISOString()
+    }]);
+    if (error) throw error;
+
+    showToast('SIMPER berhasil disubmit! Menunggu konfirmasi Admin. ✅');
+    document.getElementById('sScore').value = '';
+    document.getElementById('scorePreviewWrap').style.display = 'none';
+    document.getElementById('sFileName').innerHTML = 'Klik untuk upload file rekap<br><strong>PDF, Excel, Word</strong>';
+    uploadFiles['sFile'] = null;
+    await loadSimperPage();
+  } catch (e) {
+    console.error(e);
+    showToast('Gagal menyimpan SIMPER!', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+let activeSimperModalId = null;
+
+function openSimperDetail(id) {
+  const s = simperMasterData.find(x => x.id === id);
+  activeSimperModalId = id;
+
+  document.getElementById('sdId').innerText          = s.id;
+  document.getElementById('sdCompany').innerText     = s.company || '—';
+  document.getElementById('sdPeriod').innerText      = s.period || '—';
+  document.getElementById('sdSubmittedBy').innerText = s.submitted_by || '—';
+  document.getElementById('sdScore').innerText       = s.score;
+
+  const status   = s.status || 'Pending';
+  const barColor = status === 'Valid' ? 'linear-gradient(90deg,var(--teal),#22d3ee)'
+                 : status === 'Tidak Valid' ? 'linear-gradient(90deg,var(--red),#f97316)'
+                 : 'linear-gradient(90deg,var(--amber),#fbbf24)';
+  document.getElementById('sdBar').style.width      = s.score + '%';
+  document.getElementById('sdBar').style.background = barColor;
+
+  const badge = document.getElementById('sdBadge');
+  badge.className = 'badge ' + (status === 'Valid' ? 'badge-valid' : status === 'Tidak Valid' ? 'badge-invalid' : 'badge-pending');
+  badge.innerText = status;
+
+  // File rekap
+  const fileSection = document.getElementById('sdFileSection');
+  if (s.file_url) {
+    fileSection.style.display = '';
+    document.getElementById('sdFileLink').href = s.file_url;
+  } else {
+    fileSection.style.display = 'none';
+  }
+
+  // Admin note display
+  const noteDisplay = document.getElementById('sdNoteDisplay');
+  if (s.admin_note) {
+    noteDisplay.style.display = '';
+    document.getElementById('sdNoteText').innerText = s.admin_note;
+  } else {
+    noteDisplay.style.display = 'none';
+  }
+
+  // Admin section — hanya untuk Admin/Superadmin
+  const adminSection = document.getElementById('sdAdminSection');
+  if (['Admin','Superadmin'].includes(currentUser.level)) {
+    adminSection.style.display = '';
+    document.getElementById('sdStatusSelect').value = status;
+    document.getElementById('sdNote').value = s.admin_note || '';
+  } else {
+    adminSection.style.display = 'none';
+  }
+
+  document.getElementById('simperModal').classList.remove('hidden');
+}
+
+async function submitSimperStatus() {
+  const newStatus = document.getElementById('sdStatusSelect').value;
+  const note      = document.getElementById('sdNote').value.trim();
+
+  if (!newStatus) return showToast('Pilih status!', 'error');
+  setLoader(true);
+  try {
+    const { error } = await supabaseClient.from('simper')
+      .update({ status: newStatus, admin_note: note || null })
+      .eq('id', activeSimperModalId);
+    if (error) throw error;
+
+    showToast(`Status SIMPER diset ke: ${newStatus} ✅`);
+    document.getElementById('simperModal').classList.add('hidden');
+    await loadSimperPage();
+  } catch (e) {
+    console.error(e);
+    showToast('Gagal update status!', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+/* ══ USER MANAGEMENT ══ */
+async function loadUsers() {
+  const { data } = await supabaseClient.from('users').select('*').order('email');
+  const tbody = document.getElementById('userTableBody');
+  tbody.innerHTML = (data || []).map(u => `<tr>
+    <td>${u.email}</td>
+    <td>${u.company || '—'}</td>
+    <td><span class="badge badge-warning">${u.level}</span></td>
+    <td><button class="btn-remove" onclick="deleteUser('${u.email}')">Hapus</button></td>
+  </tr>`).join('');
+}
+
+async function submitNewUser() {
+  const email   = document.getElementById('uEmail').value.trim();
+  const pass    = document.getElementById('uPass').value;
+  const company = document.getElementById('uCompany').value;
+  const level   = document.getElementById('uLevel').value;
+  if (!email || !pass || !company) return showToast('Semua field wajib diisi!', 'error');
+  setLoader(true);
+  try {
+    const { error } = await supabaseClient.from('users').insert([{ email, password: pass, company, level }]);
+    if (error) throw error;
+    showToast('User berhasil ditambahkan! ✅');
+    document.getElementById('uEmail').value = '';
+    document.getElementById('uPass').value  = '';
+    await loadUsers();
+  } catch (e) {
+    showToast('Gagal menambah user!', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+async function deleteUser(email) {
+  if (!confirm(`Hapus user ${email}?`)) return;
+  await supabaseClient.from('users').delete().eq('email', email);
+  showToast('User dihapus');
+  loadUsers();
+}
+
+/* ══ CLEAR FORMS ══ */
+function clearInspectionForm() {
+  document.getElementById('adaTemuan').value = '';
+  document.getElementById('picaSection').style.display = 'none';
+  document.getElementById('picaContainer').innerHTML = '';
+  document.getElementById('prevInspImg').classList.add('hidden');
+  delete uploadFiles['imageFile'];
+  document.getElementById('tanggal').valueAsDate = new Date();
+}
+
+function clearHazardForm() {
+  document.getElementById('hDesc').value = '';
+  document.getElementById('hIsClosed').value = '';
+  document.getElementById('hCarSection').style.display = 'none';
+  document.getElementById('hPicaContainer').innerHTML = '';
+  document.getElementById('prevHazardImg').classList.add('hidden');
+  delete uploadFiles['hPhotoBefore'];
+}
 </script>
-    let currentUser = null, globalCompanies = [], globalLocs = [], uploadFiles = {};
-    let carMasterData = [], activeCarId = null;
-
-    function setLoader(show) { document.getElementById('loadingOverlay').classList.toggle('hidden', !show); }
-    function showToast(msg, type='success') { const t = document.getElementById('toast'); t.innerText = msg; t.className = 'show'; t.style.background = type === 'success' ? '#28a745' : '#dc3545'; setTimeout(() => t.className = '', 4000); }
-    
-    function generateID(pre) { 
-        const c = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; 
-        let r = ''; 
-        const len = 9 - (pre.length + 1);
-        for(let i=0; i<len; i++) r += c.charAt(Math.floor(Math.random()*c.length)); 
-        return (pre+"-"+r).toUpperCase(); 
-    }
-
-    function switchPage(id) {
-      document.querySelectorAll('.page-content').forEach(p => p.classList.add('hidden'));
-      const target = document.getElementById('page_' + id);
-      if(target) target.classList.remove('hidden');
-      if(id === 'carList') loadCarPage();
-      if(id === 'simper') loadSimperPage();
-    }
-
-    async function doLogin() {
-      const e = document.getElementById('email').value, p = document.getElementById('password').value;
-      setLoader(true);
-      try {
-        const { data, error } = await supabaseClient.from('users').select('*').eq('email', e).eq('password', p).single();
-        if(error || !data) { document.getElementById('loginError').innerText = "Gagal Login!"; }
-        else {
-          currentUser = data;
-          document.getElementById('loginPage').classList.add('hidden');
-          document.getElementById('mainApp').classList.remove('hidden');
-          document.getElementById('displayUser').innerText = currentUser.company;
-          document.getElementById('displayLevel').innerText = currentUser.level;
-          await initData(); switchPage('formInspection');
-        }
-      } catch(x) { } finally { setLoader(false); }
-    }
-
-    async function initData() {
-      const { data: comps } = await supabaseClient.from('companies').select('*').eq('status', 'Active');
-      const { data: locs } = await supabaseClient.from('locations').select('*').eq('status', 'Active');
-      globalLocs = locs || [];
-      const fComp = document.getElementById('fCompany'), cSel = document.getElementById('perusahaan');
-      fComp.innerHTML = '<option value="">All Companies</option>';
-      cSel.innerHTML = '<option value="">Select Company</option>';
-      (comps || []).forEach(c => { 
-          let n = c.company || c.name; 
-          fComp.innerHTML += `<option value="${n}">${n}</option>`; 
-          cSel.innerHTML += `<option value="${n}">${n}</option>`;
-          globalCompanies.push(n); 
-      });
-      const lSel = document.getElementById('lokasi'), hlSel = document.getElementById('hLokasi');
-      const locNames = [...new Set(globalLocs.map(l => l.location || l.lokasi))];
-      lSel.innerHTML = hlSel.innerHTML = '<option value="">Select Location</option>';
-      locNames.forEach(l => { lSel.innerHTML += `<option value="${l}">${l}</option>`; hlSel.innerHTML += `<option value="${l}">${l}</option>`; });
-      document.getElementById('tanggal').valueAsDate = new Date();
-    }
-
-    function updateSubLoc(lid, sid) {
-      const v = document.getElementById(lid).value, s = document.getElementById(sid);
-      s.innerHTML = '<option value="">Select Sub</option>';
-      globalLocs.filter(i => (i.location || i.lokasi) === v).forEach(i => { s.innerHTML += `<option value="${i.sub_location}">${i.sub_location}</option>`; });
-    }
-
-    async function uploadToDrive(file, pre, type) {
-      if(!file) return null;
-      const b64 = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result.split(',')[1]); r.readAsDataURL(file); });
-      const name = generateID(pre) + "." + file.name.split('.').pop();
-      const res = await fetch(gasAPI, { method: "POST", body: JSON.stringify({ fileName: name, mimeType: file.type, base64: b64, folderType: type }) });
-      const json = await res.json(); return json.url;
-    }
-
-    function previewImg(input, id) { if(input.files[0]) { uploadFiles[input.id] = input.files[0]; const p = document.getElementById(id); p.src = URL.createObjectURL(input.files[0]); p.classList.remove('hidden'); } }
-    function togglePicaSection() { document.getElementById('picaSection').classList.toggle('hidden', document.getElementById('adaTemuan').value !== "Yes"); if(document.getElementById('picaContainer').children.length === 0) addPica('picaContainer'); }
-    function toggleHazardCAR() { document.getElementById('hCarSection').classList.toggle('hidden', document.getElementById('hIsClosed').value !== "No"); if(document.getElementById('hPicaContainer').children.length === 0) addPica('hPicaContainer'); }
-
-    function addPica(cid) {
-      let opt = '<option value="">PIC</option>' + globalCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
-      let d = document.createElement('div'); d.className = 'pica-item'; d.style = "margin-top:15px; padding:15px; background:#fff; border:1px solid #ddd; border-radius:8px;";
-      d.innerHTML = `<div class="form-group"><label>Finding:</label><textarea class="pf" required></textarea></div><div class="form-group"><label>PIC:</label><select class="ppic" required>${opt}</select></div><div class="form-group"><label>Due Date:</label><input type="date" class="pd" required></div><button type="button" class="btn-danger" style="padding:5px 10px;" onclick="this.parentElement.remove()">Hapus</button>`;
-      document.getElementById(cid).appendChild(d);
-    }
-
-    async function submitInspection() {
-      const isT = document.getElementById('adaTemuan').value; 
-      if(isT === "Yes" && !uploadFiles['imageFile']) return showToast("Foto Wajib!", "error");
-      setLoader(true);
-      try {
-        let url = await uploadToDrive(uploadFiles['imageFile'], "IN", "finding_images");
-        const insCode = generateID("IN");
-        const { error } = await supabaseClient.from('inspections').insert([{ id: insCode, date: document.getElementById('tanggal').value, company: document.getElementById('perusahaan').value, location: document.getElementById('lokasi').value, sub_location: document.getElementById('subLokasi').value, has_finding: isT }]);
-        if(error) throw error;
-        if(isT === "Yes") {
-          const cars = Array.from(document.querySelectorAll('#picaContainer > .pica-item')).map(el => ({ car_code: generateID("CAR"), finding: el.querySelector('.pf').value, pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value, status: "Open", image_url: url, inspection_code: insCode, date_raised: new Date() }));
-          await supabaseClient.from('car_reports').insert(cars);
-        }
-        showToast("Berhasil!"); clearAllForms();
-      } catch(e) { showToast("Gagal!", "error"); } finally { setLoader(false); }
-    }
-
-    async function submitHazard() {
-      if(!uploadFiles['hPhotoBefore']) return showToast("Foto Wajib!", "error");
-      setLoader(true);
-      try {
-        const url = await uploadToDrive(uploadFiles['hPhotoBefore'], "HZ", "finding_images");
-        const hzId = generateID("HZD");
-        const { error } = await supabaseClient.from('hazard_reports').insert([{ id: hzId, date: new Date(), reporter: currentUser.email, company: currentUser.company, location: document.getElementById('hLokasi').value, sub_location: document.getElementById('hSubLokasi').value, photo_before: url, description: document.getElementById('hDesc').value, status: document.getElementById('hIsClosed').value === "Yes" ? "Closed" : "Open" }]);
-        if(error) throw error;
-        if(document.getElementById('hIsClosed').value === "No") {
-          const cars = Array.from(document.querySelectorAll('#hPicaContainer > .pica-item')).map(el => ({ car_code: generateID("CAR"), finding: el.querySelector('.pf').value, pic: el.querySelector('.ppic').value, due_date: el.querySelector('.pd').value, status: "Open", image_url: url, source: hzId, date_raised: new Date() }));
-          await supabaseClient.from('car_reports').insert(cars);
-        }
-        showToast("Berhasil!"); clearAllForms();
-      } catch(e) { showToast("Gagal!", "error"); } finally { setLoader(false); }
-    }
-
-    async function loadCarPage() {
-      const { data } = await supabaseClient.from('car_reports').select('*').order('date_raised', { ascending: false });
-      carMasterData = data || []; updateCarTable();
-    }
-
-    function updateCarTable() {
-      const fc = document.getElementById('fCompany').value, fs = document.getElementById('fStatus').value;
-      const filtered = carMasterData.filter(c => (!fc || c.pic === fc) && (!fs || c.status === fs));
-      let html = "";
-      filtered.forEach(c => { html += `<tr><td><b>${c.car_code}</b></td><td>${new Date(c.date_raised).toLocaleDateString()}</td><td>${c.pic}</td><td>${c.due_date}</td><td style="font-weight:700; color:${c.status==='Closed'?'green':'red'}">${c.status}</td><td><button class="btn btn-primary" onclick="openCarDetail('${c.car_code}')">View</button></td></tr>`; });
-      document.getElementById('carTableBody').innerHTML = html;
-    }
-
-    function openCarDetail(code) {
-      const c = carMasterData.find(x => x.car_code === code); activeCarId = code;
-      document.getElementById('detCarCode').innerText = code; document.getElementById('detImg').src = c.image_url; document.getElementById('detFinding').innerText = c.finding;
-      document.getElementById('fuSection').classList.toggle('hidden', c.status === 'Closed');
-      document.getElementById('carModal').classList.remove('hidden');
-    }
-
-    async function submitFU() {
-      if(!document.getElementById('fuFile').files[0]) return alert("Evidence Wajib!");
-      setLoader(true);
-      try {
-        const url = await uploadToDrive(document.getElementById('fuFile').files[0], "FU", "followup_images");
-        await supabaseClient.from('car_followups').insert([{ car_code: activeCarId, action_taken: document.getElementById('fuAction').value, file_url: url, action_date: new Date() }]);
-        await supabaseClient.from('car_reports').update({ status: 'Closed' }).eq('car_code', activeCarId);
-        showToast("Closed!"); document.getElementById('carModal').classList.add('hidden'); loadCarPage();
-      } catch(e) { showToast("Gagal!"); } finally { setLoader(false); }
-    }
-
-    function clearAllForms() { document.querySelectorAll('form').forEach(f => f.reset()); document.querySelectorAll('img').forEach(i => i.classList.add('hidden')); uploadFiles = {}; }
-    async function loadSimperPage() { /* Logic simper load */ }
-    async function submitSimper() { /* Logic simper submit */ }
-  </script>
 </body>
 </html>
