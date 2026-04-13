@@ -760,7 +760,7 @@ tbody tr:hover { background: var(--surface2); }
         <div id="picaSection" style="display:none">
           <div class="form-section-title">⚡ CAR Items</div>
           <div id="picaContainer"></div>
-          <button class="btn-add" onclick="addPica('picaContainer')">+ Tambah Item CAR</button>
+          <button class="btn-add" onclick="addPica('picaContainer','inspection')">+ Tambah Item CAR</button>
         </div>
 
         <hr class="divider"/>
@@ -864,7 +864,7 @@ tbody tr:hover { background: var(--surface2); }
         <div id="hCarSection" style="display:none">
           <div class="form-section-title">⚡ CAR Items</div>
           <div id="hPicaContainer"></div>
-          <button class="btn-add" onclick="addPica('hPicaContainer')">+ Tambah Item CAR</button>
+          <button class="btn-add" onclick="addPica('hPicaContainer','hazard')">+ Tambah Item CAR</button>
         </div>
 
         <hr class="divider"/>
@@ -1100,9 +1100,16 @@ tbody tr:hover { background: var(--surface2); }
         <div class="card-title"><span class="card-title-dot"></span>Form Pendaftaran SIMPER Baru</div>
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Nama Lengkap</label>
+            <label class="form-label">Nama Lengkap <span style="color:var(--red)">*</span></label>
             <input id="srNama" type="text" class="form-input" placeholder="Nama sesuai identitas"/>
           </div>
+          <div class="form-group">
+            <label class="form-label">Nomor Badge Karyawan <span style="color:var(--red)">*</span></label>
+            <input id="srNoBadge" type="text" class="form-input" placeholder="Contoh: EMP-2024-0123"/>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px;">Nomor yang tertera di ID Badge perusahaan</div>
+          </div>
+        </div>
+        <div class="form-row">
           <div class="form-group">
             <label class="form-label">Company</label>
             <div style="padding:13px 16px;background:var(--surface2);border:1px solid var(--border);
@@ -1111,6 +1118,10 @@ tbody tr:hover { background: var(--surface2); }
               <span id="srCompanyName">—</span>
             </div>
             <input type="hidden" id="srCompany"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Jabatan / Posisi</label>
+            <input id="srJabatan" type="text" class="form-input" placeholder="Contoh: Operator Forklift"/>
           </div>
         </div>
 
@@ -1179,7 +1190,7 @@ tbody tr:hover { background: var(--surface2); }
           <table>
             <thead>
               <tr>
-                <th>ID</th><th>Nama</th><th>Company</th><th>Tgl Daftar</th>
+                <th>ID</th><th>Nama</th><th>No. Badge</th><th>Company</th><th>Tgl Daftar</th>
                 <th>Badge Expiry</th><th>Status</th><th>Aksi</th>
               </tr>
             </thead>
@@ -1330,9 +1341,11 @@ tbody tr:hover { background: var(--surface2); }
     </div>
 
     <!-- Info Pemohon -->
-    <div class="car-detail-grid" style="margin-bottom:16px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
       <div class="car-detail-item"><label>Nama</label><p id="srdNama">—</p></div>
+      <div class="car-detail-item"><label>No. Badge</label><p id="srdNoBadge" style="font-family:'Syne',sans-serif;color:var(--teal)">—</p></div>
       <div class="car-detail-item"><label>Company</label><p id="srdCompany">—</p></div>
+      <div class="car-detail-item"><label>Jabatan</label><p id="srdJabatan">—</p></div>
       <div class="car-detail-item"><label>Tgl Daftar</label><p id="srdDate">—</p></div>
       <div class="car-detail-item"><label>Badge Expiry</label><p id="srdExpiry">—</p></div>
     </div>
@@ -1703,13 +1716,15 @@ async function uploadToDrive(file, pre, type) {
 function togglePicaSection() {
   const show = document.getElementById('adaTemuan').value === 'Yes';
   document.getElementById('picaSection').style.display = show ? '' : 'none';
-  if (show && document.getElementById('picaContainer').children.length === 0) addPica('picaContainer');
+  if (show && document.getElementById('picaContainer').children.length === 0)
+    addPica('picaContainer', 'inspection');  // ← mode inspection: wajib foto per item
 }
 
 function toggleHazardCAR() {
   const show = document.getElementById('hIsClosed').value === 'No';
   document.getElementById('hCarSection').style.display = show ? '' : 'none';
-  if (show && document.getElementById('hPicaContainer').children.length === 0) addPica('hPicaContainer');
+  if (show && document.getElementById('hPicaContainer').children.length === 0)
+    addPica('hPicaContainer', 'hazard');     // ← mode hazard: foto dari photo_before
 }
 
 function updateSubLoc(locId, subId) {
@@ -1722,10 +1737,30 @@ function updateSubLoc(locId, subId) {
 }
 
 /* ══ ADD PICA ITEM ══ */
-function addPica(containerId) {
+// mode: 'inspection' = wajib upload foto per CAR item
+//       'hazard'     = foto diambil dari photo_before (tidak perlu upload lagi)
+function addPica(containerId, mode) {
+  const isInspection = (mode || containerId.includes('picaContainer') && !containerId.includes('hPica')) ;
   const picOpts = globalCompanies.map(c => `<option value="${c}">${c}</option>`).join('');
   const d = document.createElement('div');
   d.className = 'pica-item';
+
+  const fotoSection = isInspection ? `
+    <div class="form-group">
+      <label class="form-label">Foto Temuan <span style="color:var(--red)">*</span></label>
+      <div class="file-drop" style="padding:16px;">
+        <input type="file" accept="image/*" class="pimg-file"
+          onchange="previewPicaImg(this)"/>
+        <div class="file-drop-icon" style="font-size:20px;">📸</div>
+        <div class="file-drop-text" style="font-size:12px;">Foto temuan wajib<br><strong>JPG, PNG</strong></div>
+      </div>
+      <img class="pimg-preview preview-img hidden" style="max-height:120px;"/>
+    </div>` : `
+    <div style="font-size:12px;color:var(--muted);background:var(--surface2);
+      border:1px solid var(--border);border-radius:6px;padding:8px 12px;margin-bottom:8px;">
+      📸 Foto temuan akan diambil dari <strong>foto before hazard</strong> secara otomatis
+    </div>`;
+
   d.innerHTML = `
     <div class="pica-header">
       <span class="pica-label">⚡ CAR Item</span>
@@ -1739,6 +1774,7 @@ function addPica(containerId) {
       <label class="form-label">Action Plan</label>
       <input type="text" class="form-input pap" placeholder="Rencana tindakan perbaikan..."/>
     </div>
+    ${fotoSection}
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">PIC (Company)</label>
@@ -1750,6 +1786,16 @@ function addPica(containerId) {
       </div>
     </div>`;
   document.getElementById(containerId).appendChild(d);
+}
+
+function previewPicaImg(input) {
+  if (input.files[0]) {
+    const preview = input.closest('.pica-item').querySelector('.pimg-preview');
+    preview.src = URL.createObjectURL(input.files[0]);
+    preview.classList.remove('hidden');
+    // Simpan file di element untuk diambil saat submit
+    input._file = input.files[0];
+  }
 }
 
 /* ══ SUBMIT INSPECTION ══ */
@@ -1795,18 +1841,37 @@ async function submitInspection() {
         setLoader(false);
         return;
       }
-      const cars = items.map(el => ({
+
+      // Validasi foto wajib per item (mode inspection)
+      for (let i = 0; i < items.length; i++) {
+        const fileInput = items[i].querySelector('.pimg-file');
+        if (!fileInput || !fileInput._file) {
+          showToast(`CAR Item ${i+1}: foto temuan wajib diupload!`, 'error');
+          setLoader(false);
+          return;
+        }
+      }
+
+      // Upload foto setiap CAR item secara paralel
+      const imgUrls = await Promise.all(
+        items.map(el => {
+          const fileInput = el.querySelector('.pimg-file');
+          return uploadToDrive(fileInput._file, 'CAR', 'finding_images');
+        })
+      );
+
+      const cars = items.map((el, i) => ({
         car_code:        generateID('CAR'),
         finding:         el.querySelector('.pf').value,
         action_plan:     el.querySelector('.pap').value,
         pic:             el.querySelector('.ppic').value,
         due_date:        el.querySelector('.pd').value || null,
         status:          'Open',
-        image_url:       url,
+        image_url:       imgUrls[i],        // ← foto spesifik per item
         source:          insCode,
         inspection_code: insCode,
         company:         company,
-        date_raised:     new Date().toISOString().split('T')[0]  // date type: YYYY-MM-DD
+        date_raised:     new Date().toISOString().split('T')[0]
       }));
       const { error: carError } = await supabaseClient.from('car_reports').insert(cars);
       if (carError) {
@@ -2803,51 +2868,53 @@ function updateFileLabel(input, labelId) {
 
 async function submitSimperRegistration() {
   const nama        = document.getElementById('srNama').value.trim();
+  const noBadge     = document.getElementById('srNoBadge').value.trim();
+  const jabatan     = document.getElementById('srJabatan').value.trim();
   const company     = document.getElementById('srCompany').value;
   const badgeExpiry = document.getElementById('srBadgeExpiry').value;
 
   if (!nama)                           return showToast('Nama lengkap wajib diisi!', 'error');
+  if (!noBadge)                        return showToast('Nomor badge karyawan wajib diisi!', 'error');
   if (!uploadFiles['srDocPengajuan'])  return showToast('Dokumen pengajuan wajib diupload!', 'error');
   if (!uploadFiles['srSimPolisi'])     return showToast('SIM Polisi wajib diupload!', 'error');
   if (!uploadFiles['srIdBadge'])       return showToast('Foto ID Badge wajib diupload!', 'error');
   if (!badgeExpiry)                    return showToast('Masa aktif ID Badge wajib diisi!', 'error');
 
-  // Cek masa aktif badge tidak sudah expired
   if (new Date(badgeExpiry) < new Date()) {
     return showToast('ID Badge sudah kadaluarsa! Perbarui badge Anda terlebih dahulu.', 'error');
   }
 
   setLoader(true);
   try {
-    // Upload semua dokumen paralel
     const [urlDoc, urlSim, urlBadge] = await Promise.all([
-      uploadToDrive(uploadFiles['srDocPengajuan'], 'DOC', 'simper_docs'),
-      uploadToDrive(uploadFiles['srSimPolisi'],    'SIM', 'simper_docs'),
+      uploadToDrive(uploadFiles['srDocPengajuan'], 'DOC',   'simper_docs'),
+      uploadToDrive(uploadFiles['srSimPolisi'],    'SIM',   'simper_docs'),
       uploadToDrive(uploadFiles['srIdBadge'],      'BADGE', 'simper_docs'),
     ]);
 
     const regId = generateID('SR');
     const { error } = await supabaseClient.from('simper_registration').insert([{
-      id:               regId,
-      nama:             nama,
-      company:          company,
-      email:            currentUser.email,
-      doc_pengajuan:    urlDoc,
-      sim_polisi:       urlSim,
-      foto_id_badge:    urlBadge,
-      id_badge_expiry:  badgeExpiry,
-      status:           'Menunggu Ujian Tulis',
-      created_at:       new Date().toISOString(),
+      id:              regId,
+      nama:            nama,
+      no_badge:        noBadge,
+      jabatan:         jabatan,
+      company:         company,
+      email:           currentUser.email,
+      doc_pengajuan:   urlDoc,
+      sim_polisi:      urlSim,
+      foto_id_badge:   urlBadge,
+      id_badge_expiry: badgeExpiry,
+      status:          'Menunggu Ujian Tulis',
+      created_at:      new Date().toISOString(),
     }]);
     if (error) throw error;
 
     showToast('Pendaftaran berhasil dikirim! ✅ Menunggu jadwal ujian tulis.');
-    // Reset form
-    document.getElementById('srNama').value       = '';
-    document.getElementById('srBadgeExpiry').value= '';
-    ['srDocPengajuan','srSimPolisi','srIdBadge'].forEach(id => {
-      uploadFiles[id] = null;
-    });
+    document.getElementById('srNama').value        = '';
+    document.getElementById('srNoBadge').value     = '';
+    document.getElementById('srJabatan').value     = '';
+    document.getElementById('srBadgeExpiry').value = '';
+    ['srDocPengajuan','srSimPolisi','srIdBadge'].forEach(id => { uploadFiles[id] = null; });
     ['srDocPengajuanLabel','srSimPolisiLabel','srIdBadgeLabel'].forEach(id => {
       const el = document.getElementById(id);
       if (el) el.innerHTML = el.innerHTML.replace(/✅.*/, '');
@@ -2878,6 +2945,7 @@ function renderSimperRegTable() {
     return `<tr>
       <td style="font-size:11px;color:var(--teal);font-family:'Syne',sans-serif">${r.id}</td>
       <td style="font-weight:500">${r.nama||'—'}</td>
+      <td style="font-size:12px;color:var(--teal)">${r.no_badge||'—'}</td>
       <td>${r.company||'—'}</td>
       <td>${tgl}</td>
       <td style="color:${expired?'var(--red)':'inherit'}">${expiry}${expired?' ⚠️':''}</td>
@@ -3000,15 +3068,45 @@ function buildAdminAction(r) {
   }
 
   if (r.status === 'Siap Diterbitkan') {
+    // Auto-generate nomor SIMPER: SIMPER/[KODE-COMPANY]/[TAHUN]/[URUT]
+    const tahun     = new Date().getFullYear();
+    const kodeComp  = (r.company || 'HSR')
+      .replace(/[^A-Za-z0-9]/g, '')   // hapus karakter non-alfanumerik
+      .toUpperCase()
+      .slice(0, 6);                    // max 6 karakter
+    // Urutan dari total data + 1, dipadding 3 digit
+    const urut = String(simperRegMasterData.filter(x => x.status === 'Diterbitkan').length + 1).padStart(3, '0');
+    const nomorSuggested = `SIMPER/${kodeComp}/${tahun}/${urut}`;
+
     return `
       <div style="background:rgba(14,165,160,0.08);border:1px solid rgba(14,165,160,0.3);border-radius:var(--radius-sm);padding:16px;">
-        <div style="font-size:13px;font-weight:500;color:var(--teal);margin-bottom:12px;">🎉 Semua ujian lulus — Terbitkan SIMPER</div>
+        <div style="font-size:13px;font-weight:500;color:var(--teal);margin-bottom:4px;">🎉 Semua ujian lulus — Terbitkan SIMPER</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">
+          Nomor SIMPER sudah digenerate otomatis. Anda bisa mengubahnya jika diperlukan.
+        </div>
+
+        <!-- Info format nomor -->
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-size:12px;">
+          <div style="color:var(--muted);margin-bottom:6px;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;font-size:11px;">Format Penomoran</div>
+          <code style="color:var(--teal);font-size:13px;">SIMPER / [KODE-COMPANY] / [TAHUN] / [URUT]</code>
+          <div style="color:var(--muted);margin-top:6px;">
+            Contoh: <strong style="color:var(--text)">SIMPER/STM/2025/001</strong> → Pendaftaran pertama tahun 2025 dari Sumbawa Timur Mining
+          </div>
+        </div>
+
         <div class="form-group">
           <label class="form-label">Nomor SIMPER</label>
-          <input id="srSimperNumber" type="text" class="form-input" placeholder="Contoh: SIMPER/2025/001"/>
+          <input id="srSimperNumber" type="text" class="form-input"
+            value="${nomorSuggested}"
+            placeholder="SIMPER/KODE/TAHUN/URUT"/>
+          <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+            Auto-generated · Edit jika ada penyesuaian
+          </div>
         </div>
         <hr class="divider" style="margin:14px 0"/>
-        <button class="btn-submit" onclick="submitTerbitkanSimper('${r.id}')">Terbitkan SIMPER</button>
+        <button class="btn-submit" onclick="submitTerbitkanSimper('${r.id}')">
+          🎉 Terbitkan SIMPER
+        </button>
       </div>`;
   }
 
@@ -3028,8 +3126,10 @@ function openSimperRegDetail(id) {
   activeSimperRegId = id;
 
   document.getElementById('srdId').innerText      = r.id;
-  document.getElementById('srdNama').innerText    = r.nama    || '—';
-  document.getElementById('srdCompany').innerText = r.company || '—';
+  document.getElementById('srdNama').innerText    = r.nama     || '—';
+  document.getElementById('srdNoBadge').innerText = r.no_badge || '—';
+  document.getElementById('srdJabatan').innerText = r.jabatan  || '—';
+  document.getElementById('srdCompany').innerText = r.company  || '—';
   document.getElementById('srdDate').innerText    = r.created_at ? new Date(r.created_at).toLocaleDateString('id-ID') : '—';
   document.getElementById('srdExpiry').innerText  = r.id_badge_expiry ? new Date(r.id_badge_expiry).toLocaleDateString('id-ID') : '—';
 
