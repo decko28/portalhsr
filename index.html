@@ -550,8 +550,13 @@ tbody tr:hover { background: var(--surface2); }
     </div>
 
     <nav class="sidebar-nav">
+      <div class="nav-section-label">Overview</div>
+      <div class="nav-item active" onclick="switchPage('dashboard')" id="nav-dashboard">
+        <span class="nav-item-icon">📊</span> Dashboard
+      </div>
+
       <div class="nav-section-label">Input Data</div>
-      <div class="nav-item active" onclick="switchPage('formInspection')" id="nav-formInspection">
+      <div class="nav-item" onclick="switchPage('formInspection')" id="nav-formInspection">
         <span class="nav-item-icon">📝</span> General Inspection
       </div>
       <div class="nav-item" onclick="switchPage('formHazard')" id="nav-formHazard">
@@ -559,6 +564,12 @@ tbody tr:hover { background: var(--surface2); }
       </div>
 
       <div class="nav-section-label">Laporan</div>
+      <div class="nav-item" onclick="switchPage('inspectionList')" id="nav-inspectionList">
+        <span class="nav-item-icon">🔍</span> Inspection History
+      </div>
+      <div class="nav-item" onclick="switchPage('hazardList')" id="nav-hazardList">
+        <span class="nav-item-icon">🚨</span> Hazard List
+      </div>
       <div class="nav-item" onclick="switchPage('carList')" id="nav-carList">
         <span class="nav-item-icon">📋</span> Corrective Action
       </div>
@@ -582,8 +593,123 @@ tbody tr:hover { background: var(--surface2); }
   <!-- MAIN CONTENT -->
   <main class="main-content">
 
+    <!-- ══ PAGE: DASHBOARD ══ -->
+    <div id="page_dashboard" class="page active">
+      <div class="page-header">
+        <h1>Dashboard</h1>
+        <p id="dashGreeting">Selamat datang di HSR Portal</p>
+      </div>
+      <!-- Summary stats -->
+      <div id="dashStats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;"></div>
+      <!-- 2-col row: CAR trend + Recent activity -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="card">
+          <div class="card-title"><span class="card-title-dot"></span>Status CAR</div>
+          <div id="dashCarBreakdown"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="card-title-dot"></span>Aktivitas Terbaru</div>
+          <div id="dashRecent" style="font-size:13px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: INSPECTION HISTORY ══ -->
+    <div id="page_inspectionList" class="page">
+      <div class="page-header">
+        <h1>Inspection History</h1>
+        <p>Histori semua general inspection</p>
+      </div>
+      <div class="card">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Filter Company</label>
+            <select id="ifCompany" class="form-input" onchange="filterInspectionTable()">
+              <option value="">Semua Company</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Filter Temuan</label>
+            <select id="ifFinding" class="form-input" onchange="filterInspectionTable()">
+              <option value="">Semua</option>
+              <option value="Yes">Ada Temuan</option>
+              <option value="No">Clear</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Cari</label>
+            <input id="ifSearch" type="text" class="form-input" placeholder="Company, lokasi..." oninput="filterInspectionTable()"/>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ID</th><th>Tanggal</th><th>Company</th><th>Lokasi</th><th>Sub Lokasi</th><th>Temuan</th></tr></thead>
+            <tbody id="inspectionTableBody"></tbody>
+          </table>
+        </div>
+        <div id="inspectionEmptyState" class="empty-state hidden">
+          <div class="empty-state-icon">🔍</div><p>Tidak ada data inspeksi</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PAGE: HAZARD LIST ══ -->
+    <div id="page_hazardList" class="page">
+      <div class="page-header">
+        <h1>Hazard List</h1>
+        <p>Daftar semua hazard report yang masuk</p>
+      </div>
+      <!-- Stats -->
+      <div id="hazardStats" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;"></div>
+      <div class="card">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:16px;" id="hazardFilterGrid">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Filter Status</label>
+            <select id="hfStatus" class="form-input" onchange="filterHazardTable()">
+              <option value="">Semua Status</option>
+              <option value="Open">Open</option>
+              <option value="Closed">Closed</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Filter Risk Level</label>
+            <select id="hfRisk" class="form-input" onchange="filterHazardTable()">
+              <option value="">Semua Level</option>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Filter Company</label>
+            <select id="hfCompany" class="form-input" onchange="filterHazardTable()">
+              <option value="">Semua Company</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Cari</label>
+            <input id="hfSearch" type="text" class="form-input" placeholder="Deskripsi, lokasi..." oninput="filterHazardTable()"/>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th><th>Tanggal</th><th>Company</th><th>Lokasi</th>
+                <th>Tipe</th><th>Risk</th><th>Status</th><th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="hazardTableBody"></tbody>
+          </table>
+        </div>
+        <div id="hazardEmptyState" class="empty-state hidden">
+          <div class="empty-state-icon">🚨</div><p>Tidak ada data hazard</p>
+        </div>
+      </div>
+    </div>
     <!-- ══ PAGE: GENERAL INSPECTION ══ -->
-    <div id="page_formInspection" class="page active">
+    <div id="page_formInspection" class="page">
       <div class="page-header">
         <h1>General Inspection</h1>
         <p>Catat hasil inspeksi keselamatan di lapangan</p>
@@ -754,7 +880,6 @@ tbody tr:hover { background: var(--surface2); }
       <div id="carStats" style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;"></div>
 
       <div class="card">
-        <!-- Filter Bar -->
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:16px;" id="carFilterGrid">
           <div class="form-group" style="margin:0">
             <label class="form-label">Filter PIC</label>
@@ -779,17 +904,13 @@ tbody tr:hover { background: var(--surface2); }
             <input type="date" id="fDateTo" class="form-input" onchange="updateCarTable()"/>
           </div>
         </div>
-        <div style="display:flex; justify-content:flex-end; gap:10px; margin-bottom:16px;">
-          <button class="btn-secondary" onclick="resetCarFilter()" style="font-size:12px; padding:7px 16px;">
-            ↺ Reset Filter
-          </button>
-          <button onclick="exportCarExcel()" style="
-            font-size:12px; padding:7px 18px; cursor:pointer;
-            background:linear-gradient(135deg,#16a34a,#15803d);
-            color:#fff; border:none; border-radius:var(--radius-sm);
-            font-family:'DM Sans',sans-serif; font-weight:500;
-            display:flex; align-items:center; gap:6px;
-            transition:opacity 0.2s;">
+        <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center;">
+          <input id="fSearch" type="text" class="form-input" placeholder="🔍  Cari CAR code, finding, company..." oninput="updateCarTable()" style="flex:1;"/>
+          <button class="btn-secondary" onclick="resetCarFilter()" style="font-size:12px;padding:7px 16px;flex-shrink:0;">↺ Reset</button>
+          <button onclick="exportCarExcel()" style="font-size:12px;padding:7px 18px;cursor:pointer;
+            background:linear-gradient(135deg,#16a34a,#15803d);color:#fff;border:none;
+            border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-weight:500;
+            display:flex;align-items:center;gap:6px;flex-shrink:0;">
             <span>📥</span> Export Excel
           </button>
         </div>
@@ -1016,21 +1137,34 @@ tbody tr:hover { background: var(--surface2); }
 
 <!-- ══ CAR DETAIL MODAL ══ -->
 <div id="carModal" class="modal-overlay hidden">
-  <div class="modal-box">
+  <div class="modal-box" style="max-width:580px;">
     <div class="modal-header">
       <div class="modal-title">Detail CAR — <span id="detCarCode" style="color:var(--teal)"></span></div>
       <button class="modal-close" onclick="document.getElementById('carModal').classList.add('hidden')">✕</button>
     </div>
-    <img id="detImg" class="car-img" src="" alt=""/>
+    <!-- Photo — clickable for lightbox -->
+    <img id="detImg" class="car-img" src="" alt="" style="cursor:zoom-in;"
+         onclick="openLightbox(this.src)" title="Klik untuk perbesar"/>
     <div class="car-detail-grid">
       <div class="car-detail-item"><label>Company</label><p id="detCompany">—</p></div>
       <div class="car-detail-item"><label>PIC</label><p id="detPIC">—</p></div>
+      <div class="car-detail-item"><label>Date Raised</label><p id="detRaised">—</p></div>
       <div class="car-detail-item"><label>Due Date</label><p id="detDue">—</p></div>
       <div class="car-detail-item"><label>Status</label><p id="detStatus">—</p></div>
+      <div class="car-detail-item"><label>Source</label><p id="detSource" style="font-size:11px;">—</p></div>
     </div>
-    <div style="margin-bottom:8px; font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:0.6px; color:var(--muted)">Finding</div>
+    <div style="margin-bottom:6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted)">Finding</div>
     <div class="car-finding-box" id="detFinding">—</div>
+    <div style="margin:12px 0 6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted)">Action Plan</div>
+    <div class="car-finding-box" id="detActionPlan">—</div>
 
+    <!-- Follow-up history -->
+    <div id="fuHistorySection" style="margin-top:16px;display:none;">
+      <div class="form-section-title">📋 Riwayat Follow-Up</div>
+      <div id="fuHistoryList"></div>
+    </div>
+
+    <!-- Close form — only shown when Open -->
     <div id="fuSection">
       <div class="form-section-title">✅ Close CAR — Follow Up</div>
       <div class="form-group">
@@ -1049,6 +1183,40 @@ tbody tr:hover { background: var(--surface2); }
       <button class="btn-submit" onclick="submitFU()">Submit & Close CAR</button>
     </div>
   </div>
+</div>
+
+<!-- ══ HAZARD DETAIL MODAL ══ -->
+<div id="hazardModal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:560px;">
+    <div class="modal-header">
+      <div class="modal-title">Detail Hazard — <span id="hdId" style="color:var(--amber)"></span></div>
+      <button class="modal-close" onclick="document.getElementById('hazardModal').classList.add('hidden')">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+      <img id="hdImgBefore" src="" alt="Before" style="width:100%;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:zoom-in;" onclick="openLightbox(this.src)"/>
+      <img id="hdImgAfter"  src="" alt="After"  style="width:100%;border-radius:var(--radius-sm);border:1px solid var(--border);cursor:zoom-in;display:none;" onclick="openLightbox(this.src)"/>
+    </div>
+    <div class="car-detail-grid">
+      <div class="car-detail-item"><label>Company</label><p id="hdCompany">—</p></div>
+      <div class="car-detail-item"><label>Reporter</label><p id="hdReporter" style="font-size:12px;">—</p></div>
+      <div class="car-detail-item"><label>Tipe</label><p id="hdType">—</p></div>
+      <div class="car-detail-item"><label>Kategori</label><p id="hdCategory">—</p></div>
+      <div class="car-detail-item"><label>Risk Level</label><p id="hdRisk">—</p></div>
+      <div class="car-detail-item"><label>Status</label><p id="hdStatus">—</p></div>
+      <div class="car-detail-item"><label>Lokasi</label><p id="hdLokasi">—</p></div>
+      <div class="car-detail-item"><label>Tanggal</label><p id="hdDate">—</p></div>
+    </div>
+    <div style="margin-bottom:6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted)">Deskripsi</div>
+    <div class="car-finding-box" id="hdDesc">—</div>
+    <div style="margin:12px 0 6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted)">Immediate Action</div>
+    <div class="car-finding-box" id="hdImmediate">—</div>
+  </div>
+</div>
+
+<!-- ══ LIGHTBOX ══ -->
+<div id="lightbox" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,0.92);
+  align-items:center;justify-content:center;cursor:zoom-out;" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" style="max-width:90vw;max-height:90vh;border-radius:8px;object-fit:contain;"/>
 </div>
 
 <!-- ══ SIMPER DETAIL MODAL ══ -->
@@ -1123,13 +1291,26 @@ const SIMPER_THRESHOLD = 80;
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* ══ STATE ══ */
-let currentUser    = null;
-let globalCompanies = [];
-let globalLocs      = [];
-let uploadFiles     = {};
-let carMasterData   = [];
+let currentUser      = null;
+let globalCompanies  = [];
+let globalLocs       = [];
+let uploadFiles      = {};
+let carMasterData    = [];
 let simperMasterData = [];
-let activeCarId     = null;
+let inspMasterData   = [];
+let hazardMasterData = [];
+let activeCarId      = null;
+
+/* ══ SESSION PERSISTENCE ══ */
+function saveSession(user) {
+  try { sessionStorage.setItem('hsr_user', JSON.stringify(user)); } catch(e) {}
+}
+function loadSession() {
+  try { return JSON.parse(sessionStorage.getItem('hsr_user')); } catch(e) { return null; }
+}
+function clearSession() {
+  try { sessionStorage.removeItem('hsr_user'); } catch(e) {}
+}
 
 /* ══ UTILS ══ */
 function setLoader(show) {
@@ -1171,6 +1352,23 @@ function simperStatus(score) {
   return score >= SIMPER_THRESHOLD ? 'Valid' : 'Tidak Valid';
 }
 
+/* ══ AUTO-RESTORE SESSION ══ */
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = loadSession();
+  if (saved) {
+    currentUser = saved;
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('mainApp').classList.remove('hidden');
+    document.getElementById('displayUser').innerText  = currentUser.company;
+    document.getElementById('displayLevel').innerText = currentUser.level;
+    if (['Admin','Superadmin'].includes(currentUser.level)) {
+      document.getElementById('adminNavLabel').style.display = '';
+      document.getElementById('nav-userMgmt').style.display  = '';
+    }
+    initData().then(() => switchPage('dashboard'));
+  }
+});
+
 /* ══ LOGIN ══ */
 async function doLogin() {
   const e = document.getElementById('email').value.trim();
@@ -1185,31 +1383,22 @@ async function doLogin() {
       document.getElementById('loginError').innerText = 'Email atau password salah.';
       return;
     }
-
     currentUser = data;
+    saveSession(currentUser);
     document.getElementById('loginPage').style.display = 'none';
     document.getElementById('mainApp').classList.remove('hidden');
     document.getElementById('displayUser').innerText  = currentUser.company;
     document.getElementById('displayLevel').innerText = currentUser.level;
-
-    // Show admin nav jika Admin/Superadmin
     if (['Admin','Superadmin'].includes(currentUser.level)) {
       document.getElementById('adminNavLabel').style.display = '';
       document.getElementById('nav-userMgmt').style.display  = '';
     }
-
-    // initData dalam try terpisah — gagal pun tetap lanjut ke halaman utama
     await initData();
-    switchPage('formInspection');
-
+    switchPage('dashboard');
   } catch (x) {
     console.error('doLogin error:', x);
-    // Jika mainApp sudah terbuka tapi error, tetap tunjukkan halaman
-    if (currentUser) {
-      switchPage('formInspection');
-    } else {
-      document.getElementById('loginError').innerText = 'Terjadi kesalahan koneksi, coba lagi.';
-    }
+    if (currentUser) { switchPage('dashboard'); }
+    else { document.getElementById('loginError').innerText = 'Terjadi kesalahan koneksi, coba lagi.'; }
   } finally {
     setLoader(false);
   }
@@ -1218,8 +1407,8 @@ async function doLogin() {
 function doLogout() {
   currentUser = null;
   globalCompanies = []; globalLocs = []; uploadFiles = {};
-  carMasterData = []; simperMasterData = [];
-  // Reset admin nav — sembunyikan kembali saat logout
+  carMasterData = []; simperMasterData = []; inspMasterData = []; hazardMasterData = [];
+  clearSession();
   document.getElementById('adminNavLabel').style.display = 'none';
   document.getElementById('nav-userMgmt').style.display  = 'none';
   document.getElementById('loginPage').style.display = '';
@@ -1313,9 +1502,12 @@ function switchPage(id) {
   const navEl = document.getElementById('nav-' + id);
   if (navEl) navEl.classList.add('active');
 
-  if (id === 'carList')  loadCarPage();
-  if (id === 'simper')   loadSimperPage();
-  if (id === 'userMgmt') loadUsers();
+  if (id === 'dashboard')      loadDashboard();
+  if (id === 'inspectionList') loadInspectionList();
+  if (id === 'hazardList')     loadHazardList();
+  if (id === 'carList')        loadCarPage();
+  if (id === 'simper')         loadSimperPage();
+  if (id === 'userMgmt')       loadUsers();
 }
 
 /* ══ FILE UTILS ══ */
@@ -1622,43 +1814,12 @@ function renderCarStats(data) {
 }
 
 function updateCarTable() {
-  const fPIC     = document.getElementById('fPIC').value;
-  const fs       = document.getElementById('fStatus').value;
-  const fFrom    = document.getElementById('fDateFrom').value;  // YYYY-MM-DD
-  const fTo      = document.getElementById('fDateTo').value;    // YYYY-MM-DD
-
-  const filtered = carMasterData.filter(c => {
-    const matchPIC    = !fPIC || (c.pic || '') === fPIC;
-    const matchStatus = !fs   || c.status === fs;
-
-    // Date range filter pada date_raised
-    let matchDate = true;
-    if (fFrom || fTo) {
-      const raised = c.date_raised ? new Date(c.date_raised) : null;
-      if (!raised) {
-        matchDate = false;
-      } else {
-        if (fFrom) matchDate = matchDate && raised >= new Date(fFrom);
-        if (fTo)   matchDate = matchDate && raised <= new Date(fTo + 'T23:59:59');
-      }
-    }
-
-    return matchPIC && matchStatus && matchDate;
-  });
-
-  // Update stats berdasarkan data yang sudah difilter
+  const filtered = getFilteredCars();
   renderCarStats(filtered);
-
   const tbody = document.getElementById('carTableBody');
   const empty = document.getElementById('carEmptyState');
-
-  if (filtered.length === 0) {
-    tbody.innerHTML = '';
-    empty.classList.remove('hidden');
-    return;
-  }
+  if (filtered.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
   empty.classList.add('hidden');
-
   tbody.innerHTML = filtered.map(c => {
     const dueDate   = c.due_date    ? new Date(c.due_date).toLocaleDateString('id-ID')    : '—';
     const raised    = c.date_raised ? new Date(c.date_raised).toLocaleDateString('id-ID') : '—';
@@ -1680,19 +1841,22 @@ function resetCarFilter() {
   document.getElementById('fStatus').value   = '';
   document.getElementById('fDateFrom').value = '';
   document.getElementById('fDateTo').value   = '';
+  document.getElementById('fSearch').value   = '';
   updateCarTable();
 }
 
-function exportCarExcel() {
-  // Ambil data yang sedang aktif di tabel (sama dengan filter saat ini)
-  const fPIC  = document.getElementById('fPIC').value;
-  const fs    = document.getElementById('fStatus').value;
-  const fFrom = document.getElementById('fDateFrom').value;
-  const fTo   = document.getElementById('fDateTo').value;
-
-  const filtered = carMasterData.filter(c => {
-    const matchPIC    = !fPIC || (c.pic || '') === fPIC;
-    const matchStatus = !fs   || c.status === fs;
+/* ══ REFACTORED: single filter fn used by table + export + stats ══ */
+function getFilteredCars() {
+  const fPIC    = document.getElementById('fPIC').value;
+  const fs      = document.getElementById('fStatus').value;
+  const fFrom   = document.getElementById('fDateFrom').value;
+  const fTo     = document.getElementById('fDateTo').value;
+  const fSearch = (document.getElementById('fSearch').value || '').toLowerCase();
+  return carMasterData.filter(c => {
+    const matchPIC    = !fPIC  || (c.pic     || '') === fPIC;
+    const matchStatus = !fs    || c.status === fs;
+    const matchSearch = !fSearch || [c.car_code, c.finding, c.company, c.pic]
+      .some(v => (v || '').toLowerCase().includes(fSearch));
     let matchDate = true;
     if (fFrom || fTo) {
       const raised = c.date_raised ? new Date(c.date_raised) : null;
@@ -1702,138 +1866,410 @@ function exportCarExcel() {
         if (fTo)   matchDate = matchDate && raised <= new Date(fTo + 'T23:59:59');
       }
     }
-    return matchPIC && matchStatus && matchDate;
+    return matchPIC && matchStatus && matchSearch && matchDate;
   });
+}
 
-  if (filtered.length === 0) {
-    showToast('Tidak ada data untuk diexport!', 'warning');
-    return;
+/* ══ DASHBOARD ══ */
+async function loadDashboard() {
+  setLoader(true);
+  try {
+    const isAdmin = ['Admin','Superadmin'].includes(currentUser.level);
+    const [carRes, hazRes, insRes, simRes] = await Promise.all([
+      supabaseClient.from('car_reports').select('status,date_raised,due_date,company,pic'),
+      supabaseClient.from('hazard_reports').select('status,risk_level,date,company'),
+      supabaseClient.from('inspections').select('date,company,has_finding'),
+      supabaseClient.from('simper_validity').select('status,company,upload_date'),
+    ]);
+
+    const cars  = (carRes.data  || []).filter(c => isAdmin || c.company === currentUser.company || c.pic === currentUser.company);
+    const hazs  = (hazRes.data  || []).filter(h => isAdmin || h.company === currentUser.company);
+    const insps = (insRes.data  || []).filter(i => isAdmin || i.company === currentUser.company);
+    const simps = (simRes.data  || []).filter(s => isAdmin || s.company === currentUser.company);
+
+    const now       = new Date();
+    const openCars  = cars.filter(c => c.status === 'Open').length;
+    const closedCars= cars.filter(c => c.status === 'Closed').length;
+    const overdue   = cars.filter(c => c.status === 'Open' && c.due_date && new Date(c.due_date) < now).length;
+    const pct       = cars.length > 0 ? Math.round(closedCars / cars.length * 100) : 0;
+    const openHaz   = hazs.filter(h => h.status === 'Open').length;
+    const critHaz   = hazs.filter(h => h.risk_level === 'Critical').length;
+    const pendSimp  = simps.filter(s => s.status === 'Pending').length;
+
+    const greetHour = now.getHours();
+    const greet     = greetHour < 12 ? 'Selamat pagi' : greetHour < 17 ? 'Selamat siang' : 'Selamat sore';
+    document.getElementById('dashGreeting').innerText = `${greet}, ${currentUser.company}`;
+
+    const pctColor = pct >= 80 ? '#4ade80' : pct >= 50 ? '#fbbf24' : '#f87171';
+
+    document.getElementById('dashStats').innerHTML = `
+      <div class="card" style="margin:0;padding:20px;border-color:rgba(239,68,68,0.3)">
+        <div style="font-size:28px;font-family:'Syne',sans-serif;font-weight:800;color:#f87171">${openCars}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.8px">CAR Open</div>
+        ${overdue > 0 ? `<div style="font-size:11px;color:var(--red);margin-top:4px">⚠️ ${overdue} Overdue</div>` : ''}
+      </div>
+      <div class="card" style="margin:0;padding:20px;border-color:${pct>=80?'rgba(34,197,94,0.3)':pct>=50?'rgba(245,158,11,0.3)':'rgba(239,68,68,0.3)'}">
+        <div style="font-size:28px;font-family:'Syne',sans-serif;font-weight:800;color:${pctColor}">${pct}%</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.8px">Close Rate CAR</div>
+        <div style="background:var(--surface2);border-radius:4px;height:4px;margin-top:8px;overflow:hidden;">
+          <div style="height:100%;border-radius:4px;background:${pctColor};width:${pct}%"></div>
+        </div>
+      </div>
+      <div class="card" style="margin:0;padding:20px;border-color:rgba(245,158,11,0.3)">
+        <div style="font-size:28px;font-family:'Syne',sans-serif;font-weight:800;color:#fbbf24">${openHaz}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.8px">Hazard Open</div>
+        ${critHaz > 0 ? `<div style="font-size:11px;color:var(--red);margin-top:4px">⛔ ${critHaz} Critical</div>` : ''}
+      </div>
+      <div class="card" style="margin:0;padding:20px;border-color:rgba(14,165,160,0.3)">
+        <div style="font-size:28px;font-family:'Syne',sans-serif;font-weight:800;color:var(--teal)">${pendSimp}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.8px">SIMPER Pending</div>
+      </div>`;
+
+    // CAR breakdown per PIC
+    const picGroups = {};
+    cars.forEach(c => {
+      const k = c.pic || 'Tidak Ada PIC';
+      if (!picGroups[k]) picGroups[k] = { open:0, closed:0 };
+      if (c.status === 'Open')   picGroups[k].open++;
+      if (c.status === 'Closed') picGroups[k].closed++;
+    });
+    const breakdown = Object.entries(picGroups).sort((a,b) => (b[1].open+b[1].closed)-(a[1].open+a[1].closed)).slice(0,6);
+    document.getElementById('dashCarBreakdown').innerHTML = breakdown.length === 0
+      ? `<div class="empty-state"><div class="empty-state-icon">📋</div><p>Belum ada data CAR</p></div>`
+      : breakdown.map(([pic, d]) => {
+          const tot = d.open + d.closed;
+          const p2  = tot > 0 ? Math.round(d.closed/tot*100) : 0;
+          return `<div style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+              <span style="color:var(--text)">${pic}</span>
+              <span style="color:var(--muted);font-size:12px">${d.closed}/${tot} closed</span>
+            </div>
+            <div style="background:var(--surface2);border-radius:4px;height:6px;overflow:hidden;">
+              <div style="height:100%;border-radius:4px;background:${p2>=80?'var(--teal)':p2>=50?'var(--amber)':'var(--red)'};width:${p2}%"></div>
+            </div>
+          </div>`;
+        }).join('');
+
+    // Recent activity — last 8 events combined
+    const recent = [
+      ...cars.filter(c=>c.date_raised).map(c=>({ date:c.date_raised, label:`CAR ${c.status === 'Open'?'dibuka':'ditutup'}`, sub:c.company||c.pic||'', icon:'📋', color:'var(--teal)' })),
+      ...hazs.filter(h=>h.date).map(h=>({ date:h.date, label:`Hazard ${h.risk_level||''}`, sub:h.company||'', icon:'⚠️', color:'var(--amber)' })),
+      ...insps.filter(i=>i.date).map(i=>({ date:i.date, label:`Inspeksi ${i.has_finding==='Yes'?'(ada temuan)':'(clear)'}`, sub:i.company||'', icon:'📝', color:'var(--muted)' })),
+    ].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0,8);
+
+    document.getElementById('dashRecent').innerHTML = recent.length === 0
+      ? `<div class="empty-state"><div class="empty-state-icon">📭</div><p>Belum ada aktivitas</p></div>`
+      : recent.map(r => `
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:16px;flex-shrink:0;">${r.icon}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;color:var(--text)">${r.label}</div>
+            <div style="font-size:11px;color:var(--muted)">${r.sub} · ${new Date(r.date).toLocaleDateString('id-ID')}</div>
+          </div>
+        </div>`).join('');
+  } catch(e) {
+    console.error('loadDashboard error:', e);
+  } finally {
+    setLoader(false);
   }
+}
 
-  // Buat summary info filter yang aktif
+/* ══ INSPECTION LIST ══ */
+async function loadInspectionList() {
+  setLoader(true);
+  try {
+    let query = supabaseClient.from('inspections').select('*').order('date', { ascending: false });
+    if (!['Admin','Superadmin'].includes(currentUser.level)) {
+      query = query.eq('company', currentUser.company);
+    }
+    const { data, error } = await query;
+    if (error) throw error;
+    inspMasterData = data || [];
+
+    // Populate company filter
+    const comps = [...new Set(inspMasterData.map(i => i.company).filter(Boolean))].sort();
+    const ifComp = document.getElementById('ifCompany');
+    ifComp.innerHTML = '<option value="">Semua Company</option>' +
+      comps.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    filterInspectionTable();
+  } catch(e) {
+    console.error('loadInspectionList error:', e);
+    showToast('Gagal memuat data inspeksi', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+function filterInspectionTable() {
+  const fc     = document.getElementById('ifCompany').value;
+  const ff     = document.getElementById('ifFinding').value;
+  const search = (document.getElementById('ifSearch').value || '').toLowerCase();
+  const filtered = inspMasterData.filter(i => {
+    const matchC = !fc || i.company === fc;
+    const matchF = !ff || i.has_finding === ff;
+    const matchS = !search || [i.company, i.location, i.sub_location, i.id]
+      .some(v => (v||'').toLowerCase().includes(search));
+    return matchC && matchF && matchS;
+  });
+  const tbody = document.getElementById('inspectionTableBody');
+  const empty = document.getElementById('inspectionEmptyState');
+  if (filtered.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+  tbody.innerHTML = filtered.map(i => `<tr>
+    <td style="font-size:12px;color:var(--teal);font-family:'Syne',sans-serif">${i.id}</td>
+    <td>${i.date ? new Date(i.date).toLocaleDateString('id-ID') : '—'}</td>
+    <td>${i.company || '—'}</td>
+    <td>${i.location || '—'}</td>
+    <td>${i.sub_location || '—'}</td>
+    <td>${i.has_finding === 'Yes'
+      ? '<span class="badge badge-open">Ada Temuan</span>'
+      : '<span class="badge badge-closed">Clear</span>'}</td>
+  </tr>`).join('');
+}
+
+/* ══ HAZARD LIST ══ */
+async function loadHazardList() {
+  setLoader(true);
+  try {
+    let query = supabaseClient.from('hazard_reports').select('*').order('date', { ascending: false });
+    if (!['Admin','Superadmin'].includes(currentUser.level)) {
+      query = query.eq('company', currentUser.company);
+    }
+    const { data, error } = await query;
+    if (error) throw error;
+    hazardMasterData = data || [];
+
+    // Populate company filter
+    const comps = [...new Set(hazardMasterData.map(h => h.company).filter(Boolean))].sort();
+    const hfComp = document.getElementById('hfCompany');
+    hfComp.innerHTML = '<option value="">Semua Company</option>' +
+      comps.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    renderHazardStats();
+    filterHazardTable();
+  } catch(e) {
+    console.error('loadHazardList error:', e);
+    showToast('Gagal memuat data hazard', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+function renderHazardStats() {
+  const total    = hazardMasterData.length;
+  const open     = hazardMasterData.filter(h => h.status === 'Open').length;
+  const closed   = hazardMasterData.filter(h => h.status === 'Closed').length;
+  const critical = hazardMasterData.filter(h => h.risk_level === 'Critical').length;
+  document.getElementById('hazardStats').innerHTML = `
+    <div class="card" style="margin:0;text-align:center;padding:20px;">
+      <div style="font-size:28px;font-family:'Syne',sans-serif;font-weight:800;color:var(--white)">${total}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.8px">Total Hazard</div>
+    </div>
+    <div class="card" style="margin:0;text-align:center;padding:20px;border-color:rgba(239,68,68,0.3)">
+      <div style="font-size:28px;font-family:'Syne',sans-serif;font-weight:800;color:#f87171">${open}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.8px">Open</div>
+    </div>
+    <div class="card" style="margin:0;text-align:center;padding:20px;border-color:rgba(34,197,94,0.3)">
+      <div style="font-size:28px;font-family:'Syne',sans-serif;font-weight:800;color:#4ade80">${closed}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.8px">Closed</div>
+    </div>
+    <div class="card" style="margin:0;text-align:center;padding:20px;border-color:rgba(239,68,68,0.4)">
+      <div style="font-size:28px;font-family:'Syne',sans-serif;font-weight:800;color:#ef4444">${critical}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.8px">Critical</div>
+    </div>`;
+}
+
+function riskBadge(r) {
+  const map = { Critical:'badge-open', High:'badge-open', Medium:'badge-warning', Low:'badge-closed' };
+  return `<span class="badge ${map[r]||'badge-warning'}">${r||'—'}</span>`;
+}
+
+function filterHazardTable() {
+  const fs     = document.getElementById('hfStatus').value;
+  const fr     = document.getElementById('hfRisk').value;
+  const fc     = document.getElementById('hfCompany').value;
+  const search = (document.getElementById('hfSearch').value || '').toLowerCase();
+  const filtered = hazardMasterData.filter(h => {
+    const matchS = !fs || h.status === fs;
+    const matchR = !fr || h.risk_level === fr;
+    const matchC = !fc || h.company === fc;
+    const matchQ = !search || [h.description, h.location, h.company, h.id]
+      .some(v => (v||'').toLowerCase().includes(search));
+    return matchS && matchR && matchC && matchQ;
+  });
+  const tbody = document.getElementById('hazardTableBody');
+  const empty = document.getElementById('hazardEmptyState');
+  if (filtered.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+  tbody.innerHTML = filtered.map(h => `<tr>
+    <td style="font-size:12px;color:var(--amber);font-family:'Syne',sans-serif">${h.id}</td>
+    <td>${h.date ? new Date(h.date).toLocaleDateString('id-ID') : '—'}</td>
+    <td>${h.company || '—'}</td>
+    <td>${h.location || '—'}</td>
+    <td style="font-size:12px">${h.type || '—'}</td>
+    <td>${riskBadge(h.risk_level)}</td>
+    <td>${statusBadge(h.status)}</td>
+    <td><button class="btn-amber" onclick="openHazardDetail('${h.id}')">Detail</button></td>
+  </tr>`).join('');
+}
+
+function openHazardDetail(id) {
+  const h = hazardMasterData.find(x => x.id === id);
+  document.getElementById('hdId').innerText       = h.id;
+  document.getElementById('hdCompany').innerText  = h.company || '—';
+  document.getElementById('hdReporter').innerText = h.reporter || '—';
+  document.getElementById('hdType').innerText     = h.type || '—';
+  document.getElementById('hdCategory').innerText = h.category || '—';
+  document.getElementById('hdRisk').innerHTML     = riskBadge(h.risk_level);
+  document.getElementById('hdStatus').innerHTML   = statusBadge(h.status);
+  document.getElementById('hdLokasi').innerText   = `${h.location || '—'} / ${h.sub_location || '—'}`;
+  document.getElementById('hdDate').innerText     = h.date ? new Date(h.date).toLocaleDateString('id-ID') : '—';
+  document.getElementById('hdDesc').innerText     = h.description || '—';
+  document.getElementById('hdImmediate').innerText = h.immediate_action || '—';
+
+  const imgBefore = document.getElementById('hdImgBefore');
+  const imgAfter  = document.getElementById('hdImgAfter');
+  if (h.photo_before) { imgBefore.src = h.photo_before; imgBefore.style.display = ''; }
+  else imgBefore.style.display = 'none';
+  if (h.photo_after)  { imgAfter.src  = h.photo_after;  imgAfter.style.display  = ''; }
+  else imgAfter.style.display  = 'none';
+
+  document.getElementById('hazardModal').classList.remove('hidden');
+}
+
+/* ══ LIGHTBOX ══ */
+function openLightbox(src) {
+  if (!src) return;
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').style.display = 'flex';
+}
+function closeLightbox() {
+  document.getElementById('lightbox').style.display = 'none';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+function exportCarExcel() {
+  const filtered = getFilteredCars();
+  if (filtered.length === 0) { showToast('Tidak ada data untuk diexport!', 'warning'); return; }
+
+  const fPIC  = document.getElementById('fPIC').value;
+  const fs    = document.getElementById('fStatus').value;
+  const fFrom = document.getElementById('fDateFrom').value;
+  const fTo   = document.getElementById('fDateTo').value;
+  const fSrch = document.getElementById('fSearch').value;
   const filterInfo = [
-    fPIC   ? `PIC: ${fPIC}`     : null,
-    fs     ? `Status: ${fs}`    : null,
-    fFrom  ? `Dari: ${fFrom}`   : null,
-    fTo    ? `Sampai: ${fTo}`   : null,
+    fPIC  ? `PIC: ${fPIC}`   : null,
+    fs    ? `Status: ${fs}`  : null,
+    fFrom ? `Dari: ${fFrom}` : null,
+    fTo   ? `Sampai: ${fTo}` : null,
+    fSrch ? `Cari: ${fSrch}` : null,
   ].filter(Boolean).join(' | ') || 'Semua Data';
 
   const now      = new Date();
   const nowStr   = now.toLocaleString('id-ID');
   const dateFile = now.toISOString().split('T')[0];
 
-  // ── SHEET 1: Data CAR ──
-  const headers = [
-    'CAR Code', 'Date Raised', 'Company', 'PIC',
-    'Finding', 'Action Plan', 'Due Date', 'Status', 'Source'
-  ];
-
-  const rows = filtered.map(c => [
-    c.car_code    || '',
-    c.date_raised || '',
-    c.company     || '',
-    c.pic         || '',
-    c.finding     || '',
-    c.action_plan || '',
-    c.due_date    || '',
-    c.status      || '',
-    c.source      || ''
+  const headers = ['CAR Code','Date Raised','Company','PIC','Finding','Action Plan','Due Date','Status','Source'];
+  const rows    = filtered.map(c => [
+    c.car_code||'', c.date_raised||'', c.company||'', c.pic||'',
+    c.finding||'', c.action_plan||'', c.due_date||'', c.status||'', c.source||''
   ]);
 
   const wsData = [
-    // Baris 1: Judul
     ['HSR PORTAL — Corrective Action Report'],
     [`Diekspor: ${nowStr}`],
     [`Filter: ${filterInfo}`],
-    [],  // baris kosong
-    headers,
-    ...rows,
-    [],  // baris kosong
-    // Summary di bawah
+    [],
+    headers, ...rows, [],
     ['SUMMARY'],
-    ['Total CAR',   filtered.length],
-    ['Open',        filtered.filter(c => c.status === 'Open').length],
-    ['Closed',      filtered.filter(c => c.status === 'Closed').length],
-    ['Close Rate',  filtered.length > 0
-      ? `${Math.round(filtered.filter(c=>c.status==='Closed').length / filtered.length * 100)}%`
-      : '0%'],
-    ['Overdue',     filtered.filter(c =>
-      c.status === 'Open' && c.due_date && new Date(c.due_date) < now
-    ).length],
+    ['Total CAR',  filtered.length],
+    ['Open',       filtered.filter(c=>c.status==='Open').length],
+    ['Closed',     filtered.filter(c=>c.status==='Closed').length],
+    ['Close Rate', filtered.length > 0 ? `${Math.round(filtered.filter(c=>c.status==='Closed').length/filtered.length*100)}%` : '0%'],
+    ['Overdue',    filtered.filter(c=>c.status==='Open'&&c.due_date&&new Date(c.due_date)<now).length],
   ];
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-  // ── Column widths ──
-  ws['!cols'] = [
-    { wch: 16 },  // CAR Code
-    { wch: 14 },  // Date Raised
-    { wch: 24 },  // Company
-    { wch: 24 },  // PIC
-    { wch: 40 },  // Finding
-    { wch: 40 },  // Action Plan
-    { wch: 14 },  // Due Date
-    { wch: 10 },  // Status
-    { wch: 16 },  // Source
-  ];
-
-  // ── Merge judul di baris 1 ──
+  ws['!cols'] = [{wch:16},{wch:14},{wch:24},{wch:24},{wch:40},{wch:40},{wch:14},{wch:10},{wch:16}];
   ws['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 8 } },
-    { s: { r: 2, c: 0 }, e: { r: 2, c: 8 } },
+    {s:{r:0,c:0},e:{r:0,c:8}},{s:{r:1,c:0},e:{r:1,c:8}},{s:{r:2,c:0},e:{r:2,c:8}}
   ];
 
-  // ── SHEET 2: Breakdown per PIC ──
   const picGroups = {};
   filtered.forEach(c => {
-    const key = c.pic || 'Tidak Ada PIC';
-    if (!picGroups[key]) picGroups[key] = { total: 0, open: 0, closed: 0 };
-    picGroups[key].total++;
-    if (c.status === 'Open')   picGroups[key].open++;
-    if (c.status === 'Closed') picGroups[key].closed++;
+    const k = c.pic || 'Tidak Ada PIC';
+    if (!picGroups[k]) picGroups[k] = {total:0,open:0,closed:0};
+    picGroups[k].total++;
+    if (c.status==='Open')   picGroups[k].open++;
+    if (c.status==='Closed') picGroups[k].closed++;
   });
-
   const ws2Data = [
-    ['Breakdown per PIC'],
-    [`Filter: ${filterInfo}`],
-    [],
-    ['PIC / Company', 'Total', 'Open', 'Closed', 'Close Rate'],
-    ...Object.entries(picGroups).map(([pic, d]) => [
-      pic, d.total, d.open, d.closed,
-      `${Math.round(d.closed / d.total * 100)}%`
-    ]),
+    ['Breakdown per PIC'], [`Filter: ${filterInfo}`], [],
+    ['PIC / Company','Total','Open','Closed','Close Rate'],
+    ...Object.entries(picGroups).map(([p,d])=>[p,d.total,d.open,d.closed,`${Math.round(d.closed/d.total*100)}%`]),
   ];
   const ws2 = XLSX.utils.aoa_to_sheet(ws2Data);
-  ws2['!cols'] = [{ wch: 30 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 14 }];
-  ws2['!merges'] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } },
-  ];
+  ws2['!cols'] = [{wch:30},{wch:10},{wch:10},{wch:10},{wch:14}];
+  ws2['!merges'] = [{s:{r:0,c:0},e:{r:0,c:4}},{s:{r:1,c:0},e:{r:1,c:4}}];
 
-  // ── Build workbook ──
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws,  'CAR Data');
   XLSX.utils.book_append_sheet(wb, ws2, 'Breakdown PIC');
-
-  // ── Download ──
   const filename = `CAR_Report_${dateFile}.xlsx`;
   XLSX.writeFile(wb, filename);
   showToast(`Export berhasil: ${filename} ✅`);
 }
 
-function openCarDetail(code) {
+async function openCarDetail(code) {
   const c = carMasterData.find(x => x.car_code === code);
   activeCarId = code;
-  document.getElementById('detCarCode').innerText = code;
-  document.getElementById('detImg').src = c.image_url || '';
-  document.getElementById('detFinding').innerText = c.finding || '—';
-  document.getElementById('detCompany').innerText = c.company || '—';
-  document.getElementById('detPIC').innerText = c.pic || '—';
-  document.getElementById('detDue').innerText = c.due_date || '—';
-  document.getElementById('detStatus').innerHTML = statusBadge(c.status);
+
+  document.getElementById('detCarCode').innerText   = code;
+  document.getElementById('detFinding').innerText   = c.finding     || '—';
+  document.getElementById('detActionPlan').innerText= c.action_plan || '—';
+  document.getElementById('detCompany').innerText   = c.company     || '—';
+  document.getElementById('detPIC').innerText       = c.pic         || '—';
+  document.getElementById('detDue').innerText       = c.due_date    || '—';
+  document.getElementById('detRaised').innerText    = c.date_raised ? new Date(c.date_raised).toLocaleDateString('id-ID') : '—';
+  document.getElementById('detSource').innerText    = c.source      || '—';
+  document.getElementById('detStatus').innerHTML    = statusBadge(c.status);
   document.getElementById('fuSection').style.display = c.status === 'Closed' ? 'none' : '';
+
+  // Foto — hanya tampil jika ada URL
+  const img = document.getElementById('detImg');
+  if (c.image_url) { img.src = c.image_url; img.style.display = ''; }
+  else img.style.display = 'none';
+
   document.getElementById('carModal').classList.remove('hidden');
+
+  // Load follow-up history async
+  try {
+    const { data: fus } = await supabaseClient
+      .from('car_followups').select('*')
+      .eq('car_code', code).order('action_date', { ascending: false });
+
+    const fuList    = document.getElementById('fuHistoryList');
+    const fuSection = document.getElementById('fuHistorySection');
+
+    if (fus && fus.length > 0) {
+      fuSection.style.display = '';
+      fuList.innerHTML = fus.map(fu => `
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+          padding:12px 14px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+            <span style="font-size:12px;color:var(--muted)">${fu.action_date ? new Date(fu.action_date).toLocaleDateString('id-ID') : '—'}</span>
+            <span style="font-size:11px;color:var(--muted)">${fu.closed_by || ''}</span>
+          </div>
+          <div style="font-size:13px;color:var(--text);margin-bottom:8px">${fu.action_taken || '—'}</div>
+          ${fu.file_url ? `<img src="${fu.file_url}" style="max-height:120px;border-radius:6px;border:1px solid var(--border);cursor:zoom-in;" onclick="openLightbox('${fu.file_url}')"/>` : ''}
+        </div>`).join('');
+    } else {
+      fuSection.style.display = 'none';
+    }
+  } catch(e) {
+    document.getElementById('fuHistorySection').style.display = 'none';
+  }
 }
 
 async function submitFU() {
