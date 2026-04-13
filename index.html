@@ -493,6 +493,7 @@ tbody tr:hover { background: var(--surface2); }
   .sidebar { transform: translateX(-100%); }
   .main-content { margin-left: 0; padding: 20px; }
   .form-row, .form-row-3 { grid-template-columns: 1fr; }
+  #carFilterGrid { grid-template-columns: 1fr 1fr !important; }
 }
 </style>
 </head>
@@ -748,18 +749,19 @@ tbody tr:hover { background: var(--surface2); }
         <p>Monitor dan kelola tindakan perbaikan</p>
       </div>
 
-      <!-- Stats -->
-      <div id="carStats" style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px;"></div>
+      <!-- Stats — reactive terhadap filter -->
+      <div id="carStats" style="display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:24px;"></div>
 
       <div class="card">
-        <div class="filter-bar">
-          <div class="form-group">
-            <label class="form-label">Filter PIC (Company Bertanggung Jawab)</label>
+        <!-- Filter Bar -->
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; margin-bottom:16px;" id="carFilterGrid">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Filter PIC</label>
             <select id="fPIC" class="form-input" onchange="updateCarTable()">
               <option value="">Semua PIC</option>
             </select>
           </div>
-          <div class="form-group">
+          <div class="form-group" style="margin:0">
             <label class="form-label">Filter Status</label>
             <select id="fStatus" class="form-input" onchange="updateCarTable()">
               <option value="">Semua Status</option>
@@ -767,13 +769,27 @@ tbody tr:hover { background: var(--surface2); }
               <option value="Closed">Closed</option>
             </select>
           </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Date Raised — Dari</label>
+            <input type="date" id="fDateFrom" class="form-input" onchange="updateCarTable()"/>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Date Raised — Sampai</label>
+            <input type="date" id="fDateTo" class="form-input" onchange="updateCarTable()"/>
+          </div>
         </div>
+        <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
+          <button class="btn-secondary" onclick="resetCarFilter()" style="font-size:12px; padding:7px 16px;">
+            ↺ Reset Filter
+          </button>
+        </div>
+
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>CAR Code</th>
-                <th>Tanggal</th>
+                <th>Date Raised</th>
                 <th>Company</th>
                 <th>PIC</th>
                 <th>Due Date</th>
@@ -1146,10 +1162,14 @@ function doLogout() {
   currentUser = null;
   globalCompanies = []; globalLocs = []; uploadFiles = {};
   carMasterData = []; simperMasterData = [];
+  // Reset admin nav — sembunyikan kembali saat logout
+  document.getElementById('adminNavLabel').style.display = 'none';
+  document.getElementById('nav-userMgmt').style.display  = 'none';
   document.getElementById('loginPage').style.display = '';
   document.getElementById('mainApp').classList.add('hidden');
   document.getElementById('email').value = '';
   document.getElementById('password').value = '';
+  document.getElementById('loginError').innerText = '';
 }
 
 /* ══ INIT DATA ══ */
@@ -1443,62 +1463,96 @@ async function loadCarPage() {
   try {
     let query = supabaseClient.from('car_reports').select('*').order('date_raised', { ascending: false });
 
-    // Non-admin hanya lihat company mereka sendiri
+    // Non-admin: filter berdasarkan pic (company bertanggung jawab)
+    // karena kolom 'company' di car_reports mungkin belum terisi untuk data lama
     if (!['Admin','Superadmin'].includes(currentUser.level)) {
-      query = query.eq('company', currentUser.company);
+      query = query.or(`company.eq.${currentUser.company},pic.eq.${currentUser.company}`);
     }
 
-    const { data } = await query;
+    const { data, error } = await query;
+    if (error) throw error;
     carMasterData = data || [];
 
-    // Populate PIC filter dari kolom pic (company bertanggung jawab)
+    // Populate PIC filter dari data yang ada
     const pics = [...new Set(carMasterData.map(c => c.pic).filter(Boolean))].sort();
     const fPIC = document.getElementById('fPIC');
     fPIC.innerHTML = '<option value="">Semua PIC</option>' +
       pics.map(p => `<option value="${p}">${p}</option>`).join('');
 
-    renderCarStats();
+    renderCarStats(carMasterData);
     updateCarTable();
   } catch (e) {
-    console.error(e);
+    console.error('loadCarPage error:', e);
     showToast('Gagal memuat data CAR', 'error');
   } finally {
     setLoader(false);
   }
 }
 
-function renderCarStats() {
-  const total  = carMasterData.length;
-  const open   = carMasterData.filter(c => c.status === 'Open').length;
-  const closed = carMasterData.filter(c => c.status === 'Closed').length;
-  const now    = new Date();
-  const overdue = carMasterData.filter(c => c.status === 'Open' && c.due_date && new Date(c.due_date) < now).length;
+function renderCarStats(data) {
+  // data bisa dari filtered (saat filter aktif) atau semua data
+  const src     = data || carMasterData;
+  const total   = src.length;
+  const open    = src.filter(c => c.status === 'Open').length;
+  const closed  = src.filter(c => c.status === 'Closed').length;
+  const pct     = total > 0 ? Math.round((closed / total) * 100) : 0;
+  const now     = new Date();
+  const overdue = src.filter(c => c.status === 'Open' && c.due_date && new Date(c.due_date) < now).length;
+
+  // Warna pct: hijau ≥80%, kuning ≥50%, merah <50%
+  const pctColor = pct >= 80 ? '#4ade80' : pct >= 50 ? '#fbbf24' : '#f87171';
+  const pctBorder = pct >= 80 ? 'rgba(34,197,94,0.3)' : pct >= 50 ? 'rgba(245,158,11,0.3)' : 'rgba(239,68,68,0.3)';
 
   document.getElementById('carStats').innerHTML = `
-    <div class="card" style="margin:0; text-align:center; padding:20px;">
-      <div style="font-size:32px; font-family:'Syne',sans-serif; font-weight:800; color:var(--white)">${total}</div>
-      <div style="font-size:12px; color:var(--muted); margin-top:4px; text-transform:uppercase; letter-spacing:0.8px">Total CAR</div>
+    <div class="card" style="margin:0;text-align:center;padding:20px;">
+      <div style="font-size:32px;font-family:'Syne',sans-serif;font-weight:800;color:var(--white)">${total}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.8px">Total CAR</div>
     </div>
-    <div class="card" style="margin:0; text-align:center; padding:20px; border-color:rgba(239,68,68,0.3)">
-      <div style="font-size:32px; font-family:'Syne',sans-serif; font-weight:800; color:#f87171">${open}</div>
-      <div style="font-size:12px; color:var(--muted); margin-top:4px; text-transform:uppercase; letter-spacing:0.8px">Open</div>
+    <div class="card" style="margin:0;text-align:center;padding:20px;border-color:rgba(239,68,68,0.3)">
+      <div style="font-size:32px;font-family:'Syne',sans-serif;font-weight:800;color:#f87171">${open}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.8px">Open</div>
+      ${overdue > 0 ? `<div style="font-size:11px;color:var(--red);margin-top:4px">⚠️ ${overdue} Overdue</div>` : ''}
     </div>
-    <div class="card" style="margin:0; text-align:center; padding:20px; border-color:rgba(34,197,94,0.3)">
-      <div style="font-size:32px; font-family:'Syne',sans-serif; font-weight:800; color:#4ade80">${closed}</div>
-      <div style="font-size:12px; color:var(--muted); margin-top:4px; text-transform:uppercase; letter-spacing:0.8px">Closed</div>
+    <div class="card" style="margin:0;text-align:center;padding:20px;border-color:rgba(34,197,94,0.3)">
+      <div style="font-size:32px;font-family:'Syne',sans-serif;font-weight:800;color:#4ade80">${closed}</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.8px">Closed</div>
+    </div>
+    <div class="card" style="margin:0;text-align:center;padding:20px;border-color:${pctBorder}">
+      <div style="font-size:32px;font-family:'Syne',sans-serif;font-weight:800;color:${pctColor}">${pct}%</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:0.8px">Close Rate</div>
+      <div style="background:var(--surface2);border-radius:4px;height:4px;margin-top:8px;overflow:hidden;">
+        <div style="height:100%;border-radius:4px;background:${pctColor};width:${pct}%;transition:width 0.6s ease;"></div>
+      </div>
     </div>`;
 }
 
 function updateCarTable() {
-  const fPIC = document.getElementById('fPIC').value;
-  const fs   = document.getElementById('fStatus').value;
+  const fPIC     = document.getElementById('fPIC').value;
+  const fs       = document.getElementById('fStatus').value;
+  const fFrom    = document.getElementById('fDateFrom').value;  // YYYY-MM-DD
+  const fTo      = document.getElementById('fDateTo').value;    // YYYY-MM-DD
 
   const filtered = carMasterData.filter(c => {
-    // Filter by pic = company yang bertanggung jawab (PIC)
     const matchPIC    = !fPIC || (c.pic || '') === fPIC;
     const matchStatus = !fs   || c.status === fs;
-    return matchPIC && matchStatus;
+
+    // Date range filter pada date_raised
+    let matchDate = true;
+    if (fFrom || fTo) {
+      const raised = c.date_raised ? new Date(c.date_raised) : null;
+      if (!raised) {
+        matchDate = false;
+      } else {
+        if (fFrom) matchDate = matchDate && raised >= new Date(fFrom);
+        if (fTo)   matchDate = matchDate && raised <= new Date(fTo + 'T23:59:59');
+      }
+    }
+
+    return matchPIC && matchStatus && matchDate;
   });
+
+  // Update stats berdasarkan data yang sudah difilter
+  renderCarStats(filtered);
 
   const tbody = document.getElementById('carTableBody');
   const empty = document.getElementById('carEmptyState');
@@ -1511,11 +1565,11 @@ function updateCarTable() {
   empty.classList.add('hidden');
 
   tbody.innerHTML = filtered.map(c => {
-    const dueDate = c.due_date ? new Date(c.due_date).toLocaleDateString('id-ID') : '—';
-    const raised  = c.date_raised ? new Date(c.date_raised).toLocaleDateString('id-ID') : '—';
+    const dueDate   = c.due_date    ? new Date(c.due_date).toLocaleDateString('id-ID')    : '—';
+    const raised    = c.date_raised ? new Date(c.date_raised).toLocaleDateString('id-ID') : '—';
     const isOverdue = c.status === 'Open' && c.due_date && new Date(c.due_date) < new Date();
     return `<tr>
-      <td><strong style="color:var(--teal); font-family:'Syne',sans-serif">${c.car_code}</strong></td>
+      <td><strong style="color:var(--teal);font-family:'Syne',sans-serif">${c.car_code}</strong></td>
       <td>${raised}</td>
       <td>${c.company || '—'}</td>
       <td>${c.pic || '—'}</td>
@@ -1524,6 +1578,14 @@ function updateCarTable() {
       <td><button class="btn-amber" onclick="openCarDetail('${c.car_code}')">Lihat</button></td>
     </tr>`;
   }).join('');
+}
+
+function resetCarFilter() {
+  document.getElementById('fPIC').value      = '';
+  document.getElementById('fStatus').value   = '';
+  document.getElementById('fDateFrom').value = '';
+  document.getElementById('fDateTo').value   = '';
+  updateCarTable();
 }
 
 function openCarDetail(code) {
