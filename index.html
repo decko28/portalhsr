@@ -957,6 +957,53 @@ tbody tr:hover { background: var(--surface2); }
   </main><!-- /main-content -->
 </div><!-- /mainApp -->
 
+<!-- ══ EDIT USER MODAL ══ -->
+<div id="editUserModal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:440px;">
+    <div class="modal-header">
+      <div class="modal-title">Edit User</div>
+      <button class="modal-close" onclick="document.getElementById('editUserModal').classList.add('hidden')">✕</button>
+    </div>
+
+    <!-- Email (read-only) -->
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <div style="padding:13px 16px; background:var(--surface2); border:1px solid var(--border);
+        border-radius:var(--radius-sm); color:var(--muted); font-size:14px; display:flex; align-items:center; gap:8px;">
+        <span style="color:var(--teal)">✉</span>
+        <span id="euEmail">—</span>
+        <span style="margin-left:auto; font-size:11px; padding:2px 8px; border-radius:20px;
+          background:var(--surface); border:1px solid var(--border); color:var(--muted);">Tidak bisa diubah</span>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Company</label>
+      <select id="euCompany" class="form-input"></select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Level Akses</label>
+      <select id="euLevel" class="form-input">
+        <option value="User">User</option>
+        <option value="Admin">Admin</option>
+        <option value="Superadmin">Superadmin</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Password Baru <span style="color:var(--muted);font-weight:400">(kosongkan jika tidak ingin ubah)</span></label>
+      <input id="euPass" type="password" class="form-input" placeholder="Password baru (opsional)"/>
+    </div>
+
+    <hr class="divider"/>
+    <div style="display:flex; gap:12px;">
+      <button class="btn-submit" onclick="submitEditUser()" style="flex:1">Simpan Perubahan</button>
+      <button class="btn-secondary" onclick="document.getElementById('editUserModal').classList.add('hidden')" style="flex:0 0 auto">Batal</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══ CAR DETAIL MODAL ══ -->
 <div id="carModal" class="modal-overlay hidden">
   <div class="modal-box">
@@ -1205,7 +1252,7 @@ async function initData() {
   const compOptions = '<option value="">Pilih Company</option>' +
     globalCompanies.map(n => `<option value="${n}">${n}</option>`).join('');
 
-  ['perusahaan', 'uCompany'].forEach(id => {
+  ['perusahaan', 'uCompany', 'euCompany'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = compOptions;
   });
@@ -1881,10 +1928,13 @@ async function loadUsers() {
   const { data } = await supabaseClient.from('users').select('*').order('email');
   const tbody = document.getElementById('userTableBody');
   tbody.innerHTML = (data || []).map(u => `<tr>
-    <td>${u.email}</td>
+    <td style="font-weight:500">${u.email}</td>
     <td>${u.company || '—'}</td>
     <td><span class="badge badge-warning">${u.level}</span></td>
-    <td><button class="btn-remove" onclick="deleteUser('${u.email}')">Hapus</button></td>
+    <td style="display:flex;gap:8px;">
+      <button class="btn-amber" onclick="openEditUser('${u.email}','${u.company || ''}','${u.level || 'User'}')">Edit</button>
+      <button class="btn-remove" onclick="deleteUser('${u.email}')">Hapus</button>
+    </td>
   </tr>`).join('');
 }
 
@@ -1914,6 +1964,44 @@ async function deleteUser(email) {
   await supabaseClient.from('users').delete().eq('email', email);
   showToast('User dihapus');
   loadUsers();
+}
+
+let editingUserEmail = null;
+
+function openEditUser(email, company, level) {
+  editingUserEmail = email;
+  document.getElementById('euEmail').innerText   = email;
+  document.getElementById('euCompany').value     = company;
+  document.getElementById('euLevel').value       = level;
+  document.getElementById('euPass').value        = '';
+  document.getElementById('editUserModal').classList.remove('hidden');
+}
+
+async function submitEditUser() {
+  const company  = document.getElementById('euCompany').value;
+  const level    = document.getElementById('euLevel').value;
+  const newPass  = document.getElementById('euPass').value;
+
+  if (!company) return showToast('Pilih company!', 'error');
+  setLoader(true);
+  try {
+    const updates = { company, level };
+    if (newPass.trim()) updates.password = newPass.trim();
+
+    const { error } = await supabaseClient.from('users')
+      .update(updates)
+      .eq('email', editingUserEmail);
+    if (error) throw error;
+
+    showToast('User berhasil diupdate! ✅');
+    document.getElementById('editUserModal').classList.add('hidden');
+    await loadUsers();
+  } catch (e) {
+    console.error(e);
+    showToast('Gagal mengupdate user!', 'error');
+  } finally {
+    setLoader(false);
+  }
 }
 
 /* ══ CLEAR FORMS ══ */
