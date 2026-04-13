@@ -1281,18 +1281,25 @@ function updateSimperFileName(input) {
 
 async function uploadToDrive(file, pre, type) {
   if (!file) return null;
-  const b64 = await new Promise(res => {
-    const r = new FileReader();
-    r.onload = () => res(r.result.split(',')[1]);
-    r.readAsDataURL(file);
-  });
-  const name = generateID(pre) + '.' + file.name.split('.').pop();
-  const res  = await fetch(GAS_API, {
-    method: 'POST',
-    body: JSON.stringify({ fileName: name, mimeType: file.type, base64: b64, folderType: type })
-  });
-  const json = await res.json();
-  return json.url;
+  try {
+    const b64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onload  = () => res(r.result.split(',')[1]);
+      r.onerror = () => rej(new Error('FileReader gagal'));
+      r.readAsDataURL(file);
+    });
+    const name = generateID(pre) + '.' + file.name.split('.').pop();
+    const res  = await fetch(GAS_API, {
+      method: 'POST',
+      body: JSON.stringify({ fileName: name, mimeType: file.type, base64: b64, folderType: type })
+    });
+    if (!res.ok) throw new Error(`GAS response: ${res.status}`);
+    const json = await res.json();
+    return json.url || null;
+  } catch (err) {
+    console.warn('uploadToDrive gagal, lanjut tanpa foto:', err);
+    return null; // Tidak crash — simpan data tanpa foto
+  }
 }
 
 /* ══ FORM TOGGLES ══ */
@@ -1350,47 +1357,72 @@ function addPica(containerId) {
 
 /* ══ SUBMIT INSPECTION ══ */
 async function submitInspection() {
-  const isT = document.getElementById('adaTemuan').value;
-  if (!isT) return showToast('Pilih status temuan!', 'error');
+  const isT     = document.getElementById('adaTemuan').value;
+  const company = document.getElementById('perusahaan').value;
+  const lokasi  = document.getElementById('lokasi').value;
+  const sub     = document.getElementById('subLokasi').value;
+  const tanggal = document.getElementById('tanggal').value;
+
+  if (!isT)     return showToast('Pilih status temuan!', 'error');
+  if (!company) return showToast('Pilih company!', 'error');
+  if (!lokasi)  return showToast('Pilih lokasi!', 'error');
   if (!uploadFiles['imageFile']) return showToast('Foto wajib diupload!', 'error');
+
   setLoader(true);
   try {
-    const url     = await uploadToDrive(uploadFiles['imageFile'], 'IN', 'finding_images');
-    const insCode = generateID('IN');
-    const { error } = await supabaseClient.from('inspections').insert([{
-      id: insCode,
-      date: document.getElementById('tanggal').value,
-      company: document.getElementById('perusahaan').value,
-      location: document.getElementById('lokasi').value,
-      sub_location: document.getElementById('subLokasi').value,
-      has_finding: isT,
-      image_url: url
-    }]);
-    if (error) throw error;
+    // Upload foto — jika gagal lanjut dengan null
+    const url = await uploadToDrive(uploadFiles['imageFile'], 'IN', 'finding_images');
 
+    const insCode = generateID('IN');
+
+    // Insert ke tabel inspections — hanya kolom yang ada di DB
+    const { error: insError } = await supabaseClient.from('inspections').insert([{
+      id:           insCode,
+      date:         tanggal,
+      company:      company,
+      location:     lokasi,
+      sub_location: sub,
+      has_finding:  isT
+      // image_url tidak dimasukkan — kolom tidak ada di DB inspections
+    }]);
+    if (insError) {
+      console.error('Insert inspections error:', insError);
+      throw insError;
+    }
+
+    // Insert CAR jika ada temuan
     if (isT === 'Yes') {
       const items = Array.from(document.querySelectorAll('#picaContainer > .pica-item'));
-      if (items.length === 0) { showToast('Tambah minimal 1 CAR item!', 'error'); return; }
+      if (items.length === 0) {
+        showToast('Tambah minimal 1 CAR item!', 'error');
+        setLoader(false);
+        return;
+      }
       const cars = items.map(el => ({
-        car_code:    generateID('CAR'),
-        finding:     el.querySelector('.pf').value,
-        action_plan: el.querySelector('.pap').value,
-        pic:         el.querySelector('.ppic').value,
-        due_date:    el.querySelector('.pd').value,
-        status:      'Open',
-        image_url:   url,
+        car_code:        generateID('CAR'),
+        finding:         el.querySelector('.pf').value,
+        action_plan:     el.querySelector('.pap').value,
+        pic:             el.querySelector('.ppic').value,
+        due_date:        el.querySelector('.pd').value || null,
+        status:          'Open',
+        image_url:       url,
+        source:          insCode,
         inspection_code: insCode,
-        source:      insCode,
-        company:     document.getElementById('perusahaan').value,
-        date_raised: new Date().toISOString()
+        company:         company,
+        date_raised:     new Date().toISOString().split('T')[0]  // date type: YYYY-MM-DD
       }));
-      await supabaseClient.from('car_reports').insert(cars);
+      const { error: carError } = await supabaseClient.from('car_reports').insert(cars);
+      if (carError) {
+        console.error('Insert car_reports error:', carError);
+        throw carError;
+      }
     }
+
     showToast('Inspeksi berhasil dikirim! ✅');
     clearInspectionForm();
   } catch (e) {
-    console.error(e);
-    showToast('Gagal menyimpan data!', 'error');
+    console.error('submitInspection error:', e);
+    showToast(`Gagal: ${e.message || 'cek console untuk detail'}`, 'error');
   } finally {
     setLoader(false);
   }
@@ -1438,12 +1470,12 @@ async function submitHazard() {
         finding:     el.querySelector('.pf').value,
         action_plan: el.querySelector('.pap').value,
         pic:         el.querySelector('.ppic').value,
-        due_date:    el.querySelector('.pd').value,
+        due_date:    el.querySelector('.pd').value || null,
         status:      'Open',
         image_url:   urlBefore,
         company:     currentUser.company,
         source:      hzId,
-        date_raised: new Date().toISOString()
+        date_raised: new Date().toISOString().split('T')[0]  // date type: YYYY-MM-DD
       }));
       await supabaseClient.from('car_reports').insert(cars);
     }
@@ -1461,19 +1493,25 @@ async function submitHazard() {
 async function loadCarPage() {
   setLoader(true);
   try {
+    // Fetch semua data dulu, filter di JS — hindari .or() syntax issue
     let query = supabaseClient.from('car_reports').select('*').order('date_raised', { ascending: false });
-
-    // Non-admin: filter berdasarkan pic (company bertanggung jawab)
-    // karena kolom 'company' di car_reports mungkin belum terisi untuk data lama
-    if (!['Admin','Superadmin'].includes(currentUser.level)) {
-      query = query.or(`company.eq.${currentUser.company},pic.eq.${currentUser.company}`);
-    }
 
     const { data, error } = await query;
     if (error) throw error;
-    carMasterData = data || [];
 
-    // Populate PIC filter dari data yang ada
+    const all = data || [];
+
+    // Non-admin: tampilkan CAR yang company ATAU pic = company user
+    if (!['Admin','Superadmin'].includes(currentUser.level)) {
+      carMasterData = all.filter(c =>
+        (c.company || '') === currentUser.company ||
+        (c.pic     || '') === currentUser.company
+      );
+    } else {
+      carMasterData = all;
+    }
+
+    // Populate PIC filter dari data yang sudah difilter
     const pics = [...new Set(carMasterData.map(c => c.pic).filter(Boolean))].sort();
     const fPIC = document.getElementById('fPIC');
     fPIC.innerHTML = '<option value="">Semua PIC</option>' +
