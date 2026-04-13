@@ -576,6 +576,9 @@ tbody tr:hover { background: var(--surface2); }
       <div class="nav-item" onclick="switchPage('simper')" id="nav-simper">
         <span class="nav-item-icon">🪪</span> SIMPER Validity
       </div>
+      <div class="nav-item" onclick="switchPage('simperReg')" id="nav-simperReg">
+        <span class="nav-item-icon">📋</span> Pendaftaran SIMPER
+      </div>
 
       <div class="nav-section-label" id="adminNavLabel" style="display:none">Admin</div>
       <div class="nav-item" onclick="switchPage('userMgmt')" id="nav-userMgmt" style="display:none">
@@ -1085,6 +1088,111 @@ tbody tr:hover { background: var(--surface2); }
       </div>
     </div>
 
+    <!-- ══ PAGE: PENDAFTARAN SIMPER ══ -->
+    <div id="page_simperReg" class="page">
+      <div class="page-header">
+        <h1>Pendaftaran SIMPER</h1>
+        <p>Daftar dan pantau proses penerbitan SIMPER Anda</p>
+      </div>
+
+      <!-- Form Pendaftaran — hanya untuk User biasa -->
+      <div class="card" id="simperRegFormCard">
+        <div class="card-title"><span class="card-title-dot"></span>Form Pendaftaran SIMPER Baru</div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nama Lengkap</label>
+            <input id="srNama" type="text" class="form-input" placeholder="Nama sesuai identitas"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Company</label>
+            <div style="padding:13px 16px;background:var(--surface2);border:1px solid var(--border);
+              border-radius:var(--radius-sm);color:var(--text);font-size:14px;display:flex;align-items:center;gap:8px;">
+              <span style="color:var(--teal)">🏢</span>
+              <span id="srCompanyName">—</span>
+            </div>
+            <input type="hidden" id="srCompany"/>
+          </div>
+        </div>
+
+        <div class="form-section-title">📄 Dokumen Persyaratan</div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Dokumen Pengajuan <span style="color:var(--red)">*</span></label>
+            <div class="file-drop">
+              <input type="file" id="srDocPengajuan" accept=".pdf,.doc,.docx,.jpg,.png" onchange="updateFileLabel(this,'srDocPengajuanLabel')"/>
+              <div class="file-drop-icon">📄</div>
+              <div class="file-drop-text" id="srDocPengajuanLabel">Surat pengajuan SIMPER<br><strong>PDF, Word, JPG</strong></div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">SIM Polisi <span style="color:var(--red)">*</span></label>
+            <div class="file-drop">
+              <input type="file" id="srSimPolisi" accept=".pdf,.jpg,.jpeg,.png" onchange="updateFileLabel(this,'srSimPolisiLabel')"/>
+              <div class="file-drop-icon">🚗</div>
+              <div class="file-drop-text" id="srSimPolisiLabel">Scan/foto SIM Polisi<br><strong>PDF, JPG, PNG</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Foto ID Badge <span style="color:var(--red)">*</span></label>
+            <div class="file-drop">
+              <input type="file" id="srIdBadge" accept=".jpg,.jpeg,.png" onchange="previewImg(this,'srIdBadgePreview'); updateFileLabel(this,'srIdBadgeLabel')"/>
+              <div class="file-drop-icon">🪪</div>
+              <div class="file-drop-text" id="srIdBadgeLabel">Foto ID Badge perusahaan<br><strong>JPG, PNG</strong></div>
+            </div>
+            <img id="srIdBadgePreview" class="preview-img hidden"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Masa Aktif ID Badge <span style="color:var(--red)">*</span></label>
+            <input id="srBadgeExpiry" type="date" class="form-input"/>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px;">Tanggal kadaluarsa yang tertera di ID Badge</div>
+          </div>
+        </div>
+
+        <hr class="divider"/>
+        <div style="display:flex;align-items:center;gap:16px;">
+          <button class="btn-submit" onclick="submitSimperRegistration()">Kirim Pendaftaran</button>
+          <span style="font-size:12px;color:var(--muted);">Setelah dikirim, Anda akan dihubungi untuk jadwal ujian</span>
+        </div>
+      </div>
+
+      <!-- Daftar Pendaftaran -->
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+          <div class="card-title" style="margin:0"><span class="card-title-dot"></span>Status Pendaftaran</div>
+          <div style="display:flex;gap:8px;">
+            <select id="srfStatus" class="form-input" style="font-size:12px;padding:7px 12px;" onchange="renderSimperRegTable()">
+              <option value="">Semua Status</option>
+              <option value="Menunggu Ujian Tulis">Menunggu Ujian Tulis</option>
+              <option value="Ujian Tulis Tidak Lulus">Ujian Tulis Tidak Lulus</option>
+              <option value="Menunggu Ujian Praktik">Menunggu Ujian Praktik</option>
+              <option value="Ujian Praktik Tidak Lulus">Ujian Praktik Tidak Lulus</option>
+              <option value="Siap Diterbitkan">Siap Diterbitkan</option>
+              <option value="Diterbitkan">Diterbitkan</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th><th>Nama</th><th>Company</th><th>Tgl Daftar</th>
+                <th>Badge Expiry</th><th>Status</th><th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="simperRegTableBody"></tbody>
+          </table>
+        </div>
+        <div id="simperRegEmptyState" class="empty-state hidden">
+          <div class="empty-state-icon">📋</div>
+          <p>Belum ada data pendaftaran</p>
+        </div>
+      </div>
+    </div>
+
   </main><!-- /main-content -->
 </div><!-- /mainApp -->
 
@@ -1210,6 +1318,45 @@ tbody tr:hover { background: var(--surface2); }
     <div class="car-finding-box" id="hdDesc">—</div>
     <div style="margin:12px 0 6px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted)">Immediate Action</div>
     <div class="car-finding-box" id="hdImmediate">—</div>
+  </div>
+</div>
+
+<!-- ══ SIMPER REGISTRATION MODAL ══ -->
+<div id="simperRegModal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:620px;">
+    <div class="modal-header">
+      <div class="modal-title">Detail Pendaftaran — <span id="srdId" style="color:var(--teal)"></span></div>
+      <button class="modal-close" onclick="document.getElementById('simperRegModal').classList.add('hidden')">✕</button>
+    </div>
+
+    <!-- Info Pemohon -->
+    <div class="car-detail-grid" style="margin-bottom:16px;">
+      <div class="car-detail-item"><label>Nama</label><p id="srdNama">—</p></div>
+      <div class="car-detail-item"><label>Company</label><p id="srdCompany">—</p></div>
+      <div class="car-detail-item"><label>Tgl Daftar</label><p id="srdDate">—</p></div>
+      <div class="car-detail-item"><label>Badge Expiry</label><p id="srdExpiry">—</p></div>
+    </div>
+
+    <!-- Dokumen -->
+    <div class="form-section-title">📎 Dokumen Persyaratan</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+      <a id="srdDocPengajuan" href="#" target="_blank" class="btn-secondary" style="font-size:12px;padding:7px 14px;">📄 Dok. Pengajuan</a>
+      <a id="srdSimPolisi"    href="#" target="_blank" class="btn-secondary" style="font-size:12px;padding:7px 14px;">🚗 SIM Polisi</a>
+      <div id="srdBadgeWrap" style="display:flex;align-items:center;gap:8px;">
+        <img id="srdBadgeImg" src="" style="height:60px;border-radius:6px;border:1px solid var(--border);cursor:zoom-in;" onclick="openLightbox(this.src)"/>
+        <span style="font-size:12px;color:var(--muted);">ID Badge</span>
+      </div>
+    </div>
+
+    <!-- Status Timeline -->
+    <div class="form-section-title">📊 Progress Pendaftaran</div>
+    <div id="srdTimeline" style="margin-bottom:16px;"></div>
+
+    <!-- Admin Action Panel -->
+    <div id="srdAdminPanel" style="display:none;">
+      <div class="form-section-title">🔐 Aksi Admin</div>
+      <div id="srdActionContent"></div>
+    </div>
   </div>
 </div>
 
@@ -1507,6 +1654,7 @@ function switchPage(id) {
   if (id === 'hazardList')     loadHazardList();
   if (id === 'carList')        loadCarPage();
   if (id === 'simper')         loadSimperPage();
+  if (id === 'simperReg')      loadSimperRegPage();
   if (id === 'userMgmt')       loadUsers();
 }
 
@@ -2584,6 +2732,409 @@ async function submitEditUser() {
   } catch (e) {
     console.error(e);
     showToast('Gagal mengupdate user!', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   PENDAFTARAN SIMPER
+══════════════════════════════════════════════════ */
+
+let simperRegMasterData = [];
+let activeSimperRegId   = null;
+
+/* Status flow */
+const SR_FLOW = [
+  { key: 'Menunggu Ujian Tulis',       icon: '📝', color: 'var(--amber)' },
+  { key: 'Ujian Tulis Tidak Lulus',    icon: '❌', color: 'var(--red)'   },
+  { key: 'Menunggu Ujian Praktik',     icon: '🔧', color: 'var(--amber)' },
+  { key: 'Ujian Praktik Tidak Lulus',  icon: '❌', color: 'var(--red)'   },
+  { key: 'Siap Diterbitkan',           icon: '✅', color: 'var(--teal)'  },
+  { key: 'Diterbitkan',                icon: '🎉', color: '#4ade80'      },
+];
+
+function srStatusBadge(s) {
+  const map = {
+    'Menunggu Ujian Tulis':      'badge-pending',
+    'Ujian Tulis Tidak Lulus':   'badge-invalid',
+    'Menunggu Ujian Praktik':    'badge-pending',
+    'Ujian Praktik Tidak Lulus': 'badge-invalid',
+    'Siap Diterbitkan':          'badge-valid',
+    'Diterbitkan':               'badge-closed',
+  };
+  return `<span class="badge ${map[s]||'badge-warning'}" style="white-space:nowrap">${s||'—'}</span>`;
+}
+
+async function loadSimperRegPage() {
+  setLoader(true);
+  try {
+    // Set company display
+    document.getElementById('srCompany').value      = currentUser.company;
+    document.getElementById('srCompanyName').innerText = currentUser.company;
+
+    // Tampilkan form hanya untuk User (bukan admin-only)
+    const isAdmin = ['Admin','Superadmin'].includes(currentUser.level);
+    document.getElementById('simperRegFormCard').style.display = isAdmin ? 'none' : '';
+
+    let query = supabaseClient.from('simper_registration').select('*')
+      .order('created_at', { ascending: false });
+    if (!isAdmin) query = query.eq('company', currentUser.company);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    simperRegMasterData = data || [];
+    renderSimperRegTable();
+  } catch(e) {
+    console.error('loadSimperRegPage:', e);
+    showToast('Gagal memuat data pendaftaran', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+function updateFileLabel(input, labelId) {
+  if (input.files[0]) {
+    uploadFiles[input.id] = input.files[0];
+    document.getElementById(labelId).innerHTML =
+      `✅ <strong>${input.files[0].name}</strong>`;
+  }
+}
+
+async function submitSimperRegistration() {
+  const nama        = document.getElementById('srNama').value.trim();
+  const company     = document.getElementById('srCompany').value;
+  const badgeExpiry = document.getElementById('srBadgeExpiry').value;
+
+  if (!nama)                           return showToast('Nama lengkap wajib diisi!', 'error');
+  if (!uploadFiles['srDocPengajuan'])  return showToast('Dokumen pengajuan wajib diupload!', 'error');
+  if (!uploadFiles['srSimPolisi'])     return showToast('SIM Polisi wajib diupload!', 'error');
+  if (!uploadFiles['srIdBadge'])       return showToast('Foto ID Badge wajib diupload!', 'error');
+  if (!badgeExpiry)                    return showToast('Masa aktif ID Badge wajib diisi!', 'error');
+
+  // Cek masa aktif badge tidak sudah expired
+  if (new Date(badgeExpiry) < new Date()) {
+    return showToast('ID Badge sudah kadaluarsa! Perbarui badge Anda terlebih dahulu.', 'error');
+  }
+
+  setLoader(true);
+  try {
+    // Upload semua dokumen paralel
+    const [urlDoc, urlSim, urlBadge] = await Promise.all([
+      uploadToDrive(uploadFiles['srDocPengajuan'], 'DOC', 'simper_docs'),
+      uploadToDrive(uploadFiles['srSimPolisi'],    'SIM', 'simper_docs'),
+      uploadToDrive(uploadFiles['srIdBadge'],      'BADGE', 'simper_docs'),
+    ]);
+
+    const regId = generateID('SR');
+    const { error } = await supabaseClient.from('simper_registration').insert([{
+      id:               regId,
+      nama:             nama,
+      company:          company,
+      email:            currentUser.email,
+      doc_pengajuan:    urlDoc,
+      sim_polisi:       urlSim,
+      foto_id_badge:    urlBadge,
+      id_badge_expiry:  badgeExpiry,
+      status:           'Menunggu Ujian Tulis',
+      created_at:       new Date().toISOString(),
+    }]);
+    if (error) throw error;
+
+    showToast('Pendaftaran berhasil dikirim! ✅ Menunggu jadwal ujian tulis.');
+    // Reset form
+    document.getElementById('srNama').value       = '';
+    document.getElementById('srBadgeExpiry').value= '';
+    ['srDocPengajuan','srSimPolisi','srIdBadge'].forEach(id => {
+      uploadFiles[id] = null;
+    });
+    ['srDocPengajuanLabel','srSimPolisiLabel','srIdBadgeLabel'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.innerHTML = el.innerHTML.replace(/✅.*/, '');
+    });
+    document.getElementById('srIdBadgePreview').classList.add('hidden');
+    await loadSimperRegPage();
+  } catch(e) {
+    console.error('submitSimperRegistration:', e);
+    showToast(`Gagal mendaftar: ${e.message||'cek console'}`, 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+function renderSimperRegTable() {
+  const fsFilter = document.getElementById('srfStatus').value;
+  const filtered  = simperRegMasterData.filter(r => !fsFilter || r.status === fsFilter);
+
+  const tbody = document.getElementById('simperRegTableBody');
+  const empty = document.getElementById('simperRegEmptyState');
+  if (filtered.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+
+  tbody.innerHTML = filtered.map(r => {
+    const tgl     = r.created_at ? new Date(r.created_at).toLocaleDateString('id-ID') : '—';
+    const expiry  = r.id_badge_expiry ? new Date(r.id_badge_expiry).toLocaleDateString('id-ID') : '—';
+    const expired = r.id_badge_expiry && new Date(r.id_badge_expiry) < new Date();
+    return `<tr>
+      <td style="font-size:11px;color:var(--teal);font-family:'Syne',sans-serif">${r.id}</td>
+      <td style="font-weight:500">${r.nama||'—'}</td>
+      <td>${r.company||'—'}</td>
+      <td>${tgl}</td>
+      <td style="color:${expired?'var(--red)':'inherit'}">${expiry}${expired?' ⚠️':''}</td>
+      <td>${srStatusBadge(r.status)}</td>
+      <td><button class="btn-amber" onclick="openSimperRegDetail('${r.id}')">Detail</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function buildTimeline(r) {
+  const steps = [
+    {
+      label: 'Pendaftaran Dikirim',
+      done: true,
+      date: r.created_at ? new Date(r.created_at).toLocaleDateString('id-ID') : '',
+      note: '',
+      icon: '📤',
+    },
+    {
+      label: 'Ujian Tulis',
+      done: !!r.ujian_tulis,
+      result: r.ujian_tulis,
+      date: r.ujian_tulis_date ? new Date(r.ujian_tulis_date).toLocaleDateString('id-ID') : '',
+      note: r.ujian_tulis_note || '',
+      by:   r.ujian_tulis_by   || '',
+      icon: r.ujian_tulis === 'Lulus' ? '✅' : r.ujian_tulis === 'Tidak Lulus' ? '❌' : '📝',
+    },
+    {
+      label: 'Ujian Praktik',
+      done: !!r.ujian_praktik,
+      result: r.ujian_praktik,
+      date: r.ujian_praktik_date ? new Date(r.ujian_praktik_date).toLocaleDateString('id-ID') : '',
+      note: r.ujian_praktik_note || '',
+      by:   r.ujian_praktik_by   || '',
+      icon: r.ujian_praktik === 'Lulus' ? '✅' : r.ujian_praktik === 'Tidak Lulus' ? '❌' : '🔧',
+    },
+    {
+      label: 'SIMPER Diterbitkan',
+      done: r.status === 'Diterbitkan',
+      date: r.issued_date ? new Date(r.issued_date).toLocaleDateString('id-ID') : '',
+      note: r.simper_number ? `No. SIMPER: ${r.simper_number}` : '',
+      by:   r.issued_by || '',
+      icon: r.status === 'Diterbitkan' ? '🎉' : '🎯',
+    },
+  ];
+
+  return `<div style="display:flex;flex-direction:column;gap:0;">` +
+    steps.map((s, i) => {
+      const active = s.done;
+      const lineColor = active ? 'var(--teal)' : 'var(--border)';
+      const bgColor   = active ? 'rgba(14,165,160,0.12)' : 'var(--surface2)';
+      const borderClr = active ? 'rgba(14,165,160,0.3)'  : 'var(--border)';
+      return `
+        <div style="display:flex;gap:12px;">
+          <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
+            <div style="width:36px;height:36px;border-radius:50%;background:${bgColor};
+              border:1.5px solid ${borderClr};display:flex;align-items:center;justify-content:center;
+              font-size:16px;">${s.icon}</div>
+            ${i < steps.length-1 ? `<div style="width:2px;flex:1;min-height:16px;background:${lineColor};margin:2px 0;"></div>` : ''}
+          </div>
+          <div style="padding-bottom:${i<steps.length-1?'14px':'0'};flex:1;padding-top:6px;">
+            <div style="font-size:14px;font-weight:500;color:${active?'var(--text)':'var(--muted)'};">${s.label}</div>
+            ${s.date ? `<div style="font-size:11px;color:var(--muted);margin-top:2px;">${s.date}${s.by?' · '+s.by:''}</div>` : ''}
+            ${s.result ? `<span class="badge ${s.result==='Lulus'?'badge-valid':'badge-invalid'}" style="margin-top:4px;display:inline-block;">${s.result}</span>` : ''}
+            ${s.note ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;background:var(--surface2);padding:6px 10px;border-radius:6px;">${s.note}</div>` : ''}
+          </div>
+        </div>`;
+    }).join('') + `</div>`;
+}
+
+function buildAdminAction(r) {
+  const isAdmin = ['Admin','Superadmin'].includes(currentUser.level);
+  if (!isAdmin) return '';
+
+  // Determine what action is available based on current status
+  if (r.status === 'Menunggu Ujian Tulis' || r.status === 'Ujian Tulis Tidak Lulus') {
+    return `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px;">Input Hasil Ujian Tulis</div>
+        <div class="form-row">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Hasil</label>
+            <select id="srAdminResult" class="form-input">
+              <option value="">Pilih Hasil</option>
+              <option value="Lulus">✅ Lulus</option>
+              <option value="Tidak Lulus">❌ Tidak Lulus</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Catatan (Opsional)</label>
+            <input id="srAdminNote" type="text" class="form-input" placeholder="Nilai, keterangan, dll..."/>
+          </div>
+        </div>
+        <hr class="divider" style="margin:14px 0"/>
+        <button class="btn-submit" onclick="submitUjianTulis('${r.id}')">Simpan Hasil Ujian Tulis</button>
+      </div>`;
+  }
+
+  if (r.status === 'Menunggu Ujian Praktik' || r.status === 'Ujian Praktik Tidak Lulus') {
+    return `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;">
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px;">Input Hasil Ujian Praktik</div>
+        <div class="form-row">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Hasil</label>
+            <select id="srAdminResult" class="form-input">
+              <option value="">Pilih Hasil</option>
+              <option value="Lulus">✅ Lulus</option>
+              <option value="Tidak Lulus">❌ Tidak Lulus</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Catatan (Opsional)</label>
+            <input id="srAdminNote" type="text" class="form-input" placeholder="Catatan ujian praktik..."/>
+          </div>
+        </div>
+        <hr class="divider" style="margin:14px 0"/>
+        <button class="btn-submit" onclick="submitUjianPraktik('${r.id}')">Simpan Hasil Ujian Praktik</button>
+      </div>`;
+  }
+
+  if (r.status === 'Siap Diterbitkan') {
+    return `
+      <div style="background:rgba(14,165,160,0.08);border:1px solid rgba(14,165,160,0.3);border-radius:var(--radius-sm);padding:16px;">
+        <div style="font-size:13px;font-weight:500;color:var(--teal);margin-bottom:12px;">🎉 Semua ujian lulus — Terbitkan SIMPER</div>
+        <div class="form-group">
+          <label class="form-label">Nomor SIMPER</label>
+          <input id="srSimperNumber" type="text" class="form-input" placeholder="Contoh: SIMPER/2025/001"/>
+        </div>
+        <hr class="divider" style="margin:14px 0"/>
+        <button class="btn-submit" onclick="submitTerbitkanSimper('${r.id}')">Terbitkan SIMPER</button>
+      </div>`;
+  }
+
+  if (r.status === 'Diterbitkan') {
+    return `<div style="text-align:center;padding:20px;color:var(--teal);">
+      <div style="font-size:32px;margin-bottom:8px;">🎉</div>
+      <div style="font-size:14px;font-weight:500;">SIMPER sudah diterbitkan</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;">No. ${r.simper_number||'—'}</div>
+    </div>`;
+  }
+
+  return '';
+}
+
+function openSimperRegDetail(id) {
+  const r = simperRegMasterData.find(x => x.id === id);
+  activeSimperRegId = id;
+
+  document.getElementById('srdId').innerText      = r.id;
+  document.getElementById('srdNama').innerText    = r.nama    || '—';
+  document.getElementById('srdCompany').innerText = r.company || '—';
+  document.getElementById('srdDate').innerText    = r.created_at ? new Date(r.created_at).toLocaleDateString('id-ID') : '—';
+  document.getElementById('srdExpiry').innerText  = r.id_badge_expiry ? new Date(r.id_badge_expiry).toLocaleDateString('id-ID') : '—';
+
+  // Docs
+  document.getElementById('srdDocPengajuan').href = r.doc_pengajuan || '#';
+  document.getElementById('srdSimPolisi').href    = r.sim_polisi    || '#';
+  if (r.foto_id_badge) {
+    document.getElementById('srdBadgeImg').src    = r.foto_id_badge;
+    document.getElementById('srdBadgeWrap').style.display = '';
+  } else {
+    document.getElementById('srdBadgeWrap').style.display = 'none';
+  }
+
+  // Timeline
+  document.getElementById('srdTimeline').innerHTML = buildTimeline(r);
+
+  // Admin panel
+  const isAdmin = ['Admin','Superadmin'].includes(currentUser.level);
+  const adminPanel = document.getElementById('srdAdminPanel');
+  if (isAdmin && r.status !== 'Diterbitkan' || r.status === 'Diterbitkan') {
+    adminPanel.style.display = '';
+    document.getElementById('srdActionContent').innerHTML = buildAdminAction(r);
+  } else {
+    adminPanel.style.display = 'none';
+  }
+
+  document.getElementById('simperRegModal').classList.remove('hidden');
+}
+
+async function submitUjianTulis(id) {
+  const hasil = document.getElementById('srAdminResult').value;
+  const note  = document.getElementById('srAdminNote')?.value?.trim() || '';
+  if (!hasil) return showToast('Pilih hasil ujian!', 'error');
+
+  setLoader(true);
+  try {
+    const newStatus = hasil === 'Lulus' ? 'Menunggu Ujian Praktik' : 'Ujian Tulis Tidak Lulus';
+    const { error } = await supabaseClient.from('simper_registration').update({
+      ujian_tulis:      hasil,
+      ujian_tulis_note: note,
+      ujian_tulis_date: new Date().toISOString(),
+      ujian_tulis_by:   currentUser.email,
+      status:           newStatus,
+    }).eq('id', id);
+    if (error) throw error;
+
+    showToast(`Hasil ujian tulis disimpan: ${hasil} ✅`);
+    document.getElementById('simperRegModal').classList.add('hidden');
+    await loadSimperRegPage();
+  } catch(e) {
+    console.error(e);
+    showToast('Gagal menyimpan hasil ujian!', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+async function submitUjianPraktik(id) {
+  const hasil = document.getElementById('srAdminResult').value;
+  const note  = document.getElementById('srAdminNote')?.value?.trim() || '';
+  if (!hasil) return showToast('Pilih hasil ujian!', 'error');
+
+  setLoader(true);
+  try {
+    const newStatus = hasil === 'Lulus' ? 'Siap Diterbitkan' : 'Ujian Praktik Tidak Lulus';
+    const { error } = await supabaseClient.from('simper_registration').update({
+      ujian_praktik:      hasil,
+      ujian_praktik_note: note,
+      ujian_praktik_date: new Date().toISOString(),
+      ujian_praktik_by:   currentUser.email,
+      status:             newStatus,
+    }).eq('id', id);
+    if (error) throw error;
+
+    showToast(`Hasil ujian praktik disimpan: ${hasil} ✅`);
+    document.getElementById('simperRegModal').classList.add('hidden');
+    await loadSimperRegPage();
+  } catch(e) {
+    console.error(e);
+    showToast('Gagal menyimpan hasil ujian!', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+async function submitTerbitkanSimper(id) {
+  const nomor = document.getElementById('srSimperNumber')?.value?.trim() || '';
+  if (!nomor) return showToast('Nomor SIMPER wajib diisi!', 'error');
+
+  setLoader(true);
+  try {
+    const { error } = await supabaseClient.from('simper_registration').update({
+      status:       'Diterbitkan',
+      simper_number: nomor,
+      issued_date:  new Date().toISOString(),
+      issued_by:    currentUser.email,
+    }).eq('id', id);
+    if (error) throw error;
+
+    showToast(`SIMPER ${nomor} berhasil diterbitkan! 🎉`);
+    document.getElementById('simperRegModal').classList.add('hidden');
+    await loadSimperRegPage();
+  } catch(e) {
+    console.error(e);
+    showToast('Gagal menerbitkan SIMPER!', 'error');
   } finally {
     setLoader(false);
   }
