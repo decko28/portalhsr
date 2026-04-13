@@ -768,7 +768,6 @@ tbody tr:hover { background: var(--surface2); }
             </select>
           </div>
         </div>
-        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -866,8 +865,8 @@ tbody tr:hover { background: var(--surface2); }
               <select id="sfStatus" class="form-input" onchange="renderSimperTable()">
                 <option value="">Semua Status</option>
                 <option value="Pending">Pending</option>
-                <option value="Valid">Valid</option>
-                <option value="Tidak Valid">Tidak Valid</option>
+                <option value="Verified">Verified</option>
+                <option value="Rejected">Rejected</option>
               </select>
             </div>
           </div>
@@ -1019,8 +1018,8 @@ tbody tr:hover { background: var(--surface2); }
           <label class="form-label">Status</label>
           <select id="sdStatusSelect" class="form-input">
             <option value="Pending">Pending</option>
-            <option value="Valid">Valid</option>
-            <option value="Tidak Valid">Tidak Valid</option>
+            <option value="Verified">Verified</option>
+            <option value="Rejected">Rejected</option>
           </select>
         </div>
         <div class="form-group" style="margin:0;">
@@ -1111,23 +1110,33 @@ async function doLogin() {
       .from('users').select('*').eq('email', e).eq('password', p).single();
     if (error || !data) {
       document.getElementById('loginError').innerText = 'Email atau password salah.';
-    } else {
-      currentUser = data;
-      document.getElementById('loginPage').style.display = 'none';
-      document.getElementById('mainApp').classList.remove('hidden');
-      document.getElementById('displayUser').innerText  = currentUser.company;
-      document.getElementById('displayLevel').innerText = currentUser.level;
-
-      // Show admin nav if superadmin
-      if (['Admin','Superadmin'].includes(currentUser.level)) {
-        document.getElementById('adminNavLabel').style.display = '';
-        document.getElementById('nav-userMgmt').style.display  = '';
-      }
-      await initData();
-      switchPage('formInspection');
+      return;
     }
+
+    currentUser = data;
+    document.getElementById('loginPage').style.display = 'none';
+    document.getElementById('mainApp').classList.remove('hidden');
+    document.getElementById('displayUser').innerText  = currentUser.company;
+    document.getElementById('displayLevel').innerText = currentUser.level;
+
+    // Show admin nav jika Admin/Superadmin
+    if (['Admin','Superadmin'].includes(currentUser.level)) {
+      document.getElementById('adminNavLabel').style.display = '';
+      document.getElementById('nav-userMgmt').style.display  = '';
+    }
+
+    // initData dalam try terpisah — gagal pun tetap lanjut ke halaman utama
+    await initData();
+    switchPage('formInspection');
+
   } catch (x) {
-    document.getElementById('loginError').innerText = 'Terjadi kesalahan, coba lagi.';
+    console.error('doLogin error:', x);
+    // Jika mainApp sudah terbuka tapi error, tetap tunjukkan halaman
+    if (currentUser) {
+      switchPage('formInspection');
+    } else {
+      document.getElementById('loginError').innerText = 'Terjadi kesalahan koneksi, coba lagi.';
+    }
   } finally {
     setLoader(false);
   }
@@ -1145,34 +1154,55 @@ function doLogout() {
 
 /* ══ INIT DATA ══ */
 async function initData() {
-  const [{ data: comps }, { data: locs }] = await Promise.all([
-    supabaseClient.from('companies').select('*').eq('status', 'Active'),
-    supabaseClient.from('locations').select('*').eq('status', 'Active'),
-  ]);
+  try {
+    // Query tanpa filter status dulu — lebih aman, handle berbagai kondisi data
+    const [compRes, locRes] = await Promise.all([
+      supabaseClient.from('companies').select('*'),
+      supabaseClient.from('locations').select('*'),
+    ]);
 
-  globalLocs = locs || [];
-  globalCompanies = (comps || []).map(c => c.company || c.name);
+    // Filter Active di sisi JS — lebih toleran terhadap variasi nilai status
+    const allComps = compRes.data || [];
+    const allLocs  = locRes.data  || [];
+
+    globalLocs      = allLocs.filter(l => !l.status || l.status === 'Active');
+    globalCompanies = allComps
+      .filter(c => !c.status || c.status === 'Active')
+      .map(c => c.company || c.name)
+      .filter(Boolean);
+
+    // Fallback: jika filter menghasilkan kosong, pakai semua data
+    if (globalLocs.length === 0)      globalLocs      = allLocs;
+    if (globalCompanies.length === 0) globalCompanies = allComps.map(c => c.company || c.name).filter(Boolean);
+
+  } catch (err) {
+    console.warn('initData: gagal fetch companies/locations, lanjut dengan data kosong.', err);
+    globalLocs      = [];
+    globalCompanies = [];
+  }
 
   // Populate company selects
   const compOptions = '<option value="">Pilih Company</option>' +
     globalCompanies.map(n => `<option value="${n}">${n}</option>`).join('');
 
-  ['perusahaan','uCompany','sCompany'].forEach(id => {
+  ['perusahaan', 'uCompany'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = compOptions;
   });
 
-  // Pre-fill SIMPER company from user's own company (locked)
-  document.getElementById('sCompany').value = currentUser.company;
-  document.getElementById('sCompanyName').innerText = currentUser.company;
+  // SIMPER company — locked ke company user sendiri
+  const sCompanyEl = document.getElementById('sCompany');
+  if (sCompanyEl) sCompanyEl.value = currentUser.company;
+  const sCompanyName = document.getElementById('sCompanyName');
+  if (sCompanyName) sCompanyName.innerText = currentUser.company;
 
-  // Pre-select user's company for inspection form if non-admin
-  if (!['Admin','Superadmin'].includes(currentUser.level)) {
+  // Pre-select & lock company untuk non-admin di form inspeksi
+  if (!['Admin', 'Superadmin'].includes(currentUser.level)) {
     const el = document.getElementById('perusahaan');
     if (el) { el.value = currentUser.company; el.disabled = true; }
   }
 
-  // Filter selects — sfCompany untuk filter tabel SIMPER
+  // Filter SIMPER table — sfCompany
   const allCompOption = '<option value="">Semua Company</option>' +
     globalCompanies.map(n => `<option value="${n}">${n}</option>`).join('');
   const sfEl = document.getElementById('sfCompany');
@@ -1182,17 +1212,19 @@ async function initData() {
   const locNames = [...new Set(globalLocs.map(l => l.lokasi).filter(Boolean))];
   const locOpts  = '<option value="">Pilih Lokasi</option>' +
     locNames.map(l => `<option value="${l}">${l}</option>`).join('');
-  ['lokasi','hLokasi'].forEach(id => {
+  ['lokasi', 'hLokasi'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = locOpts;
   });
 
   // Set today's date
-  document.getElementById('tanggal').valueAsDate = new Date();
+  const tanggalEl = document.getElementById('tanggal');
+  if (tanggalEl) tanggalEl.valueAsDate = new Date();
 
   // Set period to this month
   const now = new Date();
-  document.getElementById('sPeriod').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const sPeriodEl = document.getElementById('sPeriod');
+  if (sPeriodEl) sPeriodEl.value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
 }
 
 /* ══ NAVIGATION ══ */
@@ -1568,9 +1600,9 @@ async function loadSimperPage() {
 }
 
 function simperBadgeFromStatus(status) {
-  if (status === 'Valid')       return `<span class="badge badge-valid">Valid</span>`;
-  if (status === 'Tidak Valid') return `<span class="badge badge-invalid">Tidak Valid</span>`;
-  return `<span class="badge badge-pending">Pending</span>`;
+  if (status === 'Verified') return `<span class="badge badge-valid">✓ Verified</span>`;
+  if (status === 'Rejected') return `<span class="badge badge-invalid">✗ Rejected</span>`;
+  return `<span class="badge badge-pending">⏳ Pending</span>`;
 }
 
 function renderSimperTable() {
@@ -1601,7 +1633,7 @@ function renderSimperTable() {
     const submitted = s.upload_date ? new Date(s.upload_date).toLocaleDateString('id-ID') : '—';
     const score     = parseFloat(s.validity_score) || 0;
     const status    = s.status || 'Pending';
-    const barColor  = status === 'Valid' ? 'var(--teal)' : status === 'Tidak Valid' ? 'var(--red)' : 'var(--amber)';
+    const barColor  = status === 'Verified' ? 'var(--teal)' : status === 'Rejected' ? 'var(--red)' : 'var(--amber)';
     return `<tr>
       <td><strong style="color:var(--teal); font-family:'Syne',sans-serif; font-size:12px">${s.id}</strong></td>
       <td>${s.company || '—'}</td>
@@ -1640,13 +1672,12 @@ async function submitSimper() {
     }
 
     const simId = generateID('SIM');
-    // Tabel: simper_validity | Kolom: validity_score, upload_date, user_email
     const { error } = await supabaseClient.from('simper_validity').insert([{
       id:             simId,
       company:        company,
       period:         period,
       validity_score: score,
-      status:         'Pending',
+      status:         'Pending',   // selalu Pending saat submit, Admin yang verifikasi
       admin_note:     null,
       file_url:       fileUrl,
       user_email:     currentUser.email,
@@ -1654,7 +1685,7 @@ async function submitSimper() {
     }]);
     if (error) throw error;
 
-    showToast('SIMPER berhasil disubmit! Menunggu konfirmasi Admin. ✅');
+    showToast('SIMPER berhasil disubmit! Menunggu verifikasi Admin. ⏳');
     document.getElementById('sScore').value = '';
     document.getElementById('scorePreviewWrap').style.display = 'none';
     document.getElementById('sFileName').innerHTML = 'Klik untuk upload file rekap<br><strong>PDF, Excel, Word</strong>';
@@ -1684,14 +1715,14 @@ function openSimperDetail(id) {
   document.getElementById('sdScore').innerText       = score;
 
   const status   = s.status || 'Pending';
-  const barColor = status === 'Valid'       ? 'linear-gradient(90deg,var(--teal),#22d3ee)'
-                 : status === 'Tidak Valid' ? 'linear-gradient(90deg,var(--red),#f97316)'
-                 :                           'linear-gradient(90deg,var(--amber),#fbbf24)';
+  const barColor = status === 'Verified'   ? 'linear-gradient(90deg,var(--teal),#22d3ee)'
+                 : status === 'Rejected'   ? 'linear-gradient(90deg,var(--red),#f97316)'
+                 :                          'linear-gradient(90deg,var(--amber),#fbbf24)';
   document.getElementById('sdBar').style.width      = score + '%';
   document.getElementById('sdBar').style.background = barColor;
 
   const badge = document.getElementById('sdBadge');
-  badge.className = 'badge ' + (status === 'Valid' ? 'badge-valid' : status === 'Tidak Valid' ? 'badge-invalid' : 'badge-pending');
+  badge.className = 'badge ' + (status === 'Verified' ? 'badge-valid' : status === 'Rejected' ? 'badge-invalid' : 'badge-pending');
   badge.innerText = status;
 
   const fileSection = document.getElementById('sdFileSection');
@@ -1734,7 +1765,7 @@ async function submitSimperStatus() {
       .eq('id', activeSimperModalId);
     if (error) throw error;
 
-    showToast(`Status SIMPER diset ke: ${newStatus} ✅`);
+    showToast(`Status SIMPER diupdate: ${newStatus} ✅`);
     document.getElementById('simperModal').classList.add('hidden');
     await loadSimperPage();
   } catch (e) {
