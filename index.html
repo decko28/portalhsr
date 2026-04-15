@@ -2856,9 +2856,18 @@ let editingUserEmail = null;
 
 function openEditUser(email, company, level) {
   editingUserEmail = email;
-  document.getElementById('euEmail').innerText   = email;
-  document.getElementById('euCompany').value     = company;
-  document.getElementById('euLevel').value       = level;
+  document.getElementById('euEmail').innerText = email;
+  document.getElementById('euLevel').value     = level || 'User';
+
+  // Populate dropdown company dari globalCompanies (kalau belum terisi)
+  const sel = document.getElementById('euCompany');
+  if (sel.options.length <= 1) {
+    sel.innerHTML = '<option value="">Pilih Company</option>' +
+      globalCompanies.map(n => `<option value="${n}">${n}</option>`).join('');
+  }
+  // Set nilai — jika kosong biarkan placeholder tampil
+  sel.value = company || '';
+
   document.getElementById('editUserModal').classList.remove('hidden');
 }
 
