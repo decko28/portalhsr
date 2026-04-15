@@ -3485,21 +3485,12 @@ async function submitChangePassword() {
 
   setLoader(true);
   try {
-    // Cek apakah user login via recovery/magic link (belum punya password)
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    const isRecoverySession = session?.user?.amr?.some(a => a.method === 'recovery' || a.method === 'otp');
-
-    if (!isRecoverySession) {
-      // User login normal — wajib verifikasi password lama
-      if (!currentPass) {
-        showToast('Password saat ini wajib diisi!', 'error');
-        return;
-      }
+    // Jika user isi password lama, verifikasi dulu
+    if (currentPass) {
       if (currentPass === newPass) {
         showToast('Password baru tidak boleh sama dengan password lama!', 'error');
         return;
       }
-      // Re-authenticate untuk verifikasi
       const { error: signInErr } = await supabaseClient.auth.signInWithPassword({
         email:    currentUser.email,
         password: currentPass,
@@ -3510,16 +3501,23 @@ async function submitChangePassword() {
       }
     }
 
-    // Update password baru
+    // Update password — works for both recovery session and normal session
     const { error: updateErr } = await supabaseClient.auth.updateUser({ password: newPass });
     if (updateErr) throw updateErr;
 
-    showToast('Password berhasil dibuat/diganti! ✅');
+    showToast('Password berhasil disimpan! ✅ Silakan login ulang.');
     document.getElementById('changePasswordModal').classList.add('hidden');
-    clearSession();
+    // Logout dan minta login ulang dengan password baru
+    setTimeout(async () => {
+      await supabaseClient.auth.signOut();
+    }, 1500);
   } catch(e) {
     console.error('changePassword error:', e);
-    showToast(`Gagal: ${e.message}`, 'error');
+    if (e.message?.includes('current password')) {
+      showToast('Masukkan password saat ini, atau matikan "Secure password change" di Supabase Auth settings.', 'error');
+    } else {
+      showToast(`Gagal: ${e.message}`, 'error');
+    }
   } finally {
     setLoader(false);
   }
