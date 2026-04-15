@@ -1052,30 +1052,31 @@ tbody tr:hover { background: var(--surface2); }
       </div>
       <div class="card">
         <div class="card-title"><span class="card-title-dot"></span>Tambah User Baru</div>
+        <div style="background:rgba(14,165,160,0.08);border:1px solid rgba(14,165,160,0.25);
+          border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--muted);">
+          💡 User baru akan menerima <strong style="color:var(--text)">email undangan</strong> untuk set password mereka sendiri.
+          Password tidak pernah diketahui admin — lebih aman.
+        </div>
         <div class="form-row-3">
           <div class="form-group">
             <label class="form-label">Email</label>
             <input id="uEmail" type="email" class="form-input" placeholder="email@company.com"/>
           </div>
           <div class="form-group">
-            <label class="form-label">Password</label>
-            <input id="uPass" type="password" class="form-input" placeholder="••••••••"/>
-          </div>
-          <div class="form-group">
             <label class="form-label">Company</label>
             <select id="uCompany" class="form-input"></select>
           </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Level Akses</label>
-          <select id="uLevel" class="form-input">
-            <option value="User">User</option>
-            <option value="Admin">Admin</option>
-            <option value="Superadmin">Superadmin</option>
-          </select>
+          <div class="form-group">
+            <label class="form-label">Level Akses</label>
+            <select id="uLevel" class="form-input">
+              <option value="User">User</option>
+              <option value="Admin">Admin</option>
+              <option value="Superadmin">Superadmin</option>
+            </select>
+          </div>
         </div>
         <hr class="divider"/>
-        <button class="btn-submit" onclick="submitNewUser()">Simpan User</button>
+        <button class="btn-submit" onclick="submitNewUser()">Tambah & Kirim Undangan</button>
       </div>
       <div class="card">
         <div class="card-title"><span class="card-title-dot"></span>Daftar User</div>
@@ -1241,9 +1242,15 @@ tbody tr:hover { background: var(--surface2); }
       </select>
     </div>
 
-    <div class="form-group">
-      <label class="form-label">Password Baru <span style="color:var(--muted);font-weight:400">(kosongkan jika tidak ingin ubah)</span></label>
-      <input id="euPass" type="password" class="form-input" placeholder="Password baru (opsional)"/>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+      padding:12px 14px;margin-bottom:4px;">
+      <div style="font-size:12px;font-weight:500;color:var(--text);margin-bottom:6px;">Reset Password</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+        Kirim email reset password ke user. User akan membuat password baru sendiri.
+      </div>
+      <button class="btn-secondary" onclick="sendPasswordReset()" style="font-size:12px;padding:7px 14px;">
+        📧 Kirim Email Reset Password
+      </button>
     </div>
 
     <hr class="divider"/>
@@ -1461,15 +1468,15 @@ let inspMasterData   = [];
 let hazardMasterData = [];
 let activeCarId      = null;
 
-/* ══ SESSION PERSISTENCE ══ */
+/* ══ SESSION PERSISTENCE — profile cache saja, auth dihandle Supabase ══ */
 function saveSession(user) {
-  try { sessionStorage.setItem('hsr_user', JSON.stringify(user)); } catch(e) {}
+  try { sessionStorage.setItem('hsr_profile', JSON.stringify(user)); } catch(e) {}
 }
 function loadSession() {
-  try { return JSON.parse(sessionStorage.getItem('hsr_user')); } catch(e) { return null; }
+  try { return JSON.parse(sessionStorage.getItem('hsr_profile')); } catch(e) { return null; }
 }
 function clearSession() {
-  try { sessionStorage.removeItem('hsr_user'); } catch(e) {}
+  try { sessionStorage.removeItem('hsr_profile'); } catch(e) {}
 }
 
 /* ══ UTILS ══ */
@@ -1512,70 +1519,127 @@ function simperStatus(score) {
   return score >= SIMPER_THRESHOLD ? 'Valid' : 'Tidak Valid';
 }
 
-/* ══ AUTO-RESTORE SESSION ══ */
-window.addEventListener('DOMContentLoaded', () => {
-  const saved = loadSession();
-  if (saved) {
-    currentUser = saved;
-    document.getElementById('loginPage').style.display = 'none';
-    document.getElementById('mainApp').classList.remove('hidden');
-    document.getElementById('displayUser').innerText  = currentUser.company;
-    document.getElementById('displayLevel').innerText = currentUser.level;
-    if (['Admin','Superadmin'].includes(currentUser.level)) {
-      document.getElementById('adminNavLabel').style.display = '';
-      document.getElementById('nav-userMgmt').style.display  = '';
-    }
-    initData().then(() => switchPage('dashboard'));
+/* ══ AUTO-RESTORE SESSION via Supabase Auth ══ */
+window.addEventListener('DOMContentLoaded', async () => {
+  // Cek session aktif dari Supabase Auth (token disimpan di localStorage oleh Supabase)
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    await onAuthSuccess(session.user);
   }
+
+  // Dengarkan perubahan auth state (logout dari tab lain, token expired, dll)
+  supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN'  && session) await onAuthSuccess(session.user);
+    if (event === 'SIGNED_OUT')            showLoginPage();
+    if (event === 'TOKEN_REFRESHED' && session) {
+      // Token diperbarui otomatis, tidak perlu re-load
+    }
+  });
 });
 
-/* ══ LOGIN ══ */
-async function doLogin() {
-  const e = document.getElementById('email').value.trim();
-  const p = document.getElementById('password').value;
-  document.getElementById('loginError').innerText = '';
-  if (!e || !p) { document.getElementById('loginError').innerText = 'Email dan password wajib diisi.'; return; }
-  setLoader(true);
+/* ══ Helper: load profile setelah auth berhasil ══ */
+async function onAuthSuccess(authUser) {
   try {
-    const { data, error } = await supabaseClient
-      .from('users').select('*').eq('email', e).eq('password', p).single();
-    if (error || !data) {
-      document.getElementById('loginError').innerText = 'Email atau password salah.';
-      return;
+    // Cek cache dulu — hindari query berulang
+    const cached = loadSession();
+    if (cached && cached.email === authUser.email) {
+      currentUser = cached;
+    } else {
+      // Ambil profile dari tabel users (company, level, dll)
+      const { data: profile, error } = await supabaseClient
+        .from('users')
+        .select('*')
+        .eq('email', authUser.email)
+        .single();
+
+      if (error || !profile) {
+        console.warn('Profile tidak ditemukan:', authUser.email);
+        await supabaseClient.auth.signOut();
+        document.getElementById('loginError').innerText =
+          'Akun belum terdaftar di sistem. Hubungi Admin.';
+        return;
+      }
+      currentUser = { ...profile, auth_id: authUser.id };
+      saveSession(currentUser);
     }
-    currentUser = data;
-    saveSession(currentUser);
-    document.getElementById('loginPage').style.display = 'none';
+
+    document.getElementById('loginPage').style.display  = 'none';
     document.getElementById('mainApp').classList.remove('hidden');
     document.getElementById('displayUser').innerText  = currentUser.company;
     document.getElementById('displayLevel').innerText = currentUser.level;
+
     if (['Admin','Superadmin'].includes(currentUser.level)) {
       document.getElementById('adminNavLabel').style.display = '';
       document.getElementById('nav-userMgmt').style.display  = '';
     }
-    await initData();
-    switchPage('dashboard');
-  } catch (x) {
-    console.error('doLogin error:', x);
-    if (currentUser) { switchPage('dashboard'); }
-    else { document.getElementById('loginError').innerText = 'Terjadi kesalahan koneksi, coba lagi.'; }
-  } finally {
-    setLoader(false);
+
+    if (!document.querySelector('.page.active') ||
+        document.getElementById('page_dashboard').classList.contains('active') === false) {
+      await initData();
+      switchPage('dashboard');
+    }
+  } catch(e) {
+    console.error('onAuthSuccess error:', e);
   }
 }
 
-function doLogout() {
+function showLoginPage() {
   currentUser = null;
   globalCompanies = []; globalLocs = []; uploadFiles = {};
   carMasterData = []; simperMasterData = []; inspMasterData = []; hazardMasterData = [];
   clearSession();
   document.getElementById('adminNavLabel').style.display = 'none';
   document.getElementById('nav-userMgmt').style.display  = 'none';
-  document.getElementById('loginPage').style.display = '';
+  document.getElementById('loginPage').style.display     = '';
   document.getElementById('mainApp').classList.add('hidden');
-  document.getElementById('email').value = '';
+  document.getElementById('email').value    = '';
   document.getElementById('password').value = '';
   document.getElementById('loginError').innerText = '';
+}
+
+/* ══ LOGIN — Supabase Auth (password ter-hash, tidak pernah exposed) ══ */
+async function doLogin() {
+  const e = document.getElementById('email').value.trim();
+  const p = document.getElementById('password').value;
+  document.getElementById('loginError').innerText = '';
+
+  if (!e || !p) {
+    document.getElementById('loginError').innerText = 'Email dan password wajib diisi.';
+    return;
+  }
+
+  setLoader(true);
+  try {
+    const { data, error } = await supabaseClient.auth.signInWithPassword({
+      email:    e,
+      password: p,
+    });
+
+    if (error) {
+      const msg = error.message.includes('Invalid login credentials')
+        ? 'Email atau password salah.'
+        : error.message.includes('Email not confirmed')
+        ? 'Email belum dikonfirmasi. Cek inbox Anda.'
+        : error.message.includes('Too many requests')
+        ? 'Terlalu banyak percobaan. Tunggu beberapa menit.'
+        : 'Gagal login. Coba lagi.';
+      document.getElementById('loginError').innerText = msg;
+    }
+    // Jika berhasil, onAuthStateChange → onAuthSuccess akan handle redirect
+  } catch(x) {
+    console.error('doLogin error:', x);
+    document.getElementById('loginError').innerText = 'Terjadi kesalahan koneksi. Coba lagi.';
+  } finally {
+    setLoader(false);
+  }
+}
+
+/* ══ LOGOUT — Supabase Auth ══ */
+async function doLogout() {
+  setLoader(true);
+  await supabaseClient.auth.signOut();
+  // showLoginPage() dipanggil otomatis oleh onAuthStateChange
+  setLoader(false);
 }
 
 /* ══ INIT DATA ══ */
@@ -2730,7 +2794,7 @@ async function loadUsers() {
     <td>${u.company || '—'}</td>
     <td><span class="badge badge-warning">${u.level}</span></td>
     <td style="display:flex;gap:8px;">
-      <button class="btn-amber" onclick="openEditUser('${u.email}','${u.company || ''}','${u.level || 'User'}')">Edit</button>
+      <button class="btn-amber" onclick="openEditUser('${u.email}','${u.company||''}','${u.level||'User'}')">Edit</button>
       <button class="btn-remove" onclick="deleteUser('${u.email}')">Hapus</button>
     </td>
   </tr>`).join('');
@@ -2738,30 +2802,54 @@ async function loadUsers() {
 
 async function submitNewUser() {
   const email   = document.getElementById('uEmail').value.trim();
-  const pass    = document.getElementById('uPass').value;
   const company = document.getElementById('uCompany').value;
   const level   = document.getElementById('uLevel').value;
-  if (!email || !pass || !company) return showToast('Semua field wajib diisi!', 'error');
+  if (!email || !company) return showToast('Email dan company wajib diisi!', 'error');
+
   setLoader(true);
   try {
-    const { error } = await supabaseClient.from('users').insert([{ email, password: pass, company, level }]);
-    if (error) throw error;
-    showToast('User berhasil ditambahkan! ✅');
+    // 1. Daftarkan di tabel users dulu (profile data)
+    const { error: profileErr } = await supabaseClient
+      .from('users')
+      .insert([{ email, company, level }]);
+    if (profileErr) {
+      if (profileErr.code === '23505') throw new Error('Email sudah terdaftar!');
+      throw profileErr;
+    }
+
+    // 2. Kirim magic link / reset password ke email user
+    //    User akan set password mereka sendiri — admin tidak pernah tahu password
+    const { error: authErr } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+    if (authErr) console.warn('Reset email gagal (user belum di Supabase Auth):', authErr.message);
+
+    showToast(`User ${email} ditambahkan! ✅ Email undangan dikirim.`);
     document.getElementById('uEmail').value = '';
-    document.getElementById('uPass').value  = '';
     await loadUsers();
   } catch (e) {
-    showToast('Gagal menambah user!', 'error');
+    console.error(e);
+    showToast(`Gagal: ${e.message || 'cek console'}`, 'error');
   } finally {
     setLoader(false);
   }
 }
 
 async function deleteUser(email) {
-  if (!confirm(`Hapus user ${email}?`)) return;
-  await supabaseClient.from('users').delete().eq('email', email);
-  showToast('User dihapus');
-  loadUsers();
+  if (!confirm(`Hapus user ${email}?\n\nUser tidak akan bisa login lagi.`)) return;
+  setLoader(true);
+  try {
+    // Hapus dari tabel profile saja — hapus dari Supabase Auth butuh service role key
+    // User tidak bisa login karena profile tidak ditemukan (onAuthSuccess akan reject)
+    const { error } = await supabaseClient.from('users').delete().eq('email', email);
+    if (error) throw error;
+    showToast(`User ${email} dihapus ✅`);
+    loadUsers();
+  } catch(e) {
+    showToast('Gagal menghapus user!', 'error');
+  } finally {
+    setLoader(false);
+  }
 }
 
 let editingUserEmail = null;
@@ -2771,25 +2859,47 @@ function openEditUser(email, company, level) {
   document.getElementById('euEmail').innerText   = email;
   document.getElementById('euCompany').value     = company;
   document.getElementById('euLevel').value       = level;
-  document.getElementById('euPass').value        = '';
   document.getElementById('editUserModal').classList.remove('hidden');
 }
 
-async function submitEditUser() {
-  const company  = document.getElementById('euCompany').value;
-  const level    = document.getElementById('euLevel').value;
-  const newPass  = document.getElementById('euPass').value;
-
-  if (!company) return showToast('Pilih company!', 'error');
+async function sendPasswordReset() {
+  if (!editingUserEmail) return;
   setLoader(true);
   try {
-    const updates = { company, level };
-    if (newPass.trim()) updates.password = newPass.trim();
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(editingUserEmail, {
+      redirectTo: window.location.origin,
+    });
+    if (error) throw error;
+    showToast(`Email reset password dikirim ke ${editingUserEmail} ✅`);
+  } catch(e) {
+    console.error(e);
+    showToast('Gagal kirim email reset. Cek apakah user sudah confirm email-nya.', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
 
+async function submitEditUser() {
+  const company = document.getElementById('euCompany').value;
+  const level   = document.getElementById('euLevel').value;
+  if (!company) return showToast('Pilih company!', 'error');
+
+  setLoader(true);
+  try {
+    // Update profile saja — password tidak disentuh sama sekali
     const { error } = await supabaseClient.from('users')
-      .update(updates)
+      .update({ company, level })
       .eq('email', editingUserEmail);
     if (error) throw error;
+
+    // Update cache session jika yang diedit adalah diri sendiri
+    if (currentUser && currentUser.email === editingUserEmail) {
+      currentUser.company = company;
+      currentUser.level   = level;
+      saveSession(currentUser);
+      document.getElementById('displayUser').innerText  = company;
+      document.getElementById('displayLevel').innerText = level;
+    }
 
     showToast('User berhasil diupdate! ✅');
     document.getElementById('editUserModal').classList.add('hidden');
