@@ -2787,12 +2787,33 @@ async function submitSimperStatus() {
 
 /* ══ USER MANAGEMENT ══ */
 async function loadUsers() {
+  // Jika companies belum terload, fetch dulu
+  if (globalCompanies.length === 0) {
+    try {
+      const { data } = await supabaseClient.from('companies').select('company, status');
+      globalCompanies = (data || [])
+        .filter(c => !c.status || c.status === 'Active')
+        .map(c => c.company)
+        .filter(Boolean);
+    } catch(e) {
+      console.warn('loadUsers: gagal fetch companies:', e);
+    }
+  }
+
+  // Populate dropdown company di form tambah & edit user
+  const compOpts = '<option value="">Pilih Company</option>' +
+    globalCompanies.map(n => `<option value="${n}">${n}</option>`).join('');
+  ['uCompany', 'euCompany'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = compOpts;
+  });
+
   const { data } = await supabaseClient.from('users').select('*').order('email');
   const tbody = document.getElementById('userTableBody');
   tbody.innerHTML = (data || []).map(u => `<tr>
     <td style="font-weight:500">${u.email}</td>
-    <td>${u.company || '—'}</td>
-    <td><span class="badge badge-warning">${u.level}</span></td>
+    <td>${u.company || '<span style="color:var(--muted);font-style:italic">Belum diset</span>'}</td>
+    <td><span class="badge badge-warning">${u.level || 'User'}</span></td>
     <td style="display:flex;gap:8px;">
       <button class="btn-amber" onclick="openEditUser('${u.email}','${u.company||''}','${u.level||'User'}')">Edit</button>
       <button class="btn-remove" onclick="deleteUser('${u.email}')">Hapus</button>
