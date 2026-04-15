@@ -587,6 +587,11 @@ tbody tr:hover { background: var(--surface2); }
     </nav>
 
     <div class="sidebar-footer">
+      <button class="btn-secondary" onclick="openChangePassword()"
+        style="width:100%;margin-bottom:8px;font-size:12px;padding:9px 12px;
+        display:flex;align-items:center;gap:8px;justify-content:center;">
+        <span>🔑</span> Ganti Password
+      </button>
       <button class="btn-logout" onclick="doLogout()">
         <span>🚪</span> Logout
       </button>
@@ -1377,6 +1382,38 @@ tbody tr:hover { background: var(--surface2); }
       <div class="form-section-title">🔐 Aksi Admin</div>
       <div id="srdActionContent"></div>
     </div>
+  </div>
+</div>
+
+<!-- ══ GANTI PASSWORD MODAL ══ -->
+<div id="changePasswordModal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title">🔑 Ganti Password</div>
+      <button class="modal-close" onclick="document.getElementById('changePasswordModal').classList.add('hidden')">✕</button>
+    </div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px;">
+      Password baru minimal <strong style="color:var(--text)">8 karakter</strong>.
+      Gunakan kombinasi huruf, angka, dan simbol untuk keamanan lebih baik.
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password Baru</label>
+      <input id="cpNewPass" type="password" class="form-input" placeholder="Minimal 8 karakter"
+        oninput="checkPasswordStrength(this.value)"/>
+      <!-- Strength indicator -->
+      <div style="margin-top:8px;">
+        <div style="background:var(--surface2);border-radius:4px;height:4px;overflow:hidden;">
+          <div id="cpStrengthBar" style="height:100%;border-radius:4px;width:0%;transition:all 0.3s;"></div>
+        </div>
+        <div id="cpStrengthLabel" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Konfirmasi Password Baru</label>
+      <input id="cpConfirmPass" type="password" class="form-input" placeholder="Ketik ulang password baru"/>
+    </div>
+    <hr class="divider"/>
+    <button class="btn-submit" onclick="submitChangePassword()" style="width:100%;">Simpan Password Baru</button>
   </div>
 </div>
 
@@ -2829,25 +2866,34 @@ async function submitNewUser() {
 
   setLoader(true);
   try {
-    // 1. Daftarkan di tabel users dulu (profile data)
+    // 1. Simpan profile di tabel users
     const { error: profileErr } = await supabaseClient
       .from('users')
-      .insert([{ email, company, level }]);
+      .insert([{ email, company, level, status: 'Active' }]);
+
     if (profileErr) {
       if (profileErr.code === '23505') throw new Error('Email sudah terdaftar!');
       throw profileErr;
     }
 
-    // 2. Kirim magic link / reset password ke email user
-    //    User akan set password mereka sendiri — admin tidak pernah tahu password
-    const { error: authErr } = await supabaseClient.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin,
-    });
-    if (authErr) console.warn('Reset email gagal (user belum di Supabase Auth):', authErr.message);
-
-    showToast(`User ${email} ditambahkan! ✅ Email undangan dikirim.`);
+    showToast(`User ${email} berhasil ditambahkan! ✅`);
     document.getElementById('uEmail').value = '';
     await loadUsers();
+
+    // 2. Coba kirim email reset — jika gagal tampilkan pesan tapi tidak error fatal
+    try {
+      const { error: authErr } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin,
+      });
+      if (!authErr) {
+        showToast(`Email undangan dikirim ke ${email} 📧`);
+      } else {
+        showToast(`User tersimpan. Email undangan gagal dikirim — daftarkan manual di Supabase Auth.`, 'warning');
+      }
+    } catch(emailErr) {
+      showToast(`User tersimpan. Email undangan gagal — daftarkan manual di Supabase Auth.`, 'warning');
+    }
+
   } catch (e) {
     console.error(e);
     showToast(`Gagal: ${e.message || 'cek console'}`, 'error');
@@ -2896,14 +2942,19 @@ async function sendPasswordReset() {
   if (!editingUserEmail) return;
   setLoader(true);
   try {
-    const { error } = await supabaseClient.auth.resetPasswordForEmail(editingUserEmail, {
+    // Tambah timeout 10 detik agar tidak stuck
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Timeout — cek koneksi atau setting SMTP')), 10000)
+    );
+    const resetPromise = supabaseClient.auth.resetPasswordForEmail(editingUserEmail, {
       redirectTo: window.location.origin,
     });
+    const { error } = await Promise.race([resetPromise, timeoutPromise]);
     if (error) throw error;
     showToast(`Email reset password dikirim ke ${editingUserEmail} ✅`);
   } catch(e) {
     console.error(e);
-    showToast('Gagal kirim email reset. Cek apakah user sudah confirm email-nya.', 'error');
+    showToast(`Gagal kirim email: ${e.message}. Setup SMTP dulu di Supabase → Authentication → Email.`, 'error');
   } finally {
     setLoader(false);
   }
@@ -3375,6 +3426,69 @@ async function submitTerbitkanSimper(id) {
   } catch(e) {
     console.error(e);
     showToast('Gagal menerbitkan SIMPER!', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+/* ══ GANTI PASSWORD ══ */
+function openChangePassword() {
+  document.getElementById('cpNewPass').value     = '';
+  document.getElementById('cpConfirmPass').value = '';
+  document.getElementById('cpStrengthBar').style.width = '0%';
+  document.getElementById('cpStrengthLabel').innerText = '';
+  document.getElementById('changePasswordModal').classList.remove('hidden');
+}
+
+function checkPasswordStrength(val) {
+  const bar   = document.getElementById('cpStrengthBar');
+  const label = document.getElementById('cpStrengthLabel');
+  if (!val) { bar.style.width = '0%'; label.innerText = ''; return; }
+
+  let score = 0;
+  if (val.length >= 8)  score++;
+  if (val.length >= 12) score++;
+  if (/[A-Z]/.test(val)) score++;
+  if (/[0-9]/.test(val)) score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+
+  const levels = [
+    { w: '20%', color: 'var(--red)',   text: 'Sangat lemah' },
+    { w: '40%', color: '#f97316',      text: 'Lemah' },
+    { w: '60%', color: 'var(--amber)', text: 'Cukup' },
+    { w: '80%', color: '#84cc16',      text: 'Kuat' },
+    { w: '100%',color: 'var(--teal)',  text: 'Sangat kuat ✓' },
+  ];
+  const lvl = levels[Math.min(score - 1, 4)] || levels[0];
+  bar.style.width      = lvl.w;
+  bar.style.background = lvl.color;
+  label.style.color    = lvl.color;
+  label.innerText      = lvl.text;
+}
+
+async function submitChangePassword() {
+  const newPass     = document.getElementById('cpNewPass').value;
+  const confirmPass = document.getElementById('cpConfirmPass').value;
+
+  if (!newPass)              return showToast('Password baru wajib diisi!', 'error');
+  if (newPass.length < 8)   return showToast('Password minimal 8 karakter!', 'error');
+  if (newPass !== confirmPass) return showToast('Konfirmasi password tidak cocok!', 'error');
+
+  setLoader(true);
+  try {
+    const { error } = await supabaseClient.auth.updateUser({ password: newPass });
+    if (error) throw error;
+
+    showToast('Password berhasil diganti! ✅');
+    document.getElementById('changePasswordModal').classList.add('hidden');
+    // Clear session cache agar fresh
+    clearSession();
+  } catch(e) {
+    console.error('changePassword error:', e);
+    const msg = e.message.includes('same password')
+      ? 'Password baru tidak boleh sama dengan password lama!'
+      : `Gagal ganti password: ${e.message}`;
+    showToast(msg, 'error');
   } finally {
     setLoader(false);
   }
