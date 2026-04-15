@@ -1397,10 +1397,17 @@ tbody tr:hover { background: var(--surface2); }
       Gunakan kombinasi huruf, angka, dan simbol untuk keamanan lebih baik.
     </div>
     <div class="form-group">
+      <label class="form-label">Password Saat Ini
+        <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;">
+          — kosongkan jika baru pertama login via email undangan
+        </span>
+      </label>
+      <input id="cpCurrentPass" type="password" class="form-input" placeholder="Kosongkan jika login via link email"/>
+    </div>
+    <div class="form-group">
       <label class="form-label">Password Baru</label>
       <input id="cpNewPass" type="password" class="form-input" placeholder="Minimal 8 karakter"
         oninput="checkPasswordStrength(this.value)"/>
-      <!-- Strength indicator -->
       <div style="margin-top:8px;">
         <div style="background:var(--surface2);border-radius:4px;height:4px;overflow:hidden;">
           <div id="cpStrengthBar" style="height:100%;border-radius:4px;width:0%;transition:all 0.3s;"></div>
@@ -3433,6 +3440,7 @@ async function submitTerbitkanSimper(id) {
 
 /* ══ GANTI PASSWORD ══ */
 function openChangePassword() {
+  document.getElementById('cpCurrentPass').value = '';
   document.getElementById('cpNewPass').value     = '';
   document.getElementById('cpConfirmPass').value = '';
   document.getElementById('cpStrengthBar').style.width = '0%';
@@ -3446,11 +3454,11 @@ function checkPasswordStrength(val) {
   if (!val) { bar.style.width = '0%'; label.innerText = ''; return; }
 
   let score = 0;
-  if (val.length >= 8)  score++;
-  if (val.length >= 12) score++;
-  if (/[A-Z]/.test(val)) score++;
-  if (/[0-9]/.test(val)) score++;
-  if (/[^A-Za-z0-9]/.test(val)) score++;
+  if (val.length >= 8)           score++;
+  if (val.length >= 12)          score++;
+  if (/[A-Z]/.test(val))         score++;
+  if (/[0-9]/.test(val))         score++;
+  if (/[^A-Za-z0-9]/.test(val))  score++;
 
   const levels = [
     { w: '20%', color: 'var(--red)',   text: 'Sangat lemah' },
@@ -3467,28 +3475,51 @@ function checkPasswordStrength(val) {
 }
 
 async function submitChangePassword() {
+  const currentPass = document.getElementById('cpCurrentPass').value;
   const newPass     = document.getElementById('cpNewPass').value;
   const confirmPass = document.getElementById('cpConfirmPass').value;
 
-  if (!newPass)              return showToast('Password baru wajib diisi!', 'error');
-  if (newPass.length < 8)   return showToast('Password minimal 8 karakter!', 'error');
+  if (!newPass)                return showToast('Password baru wajib diisi!', 'error');
+  if (newPass.length < 8)      return showToast('Password minimal 8 karakter!', 'error');
   if (newPass !== confirmPass) return showToast('Konfirmasi password tidak cocok!', 'error');
 
   setLoader(true);
   try {
-    const { error } = await supabaseClient.auth.updateUser({ password: newPass });
-    if (error) throw error;
+    // Cek apakah user login via recovery/magic link (belum punya password)
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const isRecoverySession = session?.user?.amr?.some(a => a.method === 'recovery' || a.method === 'otp');
 
-    showToast('Password berhasil diganti! ✅');
+    if (!isRecoverySession) {
+      // User login normal — wajib verifikasi password lama
+      if (!currentPass) {
+        showToast('Password saat ini wajib diisi!', 'error');
+        return;
+      }
+      if (currentPass === newPass) {
+        showToast('Password baru tidak boleh sama dengan password lama!', 'error');
+        return;
+      }
+      // Re-authenticate untuk verifikasi
+      const { error: signInErr } = await supabaseClient.auth.signInWithPassword({
+        email:    currentUser.email,
+        password: currentPass,
+      });
+      if (signInErr) {
+        showToast('Password saat ini salah!', 'error');
+        return;
+      }
+    }
+
+    // Update password baru
+    const { error: updateErr } = await supabaseClient.auth.updateUser({ password: newPass });
+    if (updateErr) throw updateErr;
+
+    showToast('Password berhasil dibuat/diganti! ✅');
     document.getElementById('changePasswordModal').classList.add('hidden');
-    // Clear session cache agar fresh
     clearSession();
   } catch(e) {
     console.error('changePassword error:', e);
-    const msg = e.message.includes('same password')
-      ? 'Password baru tidak boleh sama dengan password lama!'
-      : `Gagal ganti password: ${e.message}`;
-    showToast(msg, 'error');
+    showToast(`Gagal: ${e.message}`, 'error');
   } finally {
     setLoader(false);
   }
