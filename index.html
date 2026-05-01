@@ -2669,24 +2669,48 @@ function filterHazardTable() {
 
 function openHazardDetail(id) {
   const h = hazardMasterData.find(x => x.id === id);
-  document.getElementById('hdId').innerText       = h.id;
-  document.getElementById('hdCompany').innerText  = h.company || '—';
-  document.getElementById('hdReporter').innerText = h.reporter || '—';
-  document.getElementById('hdType').innerText     = h.type || '—';
-  document.getElementById('hdCategory').innerText = h.category || '—';
-  document.getElementById('hdRisk').innerHTML     = riskBadge(h.risk_level);
-  document.getElementById('hdStatus').innerHTML   = statusBadge(h.status);
-  document.getElementById('hdLokasi').innerText   = `${h.location || '—'} / ${h.sub_location || '—'}`;
-  document.getElementById('hdDate').innerText     = h.date ? new Date(h.date).toLocaleDateString('id-ID') : '—';
-  document.getElementById('hdDesc').innerText     = h.description || '—';
+  document.getElementById('hdId').innerText        = h.id;
+  document.getElementById('hdCompany').innerText   = h.company || '—';
+  document.getElementById('hdReporter').innerText  = h.reporter || '—';
+  document.getElementById('hdType').innerText      = h.type || '—';
+  document.getElementById('hdCategory').innerText  = h.category || '—';
+  document.getElementById('hdRisk').innerHTML      = riskBadge(h.risk_level);
+  document.getElementById('hdStatus').innerHTML    = statusBadge(h.status);
+  document.getElementById('hdLokasi').innerText    = `${h.location || '—'} / ${h.sub_location || '—'}`;
+  document.getElementById('hdDate').innerText      = h.date ? new Date(h.date).toLocaleDateString('id-ID') : '—';
+  document.getElementById('hdDesc').innerText      = h.description || '—';
   document.getElementById('hdImmediate').innerText = h.immediate_action || '—';
 
   const imgBefore = document.getElementById('hdImgBefore');
   const imgAfter  = document.getElementById('hdImgAfter');
-  if (h.photo_before) { imgBefore.src = h.photo_before; imgBefore.style.display = ''; }
-  else imgBefore.style.display = 'none';
-  if (h.photo_after)  { imgAfter.src  = h.photo_after;  imgAfter.style.display  = ''; }
-  else imgAfter.style.display  = 'none';
+
+  // Foto before — hanya tampil jika ada URL
+  if (h.photo_before && h.photo_before.trim()) {
+    imgBefore.src = h.photo_before;
+    imgBefore.style.display = '';
+    imgBefore.title = 'Foto Before';
+  } else {
+    imgBefore.src = '';
+    imgBefore.style.display = 'none';
+  }
+
+  // Foto after — hanya tampil jika ada URL
+  if (h.photo_after && h.photo_after.trim()) {
+    imgAfter.src = h.photo_after;
+    imgAfter.style.display = '';
+    imgAfter.title = 'Foto After';
+  } else {
+    imgAfter.src = '';
+    imgAfter.style.display = 'none';
+  }
+
+  // Jika tidak ada foto sama sekali, sembunyikan seluruh grid foto
+  const photoGrid = imgBefore.closest('div[style*="grid"]') || imgBefore.parentElement;
+  if (!h.photo_before && !h.photo_after) {
+    photoGrid.style.display = 'none';
+  } else {
+    photoGrid.style.display = '';
+  }
 
   document.getElementById('hazardModal').classList.remove('hidden');
 }
@@ -2833,17 +2857,59 @@ async function submitFU() {
   setLoader(true);
   try {
     const url = await uploadToDrive(file, 'FU', 'followup_images');
+
+    // 1. Insert follow-up record
     await supabaseClient.from('car_followups').insert([{
-      car_code: activeCarId,
+      car_code:     activeCarId,
       action_taken: action,
-      file_url: url,
-      action_date: new Date().toISOString(),
-      closed_by: currentUser.email
+      file_url:     url,
+      action_date:  new Date().toISOString(),
+      closed_by:    currentUser.email
     }]);
-    await supabaseClient.from('car_reports').update({ status: 'Closed' }).eq('car_code', activeCarId);
-    showToast('CAR berhasil ditutup! ✅');
+
+    // 2. Close CAR ini
+    await supabaseClient.from('car_reports')
+      .update({ status: 'Closed' })
+      .eq('car_code', activeCarId);
+
+    // 3. Cek apakah CAR ini berasal dari Hazard Report
+    //    Jika ya, cek apakah SEMUA CAR terkait hazard tersebut sudah Closed
+    const activeCar = carMasterData.find(c => c.car_code === activeCarId);
+    if (activeCar) {
+      // Cari hazard yang mungkin menjadi sumber CAR ini
+      // CAR dari hazard: source = hazard ID (HZD-xxxxx)
+      const sourceId = activeCar.source || '';
+      if (sourceId.startsWith('HZD-') || sourceId.startsWith('HZ-')) {
+        // Ambil semua CAR yang berasal dari hazard yang sama
+        const { data: relatedCars } = await supabaseClient
+          .from('car_reports')
+          .select('status')
+          .eq('source', sourceId);
+
+        // Simulasikan CAR ini sudah Closed (karena baru di-update)
+        const allClosed = relatedCars?.every(c =>
+          c.status === 'Closed' || c.car_code === activeCarId
+        );
+
+        if (allClosed) {
+          await supabaseClient.from('hazard_reports')
+            .update({ status: 'Closed' })
+            .eq('id', sourceId);
+          showToast('CAR ditutup & Hazard otomatis Closed! ✅');
+        } else {
+          showToast('CAR berhasil ditutup! ✅');
+        }
+      } else {
+        showToast('CAR berhasil ditutup! ✅');
+      }
+    } else {
+      showToast('CAR berhasil ditutup! ✅');
+    }
+
     document.getElementById('carModal').classList.add('hidden');
     await loadCarPage();
+    // Refresh hazard list juga jika sedang di halaman itu
+    if (hazardMasterData.length > 0) await loadHazardList();
   } catch (e) {
     console.error(e);
     showToast('Gagal menutup CAR!', 'error');
