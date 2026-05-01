@@ -1719,11 +1719,11 @@ async function onAuthSuccess(authUser) {
       document.getElementById('nav-userMgmt').style.display  = '';
     }
 
-    if (!document.querySelector('.page.active') ||
-        document.getElementById('page_dashboard').classList.contains('active') === false) {
-      await initData();
-      switchPage('dashboard');
-    }
+    // Selalu jalankan initData + repopulateFormDropdowns
+    // agar dropdown company/lokasi selalu terisi meskipun session di-restore dari localStorage
+    await initData();
+    await repopulateFormDropdowns();
+    switchPage('dashboard');
   } catch(e) {
     console.error('onAuthSuccess error:', e);
   }
