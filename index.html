@@ -1120,8 +1120,9 @@ tbody tr:hover { background: var(--surface2); }
         <div class="card-title"><span class="card-title-dot"></span>Tambah User Baru</div>
         <div style="background:rgba(14,165,160,0.08);border:1px solid rgba(14,165,160,0.25);
           border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--muted);">
-          💡 User baru akan menerima <strong style="color:var(--text)">email undangan</strong> untuk set password mereka sendiri.
-          Password tidak pernah diketahui admin — lebih aman.
+          💡 Setelah user ditambahkan, daftarkan email di <strong style="color:var(--text)">Supabase → Authentication → Users → Add User</strong>
+          dengan password default: <strong style="color:var(--teal);font-family:'Syne',sans-serif;">Sumbawa@12345</strong>
+          — minta user ganti password setelah login pertama.
         </div>
         <div class="form-row-3">
           <div class="form-group">
@@ -2966,10 +2967,10 @@ async function submitNewUser() {
       if (!authErr) {
         showToast(`Email undangan dikirim ke ${email} 📧`, 'success');
       } else {
-        showToast(`User tersimpan. Email gagal — daftarkan di Supabase Auth dengan password default: PortalHSR@123`, 'warning');
+        showToast(`User tersimpan. Email gagal — daftarkan di Supabase Auth dengan password default: Sumbawa@12345`, 'warning');
       }
     } catch(emailErr) {
-      showToast(`User tersimpan. Daftarkan manual di Supabase Auth, password default: PortalHSR@123`, 'warning');
+      showToast(`User tersimpan. Daftarkan manual di Supabase Auth, password default: Sumbawa@12345`, 'warning');
     }
 
   } catch (e) {
