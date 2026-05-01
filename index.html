@@ -2162,27 +2162,53 @@ async function submitHazard() {
   if (!uploadFiles['hPhotoBefore']) return showToast('Foto Before wajib diupload!', 'error');
   const desc = document.getElementById('hDesc').value.trim();
   if (!desc) return showToast('Deskripsi hazard wajib diisi!', 'error');
+
+  // Validasi field wajib lainnya
+  const company  = currentUser.company;
+  const lokasi   = document.getElementById('hLokasi').value;
+  const type     = document.getElementById('hType').value;
+  const riskLevel= document.getElementById('hRiskLevel').value;
+  const isClosed = document.getElementById('hIsClosed').value === 'Yes';
+
+  if (!lokasi)    return showToast('Lokasi wajib dipilih!', 'error');
+  if (!type)      return showToast('Tipe hazard wajib dipilih!', 'error');
+  if (!riskLevel) return showToast('Risk level wajib dipilih!', 'error');
+
   setLoader(true);
   try {
-    const urlBefore = await uploadToDrive(uploadFiles['hPhotoBefore'], 'HZ', 'finding_images');
-    let urlAfter = null;
-    if (uploadFiles['hPhotoAfter']) {
-      urlAfter = await uploadToDrive(uploadFiles['hPhotoAfter'], 'HZA', 'finding_images');
+    // Upload foto before — wajib
+    let urlBefore = null;
+    try {
+      urlBefore = await uploadToDrive(uploadFiles['hPhotoBefore'], 'HZ', 'finding_images');
+      if (!urlBefore) throw new Error('URL foto before null');
+    } catch(uploadErr) {
+      showToast('Gagal upload foto before ke Google Drive! Cek koneksi dan coba lagi.', 'error');
+      setLoader(false);
+      return;
     }
 
-    const hzId     = generateID('HZD');
-    const isClosed = document.getElementById('hIsClosed').value === 'Yes';
+    // Upload foto after — opsional
+    let urlAfter = null;
+    if (uploadFiles['hPhotoAfter']) {
+      try {
+        urlAfter = await uploadToDrive(uploadFiles['hPhotoAfter'], 'HZA', 'finding_images');
+      } catch(e) {
+        console.warn('Foto after gagal upload, lanjut tanpa foto after:', e);
+      }
+    }
+
+    const hzId = generateID('HZD');
 
     const { error } = await supabaseClient.from('hazard_reports').insert([{
       id:               hzId,
       date:             new Date().toISOString(),
       reporter:         currentUser.email,
-      company:          currentUser.company,
-      location:         document.getElementById('hLokasi').value,
+      company:          company,
+      location:         lokasi,
       sub_location:     document.getElementById('hSubLokasi').value,
-      type:             document.getElementById('hType').value,
+      type:             type,
       category:         document.getElementById('hCategory').value,
-      risk_level:       document.getElementById('hRiskLevel').value,
+      risk_level:       riskLevel,
       immediate_action: document.getElementById('hImmediateAction').value,
       description:      desc,
       photo_before:     urlBefore,
