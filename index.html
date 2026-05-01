@@ -712,7 +712,7 @@ tbody tr:hover { background: var(--surface2); }
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>ID</th><th>Tanggal</th><th>Company</th><th>Lokasi</th><th>Sub Lokasi</th><th>Temuan</th></tr></thead>
+            <thead><tr><th>ID</th><th>Tanggal</th><th>Company</th><th>Lokasi</th><th>Sub Lokasi</th><th>Temuan</th><th>Aksi</th></tr></thead>
             <tbody id="inspectionTableBody"></tbody>
           </table>
         </div>
@@ -1443,6 +1443,40 @@ tbody tr:hover { background: var(--surface2); }
     <div id="srdAdminPanel" style="display:none;">
       <div class="form-section-title">🔐 Aksi Admin</div>
       <div id="srdActionContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ INSPECTION DETAIL MODAL ══ -->
+<div id="inspectionDetailModal" class="modal-overlay hidden">
+  <div class="modal-box" style="max-width:680px;">
+    <div class="modal-header">
+      <div class="modal-title">Detail Inspeksi — <span id="inspDetId" style="color:var(--teal)"></span></div>
+      <button class="modal-close" onclick="document.getElementById('inspectionDetailModal').classList.add('hidden')">✕</button>
+    </div>
+
+    <!-- Info Umum -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+      <div class="car-detail-item"><label>Tanggal</label><p id="inspDetDate">—</p></div>
+      <div class="car-detail-item"><label>Company</label><p id="inspDetCompany">—</p></div>
+      <div class="car-detail-item"><label>Tipe Inspeksi</label><p id="inspDetType">—</p></div>
+      <div class="car-detail-item"><label>Lokasi</label><p id="inspDetLocation">—</p></div>
+      <div class="car-detail-item"><label>Sub Lokasi</label><p id="inspDetSubLoc">—</p></div>
+      <div class="car-detail-item"><label>Status Temuan</label><p id="inspDetFinding">—</p></div>
+    </div>
+
+    <!-- Foto Inspeksi -->
+    <div id="inspDetPhotoWrap" style="margin-bottom:16px;display:none;">
+      <div class="form-section-title">📸 Foto Inspeksi</div>
+      <img id="inspDetPhoto" src="" style="max-height:200px;border-radius:8px;border:1px solid var(--border);cursor:zoom-in;" onclick="openLightbox(this.src)"/>
+    </div>
+
+    <!-- CAR Items terkait -->
+    <div id="inspDetCARSection">
+      <div class="form-section-title">⚡ CAR Items Terkait</div>
+      <div id="inspDetCARList">
+        <div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">Memuat...</div>
+      </div>
     </div>
   </div>
 </div>
@@ -2418,7 +2452,80 @@ function filterInspectionTable() {
     <td>${i.has_finding === 'Yes'
       ? '<span class="badge badge-open">Ada Temuan</span>'
       : '<span class="badge badge-closed">Clear</span>'}</td>
+    <td><button class="btn-amber" onclick="openInspectionDetail('${i.id}')">Detail</button></td>
   </tr>`).join('');
+}
+
+async function openInspectionDetail(id) {
+  const insp = inspMasterData.find(x => x.id === id);
+  if (!insp) return;
+
+  // Isi info umum
+  document.getElementById('inspDetId').innerText       = id;
+  document.getElementById('inspDetDate').innerText     = insp.date ? new Date(insp.date).toLocaleDateString('id-ID') : '—';
+  document.getElementById('inspDetCompany').innerText  = insp.company     || '—';
+  document.getElementById('inspDetType').innerText     = insp.type        || '—';
+  document.getElementById('inspDetLocation').innerText = insp.location    || '—';
+  document.getElementById('inspDetSubLoc').innerText   = insp.sub_location|| '—';
+  document.getElementById('inspDetFinding').innerHTML  = insp.has_finding === 'Yes'
+    ? '<span class="badge badge-open">Ada Temuan</span>'
+    : '<span class="badge badge-closed">Clear</span>';
+
+  // Foto inspeksi
+  const photoWrap = document.getElementById('inspDetPhotoWrap');
+  const photoImg  = document.getElementById('inspDetPhoto');
+  if (insp.photo_url) {
+    photoImg.src = insp.photo_url;
+    photoWrap.style.display = '';
+  } else {
+    photoWrap.style.display = 'none';
+  }
+
+  // Tampilkan modal
+  document.getElementById('inspectionDetailModal').classList.remove('hidden');
+
+  // Load CAR items terkait dari DB
+  const carList = document.getElementById('inspDetCARList');
+  carList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">Memuat...</div>';
+
+  try {
+    const { data: cars, error } = await supabaseClient
+      .from('car_reports')
+      .select('*')
+      .eq('inspection_code', id)
+      .order('date_raised', { ascending: false });
+
+    if (error) throw error;
+
+    if (!cars || cars.length === 0) {
+      carList.innerHTML = `<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px;">
+        ${insp.has_finding === 'Yes' ? 'Tidak ada CAR yang ditemukan.' : '✅ Tidak ada temuan pada inspeksi ini.'}
+      </div>`;
+      return;
+    }
+
+    carList.innerHTML = cars.map(c => `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+        padding:14px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:12px;color:var(--teal);font-family:'Syne',sans-serif;font-weight:600;">${c.car_code}</span>
+          ${statusBadge(c.status)}
+        </div>
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px;">📋 ${c.finding || '—'}</div>
+        ${c.action_plan ? `<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">🔧 ${c.action_plan}</div>` : ''}
+        <div style="display:flex;gap:16px;font-size:12px;color:var(--muted);margin-top:6px;flex-wrap:wrap;">
+          ${c.pic       ? `<span>👤 ${c.pic}</span>`                                                                          : ''}
+          ${c.due_date  ? `<span>📅 Due: ${new Date(c.due_date).toLocaleDateString('id-ID')}</span>`                         : ''}
+          ${c.date_raised? `<span>📆 Dibuat: ${new Date(c.date_raised).toLocaleDateString('id-ID')}</span>`                  : ''}
+        </div>
+        ${c.image_url ? `
+          <img src="${c.image_url}" style="max-height:120px;border-radius:6px;border:1px solid var(--border);
+            margin-top:10px;cursor:zoom-in;" onclick="openLightbox('${c.image_url}')"/>` : ''}
+      </div>`).join('');
+  } catch(e) {
+    console.error('openInspectionDetail CAR error:', e);
+    carList.innerHTML = '<div style="color:var(--red);font-size:13px;padding:12px;">Gagal memuat CAR items.</div>';
+  }
 }
 
 /* ══ HAZARD LIST ══ */
