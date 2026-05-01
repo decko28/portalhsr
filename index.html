@@ -1792,6 +1792,58 @@ async function doLogout() {
   setLoader(false);
 }
 
+/* ══ REPOPULATE FORM DROPDOWNS ══ */
+async function repopulateFormDropdowns() {
+  try {
+    // Selalu fetch ulang untuk memastikan data terbaru
+    const [{ data: compData }, { data: locData }] = await Promise.all([
+      supabaseClient.from('companies').select('company, status'),
+      supabaseClient.from('locations').select('*'),
+    ]);
+
+    // Update globalCompanies
+    if (compData && compData.length > 0) {
+      const filtered = compData.filter(c => !c.status || c.status === 'Active').map(c => c.company).filter(Boolean);
+      globalCompanies = filtered.length > 0 ? filtered : compData.map(c => c.company).filter(Boolean);
+    }
+
+    // Update globalLocs
+    if (locData && locData.length > 0) {
+      globalLocs = locData.filter(l => !l.status || l.status === 'Active');
+      if (globalLocs.length === 0) globalLocs = locData;
+    }
+
+    // Populate dropdown company di form inspeksi & hazard
+    const compOpts = '<option value="">Pilih Company</option>' +
+      globalCompanies.map(n => `<option value="${n}">${n}</option>`).join('');
+    ['perusahaan', 'hPerusahaan'].forEach(elId => {
+      const el = document.getElementById(elId);
+      if (el) el.innerHTML = compOpts;
+    });
+
+    // Lock company untuk non-admin
+    const isAdmin = ['Admin','Superadmin'].includes(currentUser.level);
+    if (!isAdmin) {
+      ['perusahaan','hPerusahaan'].forEach(elId => {
+        const el = document.getElementById(elId);
+        if (el) { el.value = currentUser.company; el.disabled = true; }
+      });
+    }
+
+    // Populate lokasi
+    const locNames = [...new Set(globalLocs.map(l => l.lokasi).filter(Boolean))];
+    const locOpts  = '<option value="">Pilih Lokasi</option>' +
+      locNames.map(l => `<option value="${l}">${l}</option>`).join('');
+    ['lokasi','hLokasi'].forEach(elId => {
+      const el = document.getElementById(elId);
+      if (el) el.innerHTML = locOpts;
+    });
+
+  } catch(e) {
+    console.error('repopulateFormDropdowns error:', e);
+  }
+}
+
 /* ══ INIT DATA ══ */
 async function initData() {
   try {
@@ -1883,49 +1935,7 @@ function switchPage(id) {
   if (id === 'simper')         loadSimperPage();
   if (id === 'simperReg')      loadSimperRegPage();
   if (id === 'userMgmt')       loadUsers();
-
-  // Re-populate company & lokasi jika halaman form inspeksi/hazard dibuka dan dropdown kosong
-  if (id === 'inspection' || id === 'hazard') {
-    const sel = document.getElementById(id === 'inspection' ? 'perusahaan' : 'hPerusahaan');
-    if (sel && sel.options.length <= 1 && globalCompanies.length === 0) {
-      // Fetch ulang companies
-      supabaseClient.from('companies').select('company, status').then(({ data }) => {
-        if (data) {
-          globalCompanies = data
-            .filter(c => !c.status || c.status === 'Active')
-            .map(c => c.company).filter(Boolean);
-          if (globalCompanies.length === 0) globalCompanies = data.map(c => c.company).filter(Boolean);
-        }
-        const opts = '<option value="">Pilih Company</option>' +
-          globalCompanies.map(n => `<option value="${n}">${n}</option>`).join('');
-        ['perusahaan', 'hPerusahaan'].forEach(elId => {
-          const el = document.getElementById(elId);
-          if (el) el.innerHTML = opts;
-        });
-        // Lock company untuk non-admin
-        if (!['Admin','Superadmin'].includes(currentUser.level)) {
-          ['perusahaan','hPerusahaan'].forEach(elId => {
-            const el = document.getElementById(elId);
-            if (el) { el.value = currentUser.company; el.disabled = true; }
-          });
-        }
-      });
-    } else if (sel && sel.options.length <= 1 && globalCompanies.length > 0) {
-      // globalCompanies sudah ada, tinggal populate
-      const opts = '<option value="">Pilih Company</option>' +
-        globalCompanies.map(n => `<option value="${n}">${n}</option>`).join('');
-      ['perusahaan', 'hPerusahaan'].forEach(elId => {
-        const el = document.getElementById(elId);
-        if (el) el.innerHTML = opts;
-      });
-      if (!['Admin','Superadmin'].includes(currentUser.level)) {
-        ['perusahaan','hPerusahaan'].forEach(elId => {
-          const el = document.getElementById(elId);
-          if (el) { el.value = currentUser.company; el.disabled = true; }
-        });
-      }
-    }
-  }
+  if (id === 'inspection' || id === 'hazard') repopulateFormDropdowns();
 }
 
 /* ══ FILE UTILS ══ */
