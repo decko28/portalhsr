@@ -1883,6 +1883,49 @@ function switchPage(id) {
   if (id === 'simper')         loadSimperPage();
   if (id === 'simperReg')      loadSimperRegPage();
   if (id === 'userMgmt')       loadUsers();
+
+  // Re-populate company & lokasi jika halaman form inspeksi/hazard dibuka dan dropdown kosong
+  if (id === 'inspection' || id === 'hazard') {
+    const sel = document.getElementById(id === 'inspection' ? 'perusahaan' : 'hPerusahaan');
+    if (sel && sel.options.length <= 1 && globalCompanies.length === 0) {
+      // Fetch ulang companies
+      supabaseClient.from('companies').select('company, status').then(({ data }) => {
+        if (data) {
+          globalCompanies = data
+            .filter(c => !c.status || c.status === 'Active')
+            .map(c => c.company).filter(Boolean);
+          if (globalCompanies.length === 0) globalCompanies = data.map(c => c.company).filter(Boolean);
+        }
+        const opts = '<option value="">Pilih Company</option>' +
+          globalCompanies.map(n => `<option value="${n}">${n}</option>`).join('');
+        ['perusahaan', 'hPerusahaan'].forEach(elId => {
+          const el = document.getElementById(elId);
+          if (el) el.innerHTML = opts;
+        });
+        // Lock company untuk non-admin
+        if (!['Admin','Superadmin'].includes(currentUser.level)) {
+          ['perusahaan','hPerusahaan'].forEach(elId => {
+            const el = document.getElementById(elId);
+            if (el) { el.value = currentUser.company; el.disabled = true; }
+          });
+        }
+      });
+    } else if (sel && sel.options.length <= 1 && globalCompanies.length > 0) {
+      // globalCompanies sudah ada, tinggal populate
+      const opts = '<option value="">Pilih Company</option>' +
+        globalCompanies.map(n => `<option value="${n}">${n}</option>`).join('');
+      ['perusahaan', 'hPerusahaan'].forEach(elId => {
+        const el = document.getElementById(elId);
+        if (el) el.innerHTML = opts;
+      });
+      if (!['Admin','Superadmin'].includes(currentUser.level)) {
+        ['perusahaan','hPerusahaan'].forEach(elId => {
+          const el = document.getElementById(elId);
+          if (el) { el.value = currentUser.company; el.disabled = true; }
+        });
+      }
+    }
+  }
 }
 
 /* ══ FILE UTILS ══ */
