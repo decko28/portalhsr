@@ -510,7 +510,9 @@ tbody tr:hover { background: var(--surface2); }
      LOGIN
 ══════════════════════════════════════════ -->
 <div id="loginPage">
-  <div class="login-card">
+
+  <!-- ══ VIEW: LOGIN ══ -->
+  <div class="login-card" id="viewLogin">
     <div class="login-logo">
       <div class="login-logo-icon">🛡️</div>
       <div class="login-logo-text">HSR<span>Portal</span></div>
@@ -528,7 +530,65 @@ tbody tr:hover { background: var(--surface2); }
     </div>
     <button class="btn-primary" onclick="doLogin()">Masuk ke Portal</button>
     <div class="login-error" id="loginError"></div>
+    <div style="text-align:center;margin-top:16px;">
+      <button onclick="showForgotPassword()"
+        style="background:none;border:none;color:var(--teal);font-size:13px;
+        cursor:pointer;text-decoration:underline;padding:0;">
+        Lupa Password?
+      </button>
+    </div>
   </div>
+
+  <!-- ══ VIEW: LUPA PASSWORD ══ -->
+  <div class="login-card" id="viewForgotPassword" style="display:none;">
+    <div class="login-logo">
+      <div class="login-logo-icon">🔑</div>
+      <div class="login-logo-text">HSR<span>Portal</span></div>
+    </div>
+    <div class="login-title">Reset Password</div>
+    <div class="login-sub">Masukkan email Anda. Kami akan mengirimkan link untuk membuat password baru.</div>
+
+    <div class="form-group">
+      <label class="form-label">Email</label>
+      <input id="forgotEmail" type="email" class="form-input" placeholder="nama@perusahaan.com"
+        onkeydown="if(event.key==='Enter') doForgotPassword()"/>
+    </div>
+
+    <button class="btn-primary" onclick="doForgotPassword()">Kirim Link Reset Password</button>
+    <div class="login-error" id="forgotError"></div>
+
+    <div style="text-align:center;margin-top:16px;">
+      <button onclick="showLoginView()"
+        style="background:none;border:none;color:var(--muted);font-size:13px;
+        cursor:pointer;padding:0;">
+        ← Kembali ke Login
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ VIEW: EMAIL TERKIRIM ══ -->
+  <div class="login-card" id="viewForgotSent" style="display:none;">
+    <div style="text-align:center;padding:16px 0;">
+      <div style="font-size:48px;margin-bottom:16px;">📧</div>
+      <div class="login-title" style="font-size:20px;">Email Terkirim!</div>
+      <div class="login-sub" style="margin-bottom:24px;">
+        Link reset password sudah dikirim ke:<br>
+        <strong id="forgotEmailSent" style="color:var(--teal)"></strong>
+      </div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);
+        padding:14px;font-size:13px;color:var(--muted);text-align:left;margin-bottom:24px;line-height:1.7;">
+        <strong style="color:var(--text)">Langkah selanjutnya:</strong><br>
+        1. Buka inbox email Anda<br>
+        2. Klik link "Reset Password" di email dari HSR Portal<br>
+        3. Buat password baru<br>
+        4. Login kembali ke portal
+      </div>
+      <button onclick="showLoginView()" class="btn-primary" style="width:100%;">
+        Kembali ke Login
+      </button>
+    </div>
+  </div>
+
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -544,7 +604,8 @@ tbody tr:hover { background: var(--surface2); }
         <div class="sidebar-logo-text">HSR<span>Portal</span></div>
       </div>
       <div class="user-card">
-        <div class="user-card-name" id="displayUser">—</div>
+        <div style="font-size:13px;font-weight:600;color:var(--white);margin-bottom:3px;" id="displayName">—</div>
+        <div class="user-card-name" id="displayUser" style="font-size:12px;font-weight:400;color:var(--muted);margin-bottom:4px;">—</div>
         <span class="user-card-badge" id="displayLevel">—</span>
       </div>
     </div>
@@ -1609,6 +1670,12 @@ async function onAuthSuccess(authUser) {
 
     document.getElementById('loginPage').style.display  = 'none';
     document.getElementById('mainApp').classList.remove('hidden');
+
+    // Nama: ambil dari kolom 'name' jika ada, fallback ke bagian sebelum @ di email
+    const displayName = currentUser.name ||
+      currentUser.email.split('@')[0].replace(/[._]/g, ' ')
+        .replace(/\b\w/g, c => c.toUpperCase());
+    document.getElementById('displayName').innerText  = displayName;
     document.getElementById('displayUser').innerText  = currentUser.company;
     document.getElementById('displayLevel').innerText = currentUser.level;
 
@@ -1636,6 +1703,10 @@ function showLoginPage() {
   document.getElementById('nav-userMgmt').style.display  = 'none';
   document.getElementById('loginPage').style.display     = '';
   document.getElementById('mainApp').classList.add('hidden');
+  // Reset ke view login (bukan lupa password)
+  document.getElementById('viewLogin').style.display          = '';
+  document.getElementById('viewForgotPassword').style.display = 'none';
+  document.getElementById('viewForgotSent').style.display     = 'none';
   document.getElementById('email').value    = '';
   document.getElementById('password').value = '';
   document.getElementById('loginError').innerText = '';
@@ -2887,18 +2958,18 @@ async function submitNewUser() {
     document.getElementById('uEmail').value = '';
     await loadUsers();
 
-    // 2. Coba kirim email reset — jika gagal tampilkan pesan tapi tidak error fatal
+    // 2. Coba kirim email reset — jika gagal tampilkan info default password
     try {
       const { error: authErr } = await supabaseClient.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin,
       });
       if (!authErr) {
-        showToast(`Email undangan dikirim ke ${email} 📧`);
+        showToast(`Email undangan dikirim ke ${email} 📧`, 'success');
       } else {
-        showToast(`User tersimpan. Email undangan gagal dikirim — daftarkan manual di Supabase Auth.`, 'warning');
+        showToast(`User tersimpan. Email gagal — daftarkan di Supabase Auth dengan password default: PortalHSR@123`, 'warning');
       }
     } catch(emailErr) {
-      showToast(`User tersimpan. Email undangan gagal — daftarkan manual di Supabase Auth.`, 'warning');
+      showToast(`User tersimpan. Daftarkan manual di Supabase Auth, password default: PortalHSR@123`, 'warning');
     }
 
   } catch (e) {
@@ -3433,6 +3504,65 @@ async function submitTerbitkanSimper(id) {
   } catch(e) {
     console.error(e);
     showToast('Gagal menerbitkan SIMPER!', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+/* ══ LUPA PASSWORD ══ */
+function showForgotPassword() {
+  document.getElementById('viewLogin').style.display          = 'none';
+  document.getElementById('viewForgotSent').style.display     = 'none';
+  document.getElementById('viewForgotPassword').style.display = '';
+  document.getElementById('forgotEmail').value  = '';
+  document.getElementById('forgotError').innerText = '';
+  // Pre-fill email jika sudah diketik di form login
+  const loginEmail = document.getElementById('email').value.trim();
+  if (loginEmail) document.getElementById('forgotEmail').value = loginEmail;
+}
+
+function showLoginView() {
+  document.getElementById('viewForgotPassword').style.display = 'none';
+  document.getElementById('viewForgotSent').style.display     = 'none';
+  document.getElementById('viewLogin').style.display          = '';
+  document.getElementById('loginError').innerText = '';
+}
+
+async function doForgotPassword() {
+  const email = document.getElementById('forgotEmail').value.trim();
+  document.getElementById('forgotError').innerText = '';
+
+  if (!email) {
+    document.getElementById('forgotError').innerText = 'Email wajib diisi.';
+    return;
+  }
+
+  setLoader(true);
+  try {
+    const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+
+    if (error) throw error;
+
+    // Tampilkan view sukses
+    document.getElementById('forgotEmailSent').innerText        = email;
+    document.getElementById('viewForgotPassword').style.display = 'none';
+    document.getElementById('viewForgotSent').style.display     = '';
+
+  } catch(e) {
+    console.error('forgotPassword error:', e);
+    // Supabase tidak expose apakah email terdaftar atau tidak (security best practice)
+    // Tampilkan pesan sukses tetap meski email tidak ditemukan
+    if (e.message?.includes('rate limit') || e.message?.includes('too many')) {
+      document.getElementById('forgotError').innerText =
+        'Terlalu banyak permintaan. Tunggu beberapa menit lalu coba lagi.';
+    } else {
+      // Tetap tampilkan sukses untuk mencegah email enumeration attack
+      document.getElementById('forgotEmailSent').innerText        = email;
+      document.getElementById('viewForgotPassword').style.display = 'none';
+      document.getElementById('viewForgotSent').style.display     = '';
+    }
   } finally {
     setLoader(false);
   }
