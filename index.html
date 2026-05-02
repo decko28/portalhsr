@@ -1966,16 +1966,25 @@ async function uploadToDrive(file, pre, type) {
       r.readAsDataURL(file);
     });
     const name = generateID(pre) + '.' + file.name.split('.').pop();
-    const res  = await fetch(GAS_API, {
+
+    // GAS tidak support CORS preflight untuk JSON POST
+    // Gunakan FormData dengan Content-Type text/plain agar tidak trigger preflight
+    const payload = JSON.stringify({ fileName: name, mimeType: file.type, base64: b64, folderType: type });
+
+    const res = await fetch(GAS_API, {
       method: 'POST',
-      body: JSON.stringify({ fileName: name, mimeType: file.type, base64: b64, folderType: type })
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: payload,
+      redirect: 'follow',
     });
+
     if (!res.ok) throw new Error(`GAS response: ${res.status}`);
     const json = await res.json();
+    if (json.status === 'error') throw new Error(json.message);
     return json.url || null;
   } catch (err) {
-    console.warn('uploadToDrive gagal, lanjut tanpa foto:', err);
-    return null; // Tidak crash — simpan data tanpa foto
+    console.error('uploadToDrive error:', err);
+    throw err; // Re-throw agar caller bisa handle
   }
 }
 
@@ -3668,20 +3677,7 @@ function openSimperRegDetail(id) {
   // Timeline
   document.getElementById('srdTimeline').innerHTML = buildTimeline(r);
 
-      
-    <div id="srdPrintSection" style="display:none;margin-top:16px;">
-      <hr class="divider" style="margin:16px 0"/>
-      <button class="btn-submit" onclick="generateSimperPDF()"
-        style="width:100%;background:linear-gradient(135deg,#10b981,#059669);
-               display:flex;align-items:center;justify-content:center;gap:8px;">
-        <span style="font-size:18px;">🖨️</span>
-        <span>Cetak SIMPER Card (PDF)</span>
-      </button>
-      <div style="font-size:12px;color:var(--muted);margin-top:8px;text-align:center;">
-        Format: 5.38 × 8.56 cm · Ukuran ID Card Standar
-      </div>
-    </div>
-   // Admin panel
+  // Admin panel
   const isAdmin = ['Admin','Superadmin'].includes(currentUser.level);
   const adminPanel = document.getElementById('srdAdminPanel');
   if (isAdmin && r.status !== 'Diterbitkan' || r.status === 'Diterbitkan') {
@@ -3692,9 +3688,6 @@ function openSimperRegDetail(id) {
   }
 
   document.getElementById('simperRegModal').classList.remove('hidden');
-     // Tampilkan/sembunyikan tombol cetak sesuai status
-  document.getElementById('srdPrintSection').style.display =
-    (r.status === 'Diterbitkan') ? '' : 'none';
 }
 
 async function submitUjianTulis(id) {
@@ -3778,253 +3771,7 @@ async function submitTerbitkanSimper(id) {
   }
 }
 
-/* ══════════════════════════════════════════════════════
-   GENERATE SIMPER PDF — ID Card Format 5.38 x 8.56 cm
-══════════════════════════════════════════════════════ */
-
-async function generateSimperPDF() {
-  const reg = simperRegMasterData.find(r => r.id === activeSimperRegId);
-  if (!reg || reg.status !== 'Diterbitkan') {
-    showToast('SIMPER harus sudah diterbitkan untuk dicetak!', 'error');
-    return;
-  }
-
-  setLoader(true);
-  try {
-    // Cek apakah jsPDF sudah di-load sebelumnya
-    if (!window.jspdf) {
-      await new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-        script.onload  = resolve;
-        script.onerror = () => reject(new Error('Gagal load jsPDF. Cek koneksi internet.'));
-        document.head.appendChild(script);
-      });
-    }
-
-    const { jsPDF } = window.jspdf;
-
-    // Ukuran: 5.38 cm x 8.56 cm → 53.8 x 85.6 mm
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [53.8, 85.6] });
-    const W = doc.internal.pageSize.getWidth();
-    const H = doc.internal.pageSize.getHeight();
-    const M = 2; // margin
-
-    /* ── BORDER LUAR ── */
-    doc.setDrawColor(14, 165, 160);
-    doc.setLineWidth(0.8);
-    doc.rect(M, M, W - M * 2, H - M * 2);
-
-    /* ── HEADER TEAL ── */
-    doc.setFillColor(14, 165, 160);
-    doc.rect(M, M, W - M * 2, 14, 'F');
-
-    /* ── LOGO BOX (putih) ── */
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(M + 1.5, M + 2, 16, 10, 1, 1, 'F');
-    doc.setTextColor(14, 165, 160);
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text('STM', M + 9.5, M + 8.5, { align: 'center' });
-
-    /* ── SIMPER TEKS DI HEADER ── */
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text('SIMPER', M + 20, M + 9.5);
-
-    /* ── BACKGROUND PUTIH BADAN KARTU ── */
-    const bodyY = M + 14;
-    doc.setFillColor(255, 255, 255);
-    doc.rect(M, bodyY, W - M * 2, H - bodyY - M, 'F');
-
-    /* ── AREA FOTO ── */
-    const pX = M + 2, pY = bodyY + 2, pW = 13, pH = 16;
-
-    if (reg.foto_id_badge) {
-      try {
-        const imgData = await loadImageAsBase64(reg.foto_id_badge);
-        doc.addImage(imgData, 'JPEG', pX, pY, pW, pH);
-      } catch (_) {
-        drawPhotoPlaceholder(doc, pX, pY, pW, pH);
-      }
-    } else {
-      drawPhotoPlaceholder(doc, pX, pY, pW, pH);
-    }
-
-    /* ── INFO KANAN FOTO ── */
-    const iX = pX + pW + 2;
-    const iW = W - iX - M - 1;
-
-    // Nama
-    doc.setTextColor(60, 60, 60);
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(5.5);
-    doc.text('NAMA', iX, pY + 2);
-    doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(6.5);
-    doc.setTextColor(0, 0, 0);
-    const namaLines = doc.splitTextToSize(reg.nama || '—', iW);
-    doc.text(namaLines.slice(0, 2), iX, pY + 4.5);
-
-    // No Badge
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(5.5);
-    doc.setTextColor(60, 60, 60);
-    doc.text('NO. BADGE', iX, pY + 9);
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(7);
-    doc.setTextColor(14, 165, 160);
-    doc.text(reg.no_badge || '—', iX, pY + 11.5);
-
-    // Jabatan / Company
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(5.5);
-    doc.setTextColor(60, 60, 60);
-    doc.text('JABATAN', iX, pY + 14.5);
-    doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(5.5);
-    doc.setTextColor(0, 0, 0);
-    const jabLines = doc.splitTextToSize(reg.jabatan || '—', iW);
-    doc.text(jabLines.slice(0, 2), iX, pY + 16.5);
-
-    /* ── GARIS SEPARATOR ── */
-    const sepY = pY + pH + 2;
-    doc.setDrawColor(14, 165, 160);
-    doc.setLineWidth(0.4);
-    doc.line(M + 1.5, sepY, W - M - 1.5, sepY);
-
-    /* ── DETAIL SIMPER ── */
-    const dY = sepY + 2.5;
-
-    // Nomor identifikasi
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(5);
-    doc.setTextColor(14, 165, 160);
-    const simCode = reg.simper_number || '—';
-    doc.text(simCode, M + 2, dY);
-
-    // Label detail kiri
-    const lblX = M + 2;
-    const detX = M + 12;
-    const lineH = 3.8;
-
-    const details = [
-      ['EXPIRED', reg.id_badge_expiry
-        ? new Date(reg.id_badge_expiry).toLocaleDateString('id-ID',
-            { day:'2-digit', month:'short', year:'numeric' })
-        : '—'],
-      ['ISSUED AT', reg.company ? reg.company.split(' ').map(w=>w[0]).join('').toUpperCase() : 'STM'],
-    ];
-
-    details.forEach(([label, value], i) => {
-      const y = dY + 3.5 + i * lineH;
-      doc.setFont('Helvetica', 'bold');
-      doc.setFontSize(4.5);
-      doc.setTextColor(100, 100, 100);
-      doc.text(label, lblX, y);
-      doc.setFont('Helvetica', 'normal');
-      doc.setFontSize(5.5);
-      doc.setTextColor(0, 0, 0);
-      doc.text(': ' + value, detX, y);
-    });
-
-    // Equipment type
-    const etY = dY + 11;
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(4.5);
-    doc.setTextColor(100, 100, 100);
-    doc.text('EQUIPMENT TYPE', lblX, etY);
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(0, 0, 0);
-    doc.text('LV', lblX, etY + 4);
-
-    /* ── GARIS SEPARATOR 2 ── */
-    const sep2Y = etY + 6;
-    doc.setDrawColor(14, 165, 160);
-    doc.setLineWidth(0.3);
-    doc.line(M + 1.5, sep2Y, W - M - 1.5, sep2Y);
-
-    /* ── SIGNATURE AREA ── */
-    const sigY = sep2Y + 2;
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(4.5);
-    doc.setTextColor(100, 100, 100);
-    doc.text('SIGNATURE', M + 2, sigY);
-
-    // Box HSR
-    const hX = M + 2, hY = sigY + 1.5, hW = 13, hH = 9;
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.3);
-    doc.rect(hX, hY, hW, hH);
-    doc.setFont('Helvetica', 'normal');
-    doc.setFontSize(4);
-    doc.setTextColor(130, 130, 130);
-    doc.text('HSR', hX + hW / 2, hY + hH - 1.5, { align: 'center' });
-
-    // Box KTT
-    const kX = hX + hW + 2, kY = hY, kW = hW, kH = hH;
-    doc.rect(kX, kY, kW, kH);
-    doc.text('KTT', kX + kW / 2, kY + kH - 1.5, { align: 'center' });
-
-    /* ── VIOLATION & ACCIDENT BOXES ── */
-    const vY = sigY + 12.5;
-    doc.setFont('Helvetica', 'bold');
-    doc.setFontSize(4);
-    doc.setTextColor(0, 0, 0);
-    doc.text('VIOLATION', M + 2, vY);
-    doc.text('ACCIDENT', M + 2 + 16, vY);
-
-    const bSize = 2.2, bGap = 2.8;
-    for (let i = 0; i < 3; i++) {
-      doc.rect(M + 2 + i * bGap, vY + 1, bSize, bSize);
-      doc.rect(M + 2 + 16 + i * bGap, vY + 1, bSize, bSize);
-    }
-
-    /* ── SAVE ── */
-    const fname = 'SIMPER_'
-      + (reg.nama || 'unknown').replace(/\s+/g, '_')
-      + '_' + simCode.replace(/\//g, '-')
-      + '.pdf';
-    doc.save(fname);
-    showToast('✅ SIMPER Card berhasil diunduh: ' + fname);
-
-  } catch (e) {
-    console.error('generateSimperPDF:', e);
-    showToast('Gagal generate PDF: ' + e.message, 'error');
-  } finally {
-    setLoader(false);
-  }
-}
-
-function drawPhotoPlaceholder(doc, x, y, w, h) {
-  doc.setFillColor(240, 240, 240);
-  doc.rect(x, y, w, h, 'F');
-  doc.setDrawColor(180, 180, 180);
-  doc.setLineWidth(0.4);
-  doc.rect(x, y, w, h);
-  doc.setTextColor(160, 160, 160);
-  doc.setFont('Helvetica', 'normal');
-  doc.setFontSize(4.5);
-  doc.text('PHOTO', x + w / 2, y + h / 2, { align: 'center' });
-}
-
-function loadImageAsBase64(url) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width; canvas.height = img.height;
-      canvas.getContext('2d').drawImage(img, 0, 0);
-      resolve(canvas.toDataURL('image/jpeg', 0.9));
-    };
-    img.onerror = () => reject(new Error('Gagal load foto'));
-    img.src = url;
-  });
-}
-   /* ══ LUPA PASSWORD ══ */
+/* ══ LUPA PASSWORD ══ */
 function showForgotPassword() {
   document.getElementById('viewLogin').style.display          = 'none';
   document.getElementById('viewForgotSent').style.display     = 'none';
@@ -4192,6 +3939,6 @@ function clearHazardForm() {
   delete uploadFiles['hPhotoBefore'];
   delete uploadFiles['hPhotoAfter'];
 }
-   </script>
+</script>
 </body>
 </html>
