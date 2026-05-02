@@ -3930,6 +3930,248 @@ function clearHazardForm() {
   delete uploadFiles['hPhotoBefore'];
   delete uploadFiles['hPhotoAfter'];
 }
+   /* ══════════════════════════════════════════════════════
+   GENERATE SIMPER PDF — ID Card Format 5.38 x 8.56 cm
+══════════════════════════════════════════════════════ */
+
+async function generateSimperPDF() {
+  const reg = simperRegMasterData.find(r => r.id === activeSimperRegId);
+  if (!reg || reg.status !== 'Diterbitkan') {
+    showToast('SIMPER harus sudah diterbitkan untuk dicetak!', 'error');
+    return;
+  }
+
+  setLoader(true);
+  try {
+    // Load jsPDF library dari CDN
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    script.onload = async () => {
+      const { jsPDF } = window.jspdf;
+      
+      // Ukuran ID Card: 5.38 × 8.56 cm = 153.08 × 243.43 px (di 72 DPI)
+      // Untuk konsistensi, gunakan mm: 53.8 × 85.6 mm
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [53.8, 85.6]  // lebar × tinggi dalam mm
+      });
+
+      const width  = doc.internal.pageSize.getWidth();   // 53.8 mm
+      const height = doc.internal.pageSize.getHeight();  // 85.6 mm
+      const margin = 2;  // margin 2mm di semua sisi
+
+      // BACKGROUND & BORDER
+      // Warna: teal (dari CSS) ≈ #0ea5a0
+      doc.setDrawColor(14, 165, 160);
+      doc.setLineWidth(0.8);
+      doc.rect(margin, margin, width - margin*2, height - margin*2);
+
+      // Header — warna teal
+      doc.setFillColor(14, 165, 160);
+      doc.rect(margin, margin, width - margin*2, 12, 'F');
+
+      // Logo STM area (white box di kiri header)
+      doc.setFillColor(255, 255, 255);
+      doc.rect(margin + 1, margin + 1.5, 15, 9, 'F');
+      doc.setTextColor(14, 165, 160);
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.text('STM', margin + 3.5, margin + 6, { align: 'center' });
+
+      // "SIMPER" text di header (white)
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(10);
+      doc.text('SIMPER', margin + 18, margin + 7.5, { align: 'left' });
+
+      // Info section — teal background
+      const infoY = margin + 12;
+      doc.setFillColor(255, 255, 255);
+      doc.rect(margin, infoY, width - margin*2, height - infoY - margin, 'F');
+
+      // Photo area (placeholder — jika ada foto_id_badge)
+      const photoY = infoY + 2;
+      const photoW = 12;
+      const photoH = 14;
+      
+      if (reg.foto_id_badge) {
+        // Load image dari URL (async)
+        try {
+          const img = await loadImageAsBase64(reg.foto_id_badge);
+          doc.addImage(img, 'JPEG', margin + 2, photoY, photoW, photoH);
+        } catch(imgErr) {
+          // Jika gagal load, gunakan placeholder
+          doc.setDrawColor(200, 200, 200);
+          doc.setLineWidth(0.5);
+          doc.rect(margin + 2, photoY, photoW, photoH);
+          doc.setTextColor(150, 150, 150);
+          doc.setFontSize(5);
+          doc.text('No Photo', margin + 2 + photoW/2, photoY + photoH/2, { align: 'center' });
+        }
+      } else {
+        // Placeholder
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.5);
+        doc.rect(margin + 2, photoY, photoW, photoH);
+        doc.setTextColor(150, 150, 150);
+        doc.setFontSize(5);
+        doc.text('No Photo', margin + 2 + photoW/2, photoY + photoH/2, { align: 'center' });
+      }
+
+      // Nama
+      const nameX = margin + 2 + photoW + 1.5;
+      const nameW = width - nameX - margin - 1;
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.text('Nama', nameX, photoY + 1.5, { align: 'left' });
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(6);
+      // Wrap teks nama jika panjang
+      const namaLines = doc.splitTextToSize(reg.nama || '—', nameW - 0.5);
+      doc.text(namaLines, nameX, photoY + 3.5, { align: 'left', maxWidth: nameW - 0.5 });
+
+      // No. Badge
+      const noY = photoY + 8;
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(6);
+      doc.text('No. Badge', nameX, noY, { align: 'left' });
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(14, 165, 160);
+      doc.text(reg.no_badge || '—', nameX, noY + 2, { align: 'left' });
+
+      // Jabatan
+      const jabY = noY + 3.5;
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(6);
+      doc.text('Jabatan', nameX, jabY, { align: 'left' });
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(6);
+      const jabLines = doc.splitTextToSize(reg.jabatan || '—', nameW - 0.5);
+      doc.text(jabLines, nameX, jabY + 2, { align: 'left', maxWidth: nameW - 0.5 });
+
+      // Divider line
+      const divY = photoY + photoH + 1;
+      doc.setDrawColor(14, 165, 160);
+      doc.setLineWidth(0.5);
+      doc.line(margin + 1, divY, width - margin - 1, divY);
+
+      // SIMPER Details section (kanan bawah)
+      const detY = divY + 1.5;
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(5);
+      doc.text('SIMPER / ' + (reg.simper_number ? reg.simper_number.split('/').slice(1).join('/') : '—'), 
+        margin + 1.5, detY, { align: 'left' });
+
+      // No SIMPER (lengkap)
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(5);
+      doc.text('No. Reg:', margin + 1.5, detY + 3, { align: 'left' });
+      doc.setTextColor(14, 165, 160);
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(6);
+      doc.text(reg.simper_number || '—', margin + 1.5, detY + 4.5, { align: 'left' });
+
+      // Ekspired date
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(5);
+      doc.text('EXPIRED:', margin + 1.5, detY + 6, { align: 'left' });
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(5);
+      const expiredDate = reg.id_badge_expiry 
+        ? new Date(reg.id_badge_expiry).toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: '2-digit' })
+        : '—';
+      doc.text(expiredDate, margin + 1.5, detY + 7.2, { align: 'left' });
+
+      // Status badge (Teal background)
+      const statusY = detY + 8;
+      doc.setFillColor(14, 165, 160);
+      doc.roundedRect(margin + 1, statusY, 8, 3, 0.3, 0.3, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('Helvetica', 'bold');
+      doc.setFontSize(6);
+      doc.text('✓ VALID', margin + 5, statusY + 1.8, { align: 'center' });
+
+      // Signature area (kanan bawah)
+      const sigX = width - margin - 10;
+      const sigY = detY + 8;
+
+      // HSR signature box
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.3);
+      doc.rect(sigX, sigY, 8, 5);
+      doc.setTextColor(100, 100, 100);
+      doc.setFont('Helvetica', 'normal');
+      doc.setFontSize(4);
+      doc.text('[Signature]', sigX + 4, sigY + 2.5, { align: 'center' });
+      doc.setFontSize(4);
+      doc.text('HSR', sigX + 4, sigY + 4.5, { align: 'center' });
+
+      // KTT signature box
+      doc.rect(sigX, sigY + 5.5, 8, 5);
+      doc.setFontSize(4);
+      doc.text('[Signature]', sigX + 4, sigY + 7.5, { align: 'center' });
+      doc.setFontSize(4);
+      doc.text('KTT', sigX + 4, sigY + 9.5, { align: 'center' });
+
+      // Undian/violation checkboxes area (kiri bawah)
+      const chkY = statusY + 5;
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.3);
+
+      // Violation boxes
+      doc.text('UNDIAN', margin + 1, chkY - 1.5, { align: 'left' });
+      doc.setFontSize(3);
+      for (let i = 0; i < 3; i++) {
+        doc.rect(margin + 1.5 + (i * 1.8), chkY, 1.5, 1.5);
+      }
+
+      // Accident boxes
+      doc.setFontSize(4);
+      doc.text('KECELAKAAN', margin + 1, chkY + 2.5, { align: 'left' });
+      doc.setFontSize(3);
+      for (let i = 0; i < 3; i++) {
+        doc.rect(margin + 1.5 + (i * 1.8), chkY + 3.5, 1.5, 1.5);
+      }
+
+      // Save PDF
+      const filename = `SIMPER_${reg.nama.replace(/\s+/g, '_')}_${reg.simper_number.replace(/\//g, '-')}.pdf`;
+      doc.save(filename);
+      showToast(`SIMPER Card PDF berhasil dibuat: ${filename} ✅`);
+    };
+    document.head.appendChild(script);
+
+  } catch(e) {
+    console.error('generateSimperPDF error:', e);
+    showToast('Gagal generate PDF!', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+// Helper: load image dari URL sebagai base64
+function loadImageAsBase64(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/jpeg'));
+    };
+    img.onerror = () => reject(new Error('Image load failed'));
+    img.src = url;
+  });
+}
+
 </script>
 </body>
 </html>
