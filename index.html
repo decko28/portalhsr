@@ -1226,15 +1226,26 @@ tbody tr:hover { background: var(--surface2); }
           </div>
         </div>
 
+
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Kategori SIMPER <span style="color:var(--red)">*</span></label>
-            <select id="srKategori" class="form-input">
-              <option value="">Pilih Kategori</option>
-              <option value="G">G — General </option>
-              <option value="R">R — Restricted </option>
-              <option value="F">F — Full </option>
-            </select>
+            <label class="form-label">Jenis Equipment <span style="color:var(--red)">*</span></label>
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;">
+              <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Pilih semua jenis equipment yang diotorisasi (bisa lebih dari satu):</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="equipCheckboxes">
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="F"/> F — Light Vehicle / Forklift</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="R"/> R — Rigid Dump Truck</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="G"/> G — Grader / Motor Grader</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="D"/> D — Dozer</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="E"/> E — Excavator</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="W"/> W — Wheel Loader</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="C"/> C — Crane</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="V"/> V — Vibro Compactor</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="B"/> B — Bus / Minibus</label>
+              </div>
+              <div id="srEquipError" style="color:var(--red);font-size:12px;margin-top:6px;display:none;">Pilih minimal 1 jenis equipment!</div>
+            </div>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px;">Satu SIMPER bisa mencakup beberapa jenis equipment</div>
           </div>
         </div>
 
@@ -1482,7 +1493,7 @@ tbody tr:hover { background: var(--surface2); }
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
       <div class="car-detail-item"><label>Nama</label><p id="srdNama">—</p></div>
       <div class="car-detail-item"><label>No. Badge</label><p id="srdNoBadge" style="font-family:'Syne',sans-serif;color:var(--teal)">—</p></div>
-      <div class="car-detail-item"><label>Kategori SIMPER</label><p id="srdKategori" style="font-size:22px;font-weight:900;color:#e8b800;line-height:1;">—</p></div>
+      <div class="car-detail-item"><label>Jenis Equipment</label><p id="srdKategori" style="font-size:15px;font-weight:900;color:#e8b800;line-height:1.4;">—</p></div>
       <div class="car-detail-item"><label>Company</label><p id="srdCompany">—</p></div>
       <div class="car-detail-item"><label>Jabatan</label><p id="srdJabatan">—</p></div>
       <div class="car-detail-item"><label>Jenis</label><p id="srdJenis">—</p></div>
@@ -3500,15 +3511,22 @@ async function submitSimperRegistration() {
   const nama        = document.getElementById('srNama').value.trim();
   const noBadge     = document.getElementById('srNoBadge').value.trim();
   const jabatan     = document.getElementById('srJabatan').value.trim();
-  const kategori    = document.getElementById('srKategori').value;
   const company     = document.getElementById('srCompany').value;
   const badgeExpiry = document.getElementById('srBadgeExpiry').value;
   const simExpiry   = document.getElementById('srSimPolisiExpiry').value;
 
-  // Validasi wajib
+  // Baca equipment checkboxes
+  const equipChecked = [...document.querySelectorAll('#equipCheckboxes input[type=checkbox]:checked')].map(cb => cb.value);
+  const kategori = equipChecked[0] || ''; // Kategori utama = yang pertama dipilih
+
+  // Validasi
   if (!nama)     return showToast('Nama lengkap wajib diisi!', 'error');
   if (!noBadge)  return showToast('Nomor badge wajib diisi!', 'error');
-  if (!kategori) return showToast('Kategori SIMPER wajib dipilih!', 'error');
+  if (equipChecked.length === 0) {
+    document.getElementById('srEquipError').style.display = '';
+    return showToast('Pilih minimal 1 jenis equipment!', 'error');
+  }
+  document.getElementById('srEquipError').style.display = 'none';
   if (isPerpanjang && !simperLama) return showToast('Nomor SIMPER lama wajib diisi!', 'error');
   if (!uploadFiles['srPasFoto'])      return showToast('Pas foto wajib diupload!', 'error');
   if (!uploadFiles['srDocPengajuan']) return showToast('Dokumen pengajuan wajib diupload!', 'error');
@@ -3550,6 +3568,7 @@ async function submitSimperRegistration() {
       no_badge:          noBadge,
       jabatan:           jabatan,
       kategori:          kategori,
+      equipment_types:   JSON.stringify(equipChecked),
       company:           company,
       email:             currentUser.email,
       pas_foto:          urlPasFoto,
@@ -3572,7 +3591,8 @@ async function submitSimperRegistration() {
     ['srNama','srNoBadge','srJabatan','srBadgeExpiry','srSimPolisiExpiry','srSimperLama'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
-    document.getElementById('srKategori').value = '';
+    // Reset checkboxes
+    document.querySelectorAll('#equipCheckboxes input[type=checkbox]').forEach(cb => cb.checked = false);
     ['srPasFoto','srDocPengajuan','srSimPolisi','srIdBadge'].forEach(id => { uploadFiles[id] = null; });
     ['srPasFotoLabel','srDocPengajuanLabel','srSimPolisiLabel','srIdBadgeLabel'].forEach(id => {
       const el = document.getElementById(id); if (el) el.innerHTML = el.dataset.orig || el.innerHTML;
@@ -3616,7 +3636,10 @@ function renderSimperRegTable() {
       <td style="font-size:11px;color:var(--teal);font-family:'Syne',sans-serif">${r.id}</td>
       <td style="font-weight:500">${r.nama||'—'}</td>
       <td style="font-size:12px;color:var(--teal)">${r.no_badge||'—'}</td>
-      <td><span style="font-size:16px;font-weight:900;color:#e8b800;">${r.kategori||'—'}</span></td>
+      <td>${(() => {
+        const types = r.equipment_types ? (Array.isArray(r.equipment_types) ? r.equipment_types : JSON.parse(r.equipment_types||'[]')) : (r.kategori ? [r.kategori] : []);
+        return types.map(t => `<span style="font-weight:900;color:#e8b800;font-size:13px;">${t}</span>`).join(' ');
+      })()}</td>
       <td>${r.company||'—'}</td>
       <td>${tgl}</td>
       <td style="color:${expired?'var(--red)':'inherit'}">${expiry}${expired?' ⚠️':''}</td>
@@ -3800,7 +3823,15 @@ function openSimperRegDetail(id) {
   document.getElementById('srdId').innerText       = r.id;
   document.getElementById('srdNama').innerText     = r.nama     || '—';
   document.getElementById('srdNoBadge').innerText  = r.no_badge || '—';
-  document.getElementById('srdKategori').innerText = r.kategori || '—';
+
+  // Equipment types
+  const equipEl = document.getElementById('srdKategori');
+  if (equipEl) {
+    const types = r.equipment_types
+      ? (Array.isArray(r.equipment_types) ? r.equipment_types : JSON.parse(r.equipment_types || '[]'))
+      : (r.kategori ? [r.kategori] : []);
+    equipEl.innerHTML = types.join(' · ') || '—';
+  }
   document.getElementById('srdJabatan').innerText  = r.jabatan  || '—';
   document.getElementById('srdCompany').innerText  = r.company  || '—';
   document.getElementById('srdDate').innerText     = r.created_at ? new Date(r.created_at).toLocaleDateString('id-ID') : '—';
@@ -4155,17 +4186,21 @@ async function printSimperCard() {
     const nama      = r.nama        || '—';
     const badgeNum  = r.no_badge    || '—';
     const company   = r.company     || '—';
-    const jabatan   = r.jabatan     || '—';
 
-    // SIM Polisi detail
-    const simDetail   = `SIM - ${r.sim_polisi_number || '-'}`;
-    const simExpiry   = r.sim_polisi_expiry
-      ? new Date(r.sim_polisi_expiry).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'})
+    // Multi-equipment: ambil dari kolom equipment_types (array) atau fallback ke kategori
+    const equipList = r.equipment_types
+      ? (Array.isArray(r.equipment_types) ? r.equipment_types : JSON.parse(r.equipment_types || '[]'))
+      : [kategori];
+    const equipMap = { G:'Grader', R:'Rigid Dump Truck', F:'Light Vehicle / Forklift',
+      B:'Bus', D:'Dozer', E:'Excavator', W:'Wheel Loader', V:'Vibro Compactor', C:'Crane' };
+    const equipTags = equipList.map(e =>
+      `<span class="equip-tag">${e} — ${equipMap[e] || e}</span>`
+    ).join('');
+
+    // Issued date
+    const issuedDate = r.issued_date
+      ? new Date(r.issued_date).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'})
       : '—';
-
-    // Equipment type dari kategori
-    const equipMap = { G:'Grader / Alat Berat', R:'Rigid / Heavy Truck', F:'Light Vehicle / Forklift' };
-    const equipType = equipMap[kategori] || kategori;
 
     const makeBoxes = (n) => Array(n).fill('<div class="viol-cell"></div>').join('');
     const logoUrl = 'https://raw.githubusercontent.com/decko28/portalhsr/main/Fullcolour_logo_preferred.png';
@@ -4175,124 +4210,105 @@ async function printSimperCard() {
 <head>
 <meta charset="UTF-8"/>
 <title>SIMPER — ${nama}</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body {
     background:#d0d0d0;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:flex-start;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:flex-start;
     min-height:100vh;
     font-family:Arial,Helvetica,sans-serif;
-    padding:20px;
-    gap:20px;
+    padding:24px; gap:16px;
   }
-  h3 { font-size:13px; color:#333; margin-bottom:4px; font-family:Arial; }
+  h3 { font-size:12px; color:#444; margin-bottom:2px; letter-spacing:1px; text-transform:uppercase; }
   .btn-dl {
     background:#1a3a6b; color:#fff; border:none;
-    padding:10px 32px; font-size:13px; font-weight:700;
+    padding:12px 36px; font-size:14px; font-weight:700;
     border-radius:6px; cursor:pointer; letter-spacing:1px;
+    margin-top:8px;
   }
   .btn-dl:hover { background:#0d2550; }
+  .btn-dl:disabled { background:#888; cursor:not-allowed; }
 
-  /* === CARD BASE === */
   .simper-card {
     width:5.38cm; height:8.56cm;
     background:#fff;
-    border:1px solid #aaa;
-    border-radius:3px;
+    border:1px solid #aaa; border-radius:3px;
     display:flex; flex-direction:column;
     overflow:hidden;
     box-shadow:0 4px 16px rgba(0,0,0,0.2);
   }
 
-  /* === DEPAN === */
+  /* DEPAN */
   .card-logo {
     padding:4pt 6pt 2pt;
     display:flex; align-items:center; justify-content:center;
     border-bottom:2px solid #1a3a6b;
   }
   .card-logo img { height:18pt; max-width:88%; object-fit:contain; }
-
   .card-banner {
     background:#1a3a6b; color:#fff;
     text-align:center; font-size:10pt; font-weight:900;
     letter-spacing:4px; padding:3pt 0;
   }
-
   .card-body { flex:1; padding:4pt 5pt 2pt; display:flex; flex-direction:column; }
-
   .info-row { display:flex; gap:4pt; margin-bottom:4pt; }
-
-  .foto-box {
-    width:1.4cm; height:1.85cm;
-    border:1px solid #ccc; flex-shrink:0;
-    overflow:hidden; background:#f0f0f0;
-  }
-
+  .foto-box { width:1.4cm; height:1.85cm; border:1px solid #ccc; flex-shrink:0; overflow:hidden; background:#f0f0f0; }
   .info-fields { flex:1; padding-left:3pt; padding-top:1pt; }
   .f-nama    { font-size:8pt;  font-weight:700; color:#111; margin-bottom:2pt; line-height:1.2; }
   .f-badge   { font-size:7pt;  color:#333; margin-bottom:2pt; }
-  .f-company { font-size:6.5pt;color:#555; margin-bottom:2pt; }
-  .f-kat     { font-size:20pt; font-weight:900; color:#e8b800; line-height:1; margin-top:2pt; }
-
+  .f-company { font-size:6.5pt;color:#555; margin-bottom:3pt; }
+  .f-kat     { font-size:18pt; font-weight:900; color:#e8b800; line-height:1; }
   .exp-bar {
     border-top:1.5px solid #1a3a6b; border-bottom:1.5px solid #1a3a6b;
     text-align:center; padding:2.5pt 0; margin:2.5pt 0;
   }
   .exp-title { font-size:6pt;  font-weight:700; color:#1a3a6b; letter-spacing:1px; }
   .exp-val   { font-size:7.5pt;font-weight:900; color:#111; margin-top:1pt; }
-
   .viol-row { display:flex; gap:3pt; margin-top:2pt; }
   .viol-grp { flex:1; border:1px solid #999; overflow:hidden; }
   .viol-hdr { background:#1a3a6b; color:#fff; text-align:center; font-size:5.5pt; font-weight:700; padding:2pt 0; }
   .viol-cells { display:flex; }
   .viol-cell { flex:1; height:13pt; border-right:1px solid #ccc; }
   .viol-cell:last-child { border-right:none; }
+  .card-footer { text-align:center; font-size:5pt; color:#999; margin-top:auto; padding-top:2pt; }
 
-  .card-footer {
-    text-align:center; font-size:5pt; color:#999;
-    margin-top:auto; padding-top:2pt;
-  }
-
-  /* === BELAKANG === */
-  .card-back-header {
+  /* BELAKANG */
+  .back-logo-row {
     display:flex; align-items:center; justify-content:space-between;
     padding:4pt 6pt; border-bottom:2px solid #1a3a6b;
-    background:#fff;
   }
-  .back-ktt  { font-size:7pt; font-weight:700; color:#1a3a6b; }
-  .back-hsr  { font-size:7pt; font-weight:700; color:#1a3a6b; }
-
-  .card-back-body { flex:1; padding:5pt 6pt; display:flex; flex-direction:column; gap:5pt; }
-
+  .back-logo-row img { height:16pt; object-fit:contain; }
+  .back-hsr { font-size:7pt; font-weight:900; color:#1a3a6b; }
+  .back-body { flex:1; padding:5pt 6pt; display:flex; flex-direction:column; }
   .back-simper-num {
-    font-size:7pt; font-weight:700; color:#1a3a6b;
-    text-align:center; padding:2pt 0;
-    border:1px solid #1a3a6b; border-radius:2px;
+    font-size:7pt; font-weight:700; color:#fff;
+    text-align:center; padding:3pt 4pt;
+    background:#1a3a6b; border-radius:2px; margin-bottom:5pt;
   }
-
-  .back-section-title {
+  .back-sect-title {
     font-size:6pt; font-weight:700; color:#1a3a6b;
     text-transform:uppercase; letter-spacing:0.5px;
     border-bottom:1px solid #ddd; padding-bottom:2pt; margin-bottom:3pt;
   }
-  .back-row   { display:flex; justify-content:space-between; font-size:6.5pt; color:#333; margin-bottom:2pt; }
-  .back-label { color:#888; }
-  .back-val   { font-weight:600; color:#111; text-align:right; max-width:60%; }
-
-  .sig-box {
-    border:1px solid #ccc; height:18pt; margin-top:3pt;
-    display:flex; align-items:center; justify-content:center;
+  .equip-tag {
+    display:inline-block; background:#1a3a6b; color:#fff;
+    font-size:6pt; font-weight:700; padding:2pt 5pt;
+    border-radius:2px; margin:1pt 1pt 1pt 0;
   }
-  .sig-label { font-size:5.5pt; color:#aaa; }
+  .sig-box {
+    border:1px solid #ccc; height:20pt; margin-top:3pt;
+    display:flex; align-items:flex-end; justify-content:center; padding-bottom:2pt;
+  }
+  .sig-label { font-size:5pt; color:#aaa; }
+  .issued-row { display:flex; justify-content:space-between; font-size:5.5pt; color:#555; margin-top:3pt; }
 </style>
 </head>
 <body>
 
-<h3>DEPAN</h3>
+<h3>Sisi Depan</h3>
 <div class="simper-card" id="card-front">
   <div class="card-logo"><img src="${logoUrl}" alt="STM"/></div>
   <div class="card-banner">SIMPER</div>
@@ -4324,68 +4340,59 @@ async function printSimperCard() {
   </div>
 </div>
 
-<h3>BELAKANG</h3>
+<h3>Sisi Belakang</h3>
 <div class="simper-card" id="card-back">
-  <div class="card-back-header">
-    <span class="back-ktt">KTT</span>
-    <span style="font-size:6pt;font-weight:700;color:#1a3a6b;">HSR</span>
-    <span class="back-hsr">STM</span>
+  <div class="back-logo-row">
+    <img src="${logoUrl}" alt="STM"/>
+    <span class="back-hsr">HSR · KTT</span>
   </div>
-  <div class="card-back-body">
+  <div class="back-body">
     <div class="back-simper-num">${simperNum}</div>
 
-    <div>
-      <div class="back-section-title">DETAILS</div>
-      <div class="back-row">
-        <span class="back-label">SIM Polisi</span>
-        <span class="back-val">${simDetail}</span>
-      </div>
-      <div class="back-row">
-        <span class="back-label">Expired</span>
-        <span class="back-val">${simExpiry}</span>
-      </div>
-      <div class="back-row">
-        <span class="back-label">Issued At</span>
-        <span class="back-val">NTB</span>
-      </div>
-    </div>
+    <div class="back-sect-title">Equipment Type</div>
+    <div style="margin-bottom:5pt;">${equipTags}</div>
 
-    <div>
-      <div class="back-section-title">EQUIPMENT TYPE</div>
-      <div style="font-size:7pt;font-weight:700;color:#111;">${equipType}</div>
-    </div>
+    <div class="back-sect-title">Issued</div>
+    <div style="font-size:6pt;color:#333;margin-bottom:5pt;">${issuedDate}</div>
 
-    <div>
-      <div class="back-section-title">SIGNATURE</div>
-      <div class="sig-box"><span class="sig-label">Tanda Tangan</span></div>
-    </div>
+    <div style="flex:1;"></div>
+    <div class="back-sect-title">Signature / KTT</div>
+    <div class="sig-box"><span class="sig-label">Tanda Tangan</span></div>
   </div>
 </div>
 
-<button class="btn-dl" onclick="downloadBothPDF()">⬇ Download PDF (Depan + Belakang)</button>
+<button class="btn-dl" id="dlBtn" onclick="downloadPDF()">⬇ Download PDF</button>
 
 <script>
-async function downloadBothPDF() {
-  const { jsPDF } = window.jspdf;
-  // html2pdf untuk depan
-  const optBase = {
-    margin: 0,
-    image: { type: 'jpeg', quality: 1 },
-    html2canvas: { scale: 4, useCORS: true, allowTaint: true, backgroundColor: '#fff',
-      width: Math.round(5.38 * 37.795), height: Math.round(8.56 * 37.795) },
-    jsPDF: { unit: 'cm', format: [5.38, 8.56], orientation: 'portrait' }
-  };
-  // Buat PDF 2 halaman
-  const front = document.getElementById('card-front');
-  const back  = document.getElementById('card-back');
-  const pdf   = new jsPDF({ unit:'cm', format:[5.38,8.56], orientation:'portrait' });
-  
-  const canvas1 = await html2canvas(front, optBase.html2canvas);
-  pdf.addImage(canvas1.toDataURL('image/jpeg',1), 'JPEG', 0, 0, 5.38, 8.56);
-  pdf.addPage();
-  const canvas2 = await html2canvas(back, optBase.html2canvas);
-  pdf.addImage(canvas2.toDataURL('image/jpeg',1), 'JPEG', 0, 0, 5.38, 8.56);
-  pdf.save('SIMPER_${nama.replace(/\s+/g,'_')}_${simperNum.replace(/\//g,'-')}.pdf');
+async function downloadPDF() {
+  const btn = document.getElementById('dlBtn');
+  btn.disabled = true;
+  btn.textContent = 'Memproses...';
+
+  try {
+    const { jsPDF } = window.jspdf;
+
+    const W = 5.38, H = 8.56;
+    const PX_W = Math.round(W * 37.795);
+    const PX_H = Math.round(H * 37.795);
+    const opt = { scale:4, useCORS:true, allowTaint:true, backgroundColor:'#ffffff', width:PX_W, height:PX_H };
+
+    const front = document.getElementById('card-front');
+    const back  = document.getElementById('card-back');
+
+    const c1 = await html2canvas(front, opt);
+    const c2 = await html2canvas(back,  opt);
+
+    const pdf = new jsPDF({ unit:'cm', format:[W,H], orientation:'portrait' });
+    pdf.addImage(c1.toDataURL('image/jpeg',1.0), 'JPEG', 0, 0, W, H);
+    pdf.addPage();
+    pdf.addImage(c2.toDataURL('image/jpeg',1.0), 'JPEG', 0, 0, W, H);
+    pdf.save('SIMPER_${nama.replace(/\s+/g,'_')}_${simperNum.replace(/\//g,'-')}.pdf');
+    btn.textContent = '✅ Downloaded!';
+  } catch(e) {
+    console.error(e);
+    btn.textContent = '❌ Error: ' + e.message;
+  }
 }
 <\/script>
 </body>
