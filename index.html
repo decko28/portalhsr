@@ -1163,9 +1163,42 @@ tbody tr:hover { background: var(--surface2); }
         <p>Daftar dan pantau proses penerbitan SIMPER Anda</p>
       </div>
 
-      <!-- Form Pendaftaran — hanya untuk User biasa -->
+      <!-- Form Pendaftaran -->
       <div class="card" id="simperRegFormCard">
-        <div class="card-title"><span class="card-title-dot"></span>Form Pendaftaran SIMPER Baru</div>
+
+        <!-- Toggle Jenis Pendaftaran -->
+        <div style="display:flex;gap:8px;margin-bottom:20px;">
+          <button id="btnBaru" onclick="setJenisPendaftaran('baru')"
+            style="flex:1;padding:10px;border-radius:var(--radius-sm);font-weight:700;font-size:13px;
+              border:2px solid var(--teal);background:var(--teal);color:#0a0e1a;cursor:pointer;">
+            📝 Pendaftaran Baru
+          </button>
+          <button id="btnPerpanjang" onclick="setJenisPendaftaran('perpanjang')"
+            style="flex:1;padding:10px;border-radius:var(--radius-sm);font-weight:700;font-size:13px;
+              border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;">
+            🔄 Perpanjang SIMPER
+          </button>
+        </div>
+        <input type="hidden" id="srJenisPendaftaran" value="baru"/>
+
+        <div class="card-title" id="srFormTitle"><span class="card-title-dot"></span>Form Pendaftaran SIMPER Baru</div>
+
+        <!-- Info perpanjang (hidden by default) -->
+        <div id="srPerpanjangInfo" style="display:none;background:rgba(14,165,160,0.08);border:1px solid rgba(14,165,160,0.3);
+          border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--muted);">
+          🔄 Perpanjangan SIMPER hanya memerlukan <strong style="color:var(--text)">ujian praktik</strong> tanpa ujian tulis.
+          Isi nomor SIMPER lama dan upload dokumen yang diperlukan.
+        </div>
+
+        <!-- Nomor SIMPER lama (hanya untuk perpanjang) -->
+        <div id="srSimperLamaRow" style="display:none;" class="form-row">
+          <div class="form-group">
+            <label class="form-label">Nomor SIMPER Lama <span style="color:var(--red)">*</span></label>
+            <input id="srSimperLama" type="text" class="form-input" placeholder="Contoh: SIMPER/STM/2023/001"/>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px;">Nomor SIMPER yang akan diperpanjang</div>
+          </div>
+        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">Nama Lengkap <span style="color:var(--red)">*</span></label>
@@ -1198,17 +1231,27 @@ tbody tr:hover { background: var(--surface2); }
             <label class="form-label">Kategori SIMPER <span style="color:var(--red)">*</span></label>
             <select id="srKategori" class="form-input">
               <option value="">Pilih Kategori</option>
-              <option value="G">G — General </option>
-              <option value="R">R — Restricted </option>
-              <option value="F">F — Full </option>
+              <option value="G">G — Grader / Alat Berat</option>
+              <option value="R">R — Rigid / Heavy Truck</option>
+              <option value="F">F — Forklift / Light Vehicle</option>
             </select>
-            <div style="font-size:12px;color:var(--muted);margin-top:6px;">Jenis kendaraan/alat yang dioperasikan</div>
           </div>
         </div>
 
-        <div class="form-section-title">📄 Dokumen Persyaratan</div>
+        <div class="form-section-title">📸 Pas Foto & Dokumen Persyaratan</div>
 
+        <!-- Pas Foto -->
         <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Pas Foto <span style="color:var(--red)">*</span></label>
+            <div class="file-drop">
+              <input type="file" id="srPasFoto" accept=".jpg,.jpeg,.png"
+                onchange="previewImg(this,'srPasFotoPreview'); updateFileLabel(this,'srPasFotoLabel')"/>
+              <div class="file-drop-icon">🤳</div>
+              <div class="file-drop-text" id="srPasFotoLabel">Pas foto latar putih<br><strong>JPG, PNG</strong></div>
+            </div>
+            <img id="srPasFotoPreview" class="preview-img hidden" style="height:120px;width:90px;object-fit:cover;object-position:center top;border-radius:4px;margin-top:8px;"/>
+          </div>
           <div class="form-group">
             <label class="form-label">Dokumen Pengajuan <span style="color:var(--red)">*</span></label>
             <div class="file-drop">
@@ -1217,6 +1260,9 @@ tbody tr:hover { background: var(--surface2); }
               <div class="file-drop-text" id="srDocPengajuanLabel">Surat pengajuan SIMPER<br><strong>PDF, Word, JPG</strong></div>
             </div>
           </div>
+        </div>
+
+        <div class="form-row">
           <div class="form-group">
             <label class="form-label">SIM Polisi <span style="color:var(--red)">*</span></label>
             <div class="file-drop">
@@ -1224,6 +1270,11 @@ tbody tr:hover { background: var(--surface2); }
               <div class="file-drop-icon">🚗</div>
               <div class="file-drop-text" id="srSimPolisiLabel">Scan/foto SIM Polisi<br><strong>PDF, JPG, PNG</strong></div>
             </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Masa Berlaku SIM Polisi <span style="color:var(--red)">*</span></label>
+            <input id="srSimPolisiExpiry" type="date" class="form-input"/>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px;">Tanggal kadaluarsa SIM Polisi</div>
           </div>
         </div>
 
@@ -1240,14 +1291,14 @@ tbody tr:hover { background: var(--surface2); }
           <div class="form-group">
             <label class="form-label">Masa Aktif ID Badge <span style="color:var(--red)">*</span></label>
             <input id="srBadgeExpiry" type="date" class="form-input"/>
-            <div style="font-size:12px;color:var(--muted);margin-top:6px;">Tanggal kadaluarsa yang tertera di ID Badge</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px;">Tanggal kadaluarsa ID Badge</div>
           </div>
         </div>
 
         <hr class="divider"/>
         <div style="display:flex;align-items:center;gap:16px;">
-          <button class="btn-submit" onclick="submitSimperRegistration()">Kirim Pendaftaran</button>
-          <span style="font-size:12px;color:var(--muted);">Setelah dikirim, Anda akan dihubungi untuk jadwal ujian</span>
+          <button class="btn-submit" onclick="submitSimperRegistration()" id="srSubmitBtn">Kirim Pendaftaran</button>
+          <span style="font-size:12px;color:var(--muted);" id="srSubmitHint">Setelah dikirim, Anda akan dihubungi untuk jadwal ujian</span>
         </div>
       </div>
 
@@ -1434,8 +1485,15 @@ tbody tr:hover { background: var(--surface2); }
       <div class="car-detail-item"><label>Kategori SIMPER</label><p id="srdKategori" style="font-size:22px;font-weight:900;color:#e8b800;line-height:1;">—</p></div>
       <div class="car-detail-item"><label>Company</label><p id="srdCompany">—</p></div>
       <div class="car-detail-item"><label>Jabatan</label><p id="srdJabatan">—</p></div>
+      <div class="car-detail-item"><label>Jenis</label><p id="srdJenis">—</p></div>
       <div class="car-detail-item"><label>Tgl Daftar</label><p id="srdDate">—</p></div>
       <div class="car-detail-item"><label>Badge Expiry</label><p id="srdExpiry">—</p></div>
+      <div class="car-detail-item"><label>SIM Polisi Expiry</label><p id="srdSimExpiry">—</p></div>
+      <div class="car-detail-item"><label>SIMPER Expired</label><p id="srdSimperExpiry" style="color:var(--amber);font-weight:600;">—</p></div>
+    </div>
+    <!-- SIMPER Lama (untuk perpanjangan) -->
+    <div id="srdSimperLamaWrap" style="display:none;margin-bottom:12px;">
+      <div class="car-detail-item"><label>SIMPER Lama (Diperpanjang)</label><p id="srdSimperLamaVal" style="color:var(--teal);font-family:'Syne',sans-serif;">—</p></div>
     </div>
 
     <!-- Dokumen -->
@@ -3419,71 +3477,126 @@ function updateFileLabel(input, labelId) {
   }
 }
 
+function setJenisPendaftaran(jenis) {
+  document.getElementById('srJenisPendaftaran').value = jenis;
+  const isBaru = jenis === 'baru';
+  const tealBtn  = 'flex:1;padding:10px;border-radius:var(--radius-sm);font-weight:700;font-size:13px;border:2px solid var(--teal);background:var(--teal);color:#0a0e1a;cursor:pointer;';
+  const ghostBtn = 'flex:1;padding:10px;border-radius:var(--radius-sm);font-weight:700;font-size:13px;border:2px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;';
+  document.getElementById('btnBaru').style.cssText       = isBaru  ? tealBtn : ghostBtn;
+  document.getElementById('btnPerpanjang').style.cssText = !isBaru ? tealBtn : ghostBtn;
+  document.getElementById('srPerpanjangInfo').style.display = isBaru ? 'none' : '';
+  document.getElementById('srSimperLamaRow').style.display  = isBaru ? 'none' : '';
+  document.getElementById('srFormTitle').innerHTML = `<span class="card-title-dot"></span>Form ${isBaru ? 'Pendaftaran SIMPER Baru' : 'Perpanjangan SIMPER'}`;
+  document.getElementById('srSubmitBtn').textContent  = isBaru ? 'Kirim Pendaftaran' : 'Kirim Perpanjangan SIMPER';
+  document.getElementById('srSubmitHint').textContent = isBaru
+    ? 'Setelah dikirim, Anda akan dihubungi untuk jadwal ujian tulis'
+    : 'Perpanjangan hanya memerlukan ujian praktik';
+}
+
 async function submitSimperRegistration() {
+  const jenis       = document.getElementById('srJenisPendaftaran').value || 'baru';
+  const isPerpanjang = jenis === 'perpanjang';
+  const simperLama  = document.getElementById('srSimperLama')?.value.trim() || '';
   const nama        = document.getElementById('srNama').value.trim();
   const noBadge     = document.getElementById('srNoBadge').value.trim();
   const jabatan     = document.getElementById('srJabatan').value.trim();
   const kategori    = document.getElementById('srKategori').value;
   const company     = document.getElementById('srCompany').value;
   const badgeExpiry = document.getElementById('srBadgeExpiry').value;
+  const simExpiry   = document.getElementById('srSimPolisiExpiry').value;
 
-  if (!nama)                           return showToast('Nama lengkap wajib diisi!', 'error');
-  if (!noBadge)                        return showToast('Nomor badge karyawan wajib diisi!', 'error');
-  if (!kategori)                       return showToast('Kategori SIMPER wajib dipilih!', 'error');
-  if (!uploadFiles['srDocPengajuan'])  return showToast('Dokumen pengajuan wajib diupload!', 'error');
-  if (!uploadFiles['srSimPolisi'])     return showToast('SIM Polisi wajib diupload!', 'error');
-  if (!uploadFiles['srIdBadge'])       return showToast('Foto ID Badge wajib diupload!', 'error');
-  if (!badgeExpiry)                    return showToast('Masa aktif ID Badge wajib diisi!', 'error');
+  // Validasi wajib
+  if (!nama)     return showToast('Nama lengkap wajib diisi!', 'error');
+  if (!noBadge)  return showToast('Nomor badge wajib diisi!', 'error');
+  if (!kategori) return showToast('Kategori SIMPER wajib dipilih!', 'error');
+  if (isPerpanjang && !simperLama) return showToast('Nomor SIMPER lama wajib diisi!', 'error');
+  if (!uploadFiles['srPasFoto'])      return showToast('Pas foto wajib diupload!', 'error');
+  if (!uploadFiles['srDocPengajuan']) return showToast('Dokumen pengajuan wajib diupload!', 'error');
+  if (!uploadFiles['srSimPolisi'])    return showToast('SIM Polisi wajib diupload!', 'error');
+  if (!uploadFiles['srIdBadge'])      return showToast('Foto ID Badge wajib diupload!', 'error');
+  if (!badgeExpiry) return showToast('Masa aktif ID Badge wajib diisi!', 'error');
+  if (!simExpiry)   return showToast('Masa berlaku SIM Polisi wajib diisi!', 'error');
 
-  if (new Date(badgeExpiry) < new Date()) {
-    return showToast('ID Badge sudah kadaluarsa! Perbarui badge Anda terlebih dahulu.', 'error');
-  }
+  if (new Date(badgeExpiry) < new Date()) return showToast('ID Badge sudah kadaluarsa!', 'error');
+  if (new Date(simExpiry) < new Date())   return showToast('SIM Polisi sudah kadaluarsa!', 'error');
+
+  // SIMPER expired = mana yang lebih dulu antara SIM Polisi dan ID Badge
+  const simperExpiry = badgeExpiry < simExpiry ? badgeExpiry : simExpiry;
 
   setLoader(true);
   try {
-    const [urlDoc, urlSim, urlBadge] = await Promise.all([
-      uploadToDrive(uploadFiles['srDocPengajuan'], 'DOC',   'simper_docs'),
-      uploadToDrive(uploadFiles['srSimPolisi'],    'SIM',   'simper_docs'),
-      uploadToDrive(uploadFiles['srIdBadge'],      'BADGE', 'simper_docs'),
+    // Generate ID registrasi dulu
+    const regId = generateID('SR');
+
+    // Buat nama folder = regId (akan diupdate ke nomor SIMPER setelah terbit)
+    // Upload semua file ke folder simper_docs dengan prefix regId agar terorganisir
+    const folderPrefix = regId;
+
+    showToast('Mengupload dokumen... mohon tunggu', 'success');
+
+    const [urlPasFoto, urlDoc, urlSim, urlBadge] = await Promise.all([
+      uploadToSimperFolder(uploadFiles['srPasFoto'],      `FOTO-${folderPrefix}`,  'simper_docs'),
+      uploadToSimperFolder(uploadFiles['srDocPengajuan'], `DOC-${folderPrefix}`,   'simper_docs'),
+      uploadToSimperFolder(uploadFiles['srSimPolisi'],    `SIM-${folderPrefix}`,   'simper_docs'),
+      uploadToSimperFolder(uploadFiles['srIdBadge'],      `BADGE-${folderPrefix}`, 'simper_docs'),
     ]);
 
-    const regId = generateID('SR');
+    // Status awal berdasarkan jenis
+    const statusAwal = isPerpanjang ? 'Menunggu Ujian Praktik' : 'Menunggu Ujian Tulis';
+
     const { error } = await supabaseClient.from('simper_registration').insert([{
-      id:              regId,
-      nama:            nama,
-      no_badge:        noBadge,
-      jabatan:         jabatan,
-      kategori:        kategori,
-      company:         company,
-      email:           currentUser.email,
-      doc_pengajuan:   urlDoc,
-      sim_polisi:      urlSim,
-      foto_id_badge:   urlBadge,
-      id_badge_expiry: badgeExpiry,
-      status:          'Menunggu Ujian Tulis',
-      created_at:      new Date().toISOString(),
+      id:                regId,
+      nama:              nama,
+      no_badge:          noBadge,
+      jabatan:           jabatan,
+      kategori:          kategori,
+      company:           company,
+      email:             currentUser.email,
+      pas_foto:          urlPasFoto,
+      doc_pengajuan:     urlDoc,
+      sim_polisi:        urlSim,
+      sim_polisi_expiry: simExpiry,
+      foto_id_badge:     urlBadge,
+      id_badge_expiry:   badgeExpiry,
+      simper_expiry:     simperExpiry,
+      simper_lama:       simperLama || null,
+      jenis_pendaftaran: jenis,
+      status:            statusAwal,
+      created_at:        new Date().toISOString(),
     }]);
     if (error) throw error;
 
-    showToast('Pendaftaran berhasil dikirim! ✅ Menunggu jadwal ujian tulis.');
-    document.getElementById('srNama').value        = '';
-    document.getElementById('srNoBadge').value     = '';
-    document.getElementById('srJabatan').value     = '';
-    document.getElementById('srKategori').value    = '';
-    document.getElementById('srBadgeExpiry').value = '';
-    ['srDocPengajuan','srSimPolisi','srIdBadge'].forEach(id => { uploadFiles[id] = null; });
-    ['srDocPengajuanLabel','srSimPolisiLabel','srIdBadgeLabel'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.innerHTML = el.innerHTML.replace(/✅.*/, '');
+    showToast(`${isPerpanjang ? 'Perpanjangan' : 'Pendaftaran'} berhasil dikirim! ✅`);
+
+    // Reset form
+    ['srNama','srNoBadge','srJabatan','srBadgeExpiry','srSimPolisiExpiry','srSimperLama'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.value = '';
     });
+    document.getElementById('srKategori').value = '';
+    ['srPasFoto','srDocPengajuan','srSimPolisi','srIdBadge'].forEach(id => { uploadFiles[id] = null; });
+    ['srPasFotoLabel','srDocPengajuanLabel','srSimPolisiLabel','srIdBadgeLabel'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.innerHTML = el.dataset.orig || el.innerHTML;
+    });
+    document.getElementById('srPasFotoPreview').classList.add('hidden');
     document.getElementById('srIdBadgePreview').classList.add('hidden');
+    setJenisPendaftaran('baru');
     await loadSimperRegPage();
   } catch(e) {
     console.error('submitSimperRegistration:', e);
-    showToast(`Gagal mendaftar: ${e.message||'cek console'}`, 'error');
+    showToast(`Gagal: ${e.message||'cek console'}`, 'error');
   } finally {
     setLoader(false);
   }
+}
+
+// Upload ke folder simper — nama file mengandung prefix agar terorganisir per pendaftaran
+async function uploadToSimperFolder(file, prefix, folderType) {
+  if (!file) return null;
+  const ext  = file.name.split('.').pop();
+  const fileName = `${prefix}.${ext}`;
+  // Buat file baru dengan nama yang sudah diformat
+  const renamedFile = new File([file], fileName, { type: file.type });
+  return uploadToDrive(renamedFile, prefix, folderType);
 }
 
 function renderSimperRegTable() {
@@ -3514,15 +3627,16 @@ function renderSimperRegTable() {
 }
 
 function buildTimeline(r) {
+  const isPerpanjang = r.jenis_pendaftaran === 'perpanjang';
   const steps = [
     {
-      label: 'Pendaftaran Dikirim',
+      label: isPerpanjang ? 'Perpanjangan Dikirim' : 'Pendaftaran Dikirim',
       done: true,
       date: r.created_at ? new Date(r.created_at).toLocaleDateString('id-ID') : '',
-      note: '',
+      note: isPerpanjang ? `SIMPER Lama: ${r.simper_lama || '—'}` : '',
       icon: '📤',
     },
-    {
+    ...(!isPerpanjang ? [{
       label: 'Ujian Tulis',
       done: !!r.ujian_tulis,
       result: r.ujian_tulis,
@@ -3530,7 +3644,7 @@ function buildTimeline(r) {
       note: r.ujian_tulis_note || '',
       by:   r.ujian_tulis_by   || '',
       icon: r.ujian_tulis === 'Lulus' ? '✅' : r.ujian_tulis === 'Tidak Lulus' ? '❌' : '📝',
-    },
+    }] : []),
     {
       label: 'Ujian Praktik',
       done: !!r.ujian_praktik,
@@ -3690,17 +3804,56 @@ function openSimperRegDetail(id) {
   document.getElementById('srdJabatan').innerText  = r.jabatan  || '—';
   document.getElementById('srdCompany').innerText  = r.company  || '—';
   document.getElementById('srdDate').innerText     = r.created_at ? new Date(r.created_at).toLocaleDateString('id-ID') : '—';
-  document.getElementById('srdExpiry').innerText   = r.id_badge_expiry ? new Date(r.id_badge_expiry).toLocaleDateString('id-ID') : '—';
+
+  // Badge expiry
+  document.getElementById('srdExpiry').innerText = r.id_badge_expiry
+    ? new Date(r.id_badge_expiry).toLocaleDateString('id-ID') : '—';
+
+  // SIM Polisi expiry — tampilkan jika ada
+  const simExpiryEl = document.getElementById('srdSimExpiry');
+  if (simExpiryEl) simExpiryEl.innerText = r.sim_polisi_expiry
+    ? new Date(r.sim_polisi_expiry).toLocaleDateString('id-ID') : '—';
+
+  // SIMPER expiry (otomatis = whichever comes first)
+  const simperExpiryEl = document.getElementById('srdSimperExpiry');
+  if (simperExpiryEl) {
+    const expSrc = r.simper_expiry || r.sim_polisi_expiry || r.id_badge_expiry;
+    simperExpiryEl.innerText = expSrc
+      ? new Date(expSrc).toLocaleDateString('id-ID') : '—';
+  }
+
+  // Jenis pendaftaran badge
+  const jenisEl = document.getElementById('srdJenis');
+  if (jenisEl) {
+    const isPerpanjang = r.jenis_pendaftaran === 'perpanjang';
+    jenisEl.innerHTML = isPerpanjang
+      ? '<span style="color:var(--teal);font-weight:600;">🔄 Perpanjangan</span>'
+      : '<span style="color:var(--muted);">📝 Baru</span>';
+  }
+
+  // SIMPER lama (untuk perpanjang)
+  const simperLamaEl = document.getElementById('srdSimperLamaWrap');
+  if (simperLamaEl) {
+    simperLamaEl.style.display = r.jenis_pendaftaran === 'perpanjang' ? '' : 'none';
+    const simperLamaVal = document.getElementById('srdSimperLamaVal');
+    if (simperLamaVal) simperLamaVal.innerText = r.simper_lama || '—';
+  }
+
+  // Pas foto (prioritas) atau foto badge
+  const pasFotoSrc = r.pas_foto || r.foto_id_badge;
+  if (pasFotoSrc) {
+    const img = document.getElementById('srdBadgeImg');
+    if (img) img.src = pasFotoSrc;
+    const wrap = document.getElementById('srdBadgeWrap');
+    if (wrap) wrap.style.display = '';
+  } else {
+    const wrap = document.getElementById('srdBadgeWrap');
+    if (wrap) wrap.style.display = 'none';
+  }
 
   // Docs
   document.getElementById('srdDocPengajuan').href = r.doc_pengajuan || '#';
   document.getElementById('srdSimPolisi').href    = r.sim_polisi    || '#';
-  if (r.foto_id_badge) {
-    document.getElementById('srdBadgeImg').src    = r.foto_id_badge;
-    document.getElementById('srdBadgeWrap').style.display = '';
-  } else {
-    document.getElementById('srdBadgeWrap').style.display = 'none';
-  }
 
   // Timeline
   document.getElementById('srdTimeline').innerHTML = buildTimeline(r);
@@ -3708,7 +3861,7 @@ function openSimperRegDetail(id) {
   // Admin panel
   const isAdmin = ['Admin','Superadmin'].includes(currentUser.level);
   const adminPanel = document.getElementById('srdAdminPanel');
-  if (isAdmin && r.status !== 'Diterbitkan' || r.status === 'Diterbitkan') {
+  if (isAdmin || r.status === 'Diterbitkan') {
     adminPanel.style.display = '';
     document.getElementById('srdActionContent').innerHTML = buildAdminAction(r);
   } else {
@@ -3784,11 +3937,20 @@ async function submitTerbitkanSimper(id) {
 
   setLoader(true);
   try {
+    // Hitung expired SIMPER = mana yang lebih dulu: SIM Polisi atau ID Badge
+    const rec = simperRegMasterData.find(x => x.id === id);
+    const simExp   = rec?.sim_polisi_expiry || null;
+    const badgeExp = rec?.id_badge_expiry   || null;
+    let simperExpiry = null;
+    if (simExp && badgeExp) simperExpiry = simExp < badgeExp ? simExp : badgeExp;
+    else simperExpiry = simExp || badgeExp;
+
     const { error } = await supabaseClient.from('simper_registration').update({
-      status:       'Diterbitkan',
+      status:        'Diterbitkan',
       simper_number: nomor,
-      issued_date:  new Date().toISOString(),
-      issued_by:    currentUser.email,
+      simper_expiry: simperExpiry,
+      issued_date:   new Date().toISOString(),
+      issued_by:     currentUser.email,
     }).eq('id', id);
     if (error) throw error;
 
@@ -3956,18 +4118,25 @@ async function printSimperCard() {
   setLoader(true);
 
   try {
-    // Format tanggal expired
-    const expDate = r.id_badge_expiry
-      ? new Date(r.id_badge_expiry).toLocaleDateString('en-GB', {
-          day: '2-digit', month: 'short', year: 'numeric'
-        })
+    // Expired date = yang lebih dulu antara SIM Polisi dan ID Badge
+    const expSrc = (() => {
+      const sim   = r.sim_polisi_expiry || r.simper_expiry || r.id_badge_expiry;
+      const badge = r.id_badge_expiry;
+      if (!sim && !badge) return null;
+      if (!sim)   return badge;
+      if (!badge) return sim;
+      return sim < badge ? sim : badge;
+    })();
+    const expDate = expSrc
+      ? new Date(expSrc).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' })
       : '—';
 
-    // Foto karyawan → base64
+    // Gunakan PAS FOTO utama, fallback ke foto ID badge
+    const fotoSrc = r.pas_foto || r.foto_id_badge || '';
     let fotoDataUrl = '';
-    if (r.foto_id_badge) {
+    if (fotoSrc) {
       try {
-        const resp = await fetch(r.foto_id_badge);
+        const resp = await fetch(fotoSrc);
         const blob = await resp.blob();
         fotoDataUrl = await new Promise(res => {
           const rd = new FileReader();
@@ -3979,298 +4148,255 @@ async function printSimperCard() {
 
     const fotoHtml = fotoDataUrl
       ? `<img src="${fotoDataUrl}" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block;"/>`
-      : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;
-           font-size:6pt;color:#aaa;text-align:center;padding:2pt;">Foto<br>Tidak<br>Ada</div>`;
+      : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:6pt;color:#aaa;text-align:center;">Foto</div>`;
 
-    const kategori    = r.kategori || 'F';
-    const simperNum   = r.simper_number || '—';
-    const namaDisplay = r.nama || '—';
-    const badgeNum    = r.no_badge || '—';
-    const company     = r.company || '—';
+    const kategori  = r.kategori    || 'F';
+    const simperNum = r.simper_number || '—';
+    const nama      = r.nama        || '—';
+    const badgeNum  = r.no_badge    || '—';
+    const company   = r.company     || '—';
+    const jabatan   = r.jabatan     || '—';
 
-    // Buat 3 kotak violation dan 3 kotak accident
+    // SIM Polisi detail
+    const simDetail   = `SIM - ${r.sim_polisi_number || '-'}`;
+    const simExpiry   = r.sim_polisi_expiry
+      ? new Date(r.sim_polisi_expiry).toLocaleDateString('en-GB', {day:'2-digit',month:'short',year:'numeric'})
+      : '—';
+
+    // Equipment type dari kategori
+    const equipMap = { G:'Grader / Alat Berat', R:'Rigid / Heavy Truck', F:'Light Vehicle / Forklift' };
+    const equipType = equipMap[kategori] || kategori;
+
     const makeBoxes = (n) => Array(n).fill('<div class="viol-cell"></div>').join('');
+    const logoUrl = 'https://raw.githubusercontent.com/decko28/portalhsr/main/Fullcolour_logo_preferred.png';
 
     const cardHTML = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8"/>
-<title>SIMPER — ${namaDisplay}</title>
+<title>SIMPER — ${nama}</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body {
-    background:#e8e8e8;
+    background:#d0d0d0;
     display:flex;
     flex-direction:column;
     align-items:center;
-    justify-content:center;
+    justify-content:flex-start;
     min-height:100vh;
     font-family:Arial,Helvetica,sans-serif;
     padding:20px;
+    gap:20px;
   }
-  .preview-label {
-    font-size:12px;
-    color:#555;
-    margin-bottom:12px;
-    font-family:Arial;
+  h3 { font-size:13px; color:#333; margin-bottom:4px; font-family:Arial; }
+  .btn-dl {
+    background:#1a3a6b; color:#fff; border:none;
+    padding:10px 32px; font-size:13px; font-weight:700;
+    border-radius:6px; cursor:pointer; letter-spacing:1px;
   }
-  .btn-download {
-    margin-top:20px;
-    background:#1a3a6b;
-    color:#fff;
-    border:none;
-    padding:10px 28px;
-    font-size:13px;
-    font-weight:700;
-    border-radius:6px;
-    cursor:pointer;
-    letter-spacing:1px;
-  }
-  .btn-download:hover { background:#0d2550; }
+  .btn-dl:hover { background:#0d2550; }
 
-  /* CARD */
-  #simper-card {
-    width:5.38cm;
-    height:8.56cm;
+  /* === CARD BASE === */
+  .simper-card {
+    width:5.38cm; height:8.56cm;
     background:#fff;
-    border:1px solid #bbb;
-    border-radius:4px;
-    display:flex;
-    flex-direction:column;
+    border:1px solid #aaa;
+    border-radius:3px;
+    display:flex; flex-direction:column;
     overflow:hidden;
-    box-shadow:0 4px 16px rgba(0,0,0,0.18);
+    box-shadow:0 4px 16px rgba(0,0,0,0.2);
   }
 
-  .card-header {
-    background:#fff;
-    padding:5pt 6pt 3pt;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    border-bottom:2.5px solid #1a3a6b;
+  /* === DEPAN === */
+  .card-logo {
+    padding:4pt 6pt 2pt;
+    display:flex; align-items:center; justify-content:center;
+    border-bottom:2px solid #1a3a6b;
   }
-  .card-header img {
-    height:20pt;
-    max-width:90%;
-    object-fit:contain;
-  }
+  .card-logo img { height:18pt; max-width:88%; object-fit:contain; }
 
   .card-banner {
-    background:#1a3a6b;
-    color:#fff;
-    text-align:center;
-    font-size:11pt;
-    font-weight:900;
-    letter-spacing:4px;
-    padding:4pt 0;
-    font-family:Arial,sans-serif;
+    background:#1a3a6b; color:#fff;
+    text-align:center; font-size:10pt; font-weight:900;
+    letter-spacing:4px; padding:3pt 0;
   }
 
-  .card-body {
-    flex:1;
-    padding:5pt 5pt 3pt;
-    display:flex;
-    flex-direction:column;
+  .card-body { flex:1; padding:4pt 5pt 2pt; display:flex; flex-direction:column; }
+
+  .info-row { display:flex; gap:4pt; margin-bottom:4pt; }
+
+  .foto-box {
+    width:1.4cm; height:1.85cm;
+    border:1px solid #ccc; flex-shrink:0;
+    overflow:hidden; background:#f0f0f0;
   }
 
-  .card-info-row {
-    display:flex;
-    gap:5pt;
-    margin-bottom:4pt;
-  }
+  .info-fields { flex:1; padding-left:3pt; padding-top:1pt; }
+  .f-nama    { font-size:8pt;  font-weight:700; color:#111; margin-bottom:2pt; line-height:1.2; }
+  .f-badge   { font-size:7pt;  color:#333; margin-bottom:2pt; }
+  .f-company { font-size:6.5pt;color:#555; margin-bottom:2pt; }
+  .f-kat     { font-size:20pt; font-weight:900; color:#e8b800; line-height:1; margin-top:2pt; }
 
-  .card-foto {
-    width:1.45cm;
-    height:1.9cm;
-    border:1px solid #ccc;
-    flex-shrink:0;
-    overflow:hidden;
-    background:#f5f5f5;
+  .exp-bar {
+    border-top:1.5px solid #1a3a6b; border-bottom:1.5px solid #1a3a6b;
+    text-align:center; padding:2.5pt 0; margin:2.5pt 0;
   }
+  .exp-title { font-size:6pt;  font-weight:700; color:#1a3a6b; letter-spacing:1px; }
+  .exp-val   { font-size:7.5pt;font-weight:900; color:#111; margin-top:1pt; }
 
-  .card-fields {
-    flex:1;
-    padding-left:2pt;
-    padding-top:1pt;
-  }
-  .field-nama {
-    font-size:8.5pt;
-    font-weight:700;
-    color:#111;
-    margin-bottom:3pt;
-    line-height:1.2;
-  }
-  .field-badge {
-    font-size:7.5pt;
-    color:#333;
-    margin-bottom:3pt;
-  }
-  .field-company {
-    font-size:7pt;
-    color:#555;
-    margin-bottom:3pt;
-  }
-  .field-kategori {
-    font-size:20pt;
-    font-weight:900;
-    color:#e8b800;
-    line-height:1;
-    margin-top:3pt;
-    letter-spacing:-1px;
-  }
-
-  .expired-bar {
-    border-top:1.5px solid #1a3a6b;
-    border-bottom:1.5px solid #1a3a6b;
-    text-align:center;
-    padding:3pt 0;
-    margin:3pt 0;
-  }
-  .expired-title {
-    font-size:6.5pt;
-    font-weight:700;
-    color:#1a3a6b;
-    letter-spacing:1px;
-    text-transform:uppercase;
-  }
-  .expired-value {
-    font-size:8pt;
-    font-weight:900;
-    color:#111;
-    margin-top:1pt;
-  }
-
-  .violation-row {
-    display:flex;
-    gap:4pt;
-    margin-top:3pt;
-  }
-  .viol-group {
-    flex:1;
-    border:1px solid #aaa;
-    overflow:hidden;
-  }
-  .viol-title {
-    background:#1a3a6b;
-    color:#fff;
-    text-align:center;
-    font-size:5.5pt;
-    font-weight:700;
-    padding:2pt 0;
-    letter-spacing:0.5px;
-  }
-  .viol-cells {
-    display:flex;
-  }
-  .viol-cell {
-    flex:1;
-    height:14pt;
-    border-right:1px solid #ccc;
-  }
+  .viol-row { display:flex; gap:3pt; margin-top:2pt; }
+  .viol-grp { flex:1; border:1px solid #999; overflow:hidden; }
+  .viol-hdr { background:#1a3a6b; color:#fff; text-align:center; font-size:5.5pt; font-weight:700; padding:2pt 0; }
+  .viol-cells { display:flex; }
+  .viol-cell { flex:1; height:13pt; border-right:1px solid #ccc; }
   .viol-cell:last-child { border-right:none; }
 
-  .simper-num-footer {
-    text-align:center;
-    font-size:5pt;
-    color:#999;
-    margin-top:3pt;
-    letter-spacing:0.3px;
+  .card-footer {
+    text-align:center; font-size:5pt; color:#999;
+    margin-top:auto; padding-top:2pt;
   }
+
+  /* === BELAKANG === */
+  .card-back-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:4pt 6pt; border-bottom:2px solid #1a3a6b;
+    background:#fff;
+  }
+  .back-ktt  { font-size:7pt; font-weight:700; color:#1a3a6b; }
+  .back-hsr  { font-size:7pt; font-weight:700; color:#1a3a6b; }
+
+  .card-back-body { flex:1; padding:5pt 6pt; display:flex; flex-direction:column; gap:5pt; }
+
+  .back-simper-num {
+    font-size:7pt; font-weight:700; color:#1a3a6b;
+    text-align:center; padding:2pt 0;
+    border:1px solid #1a3a6b; border-radius:2px;
+  }
+
+  .back-section-title {
+    font-size:6pt; font-weight:700; color:#1a3a6b;
+    text-transform:uppercase; letter-spacing:0.5px;
+    border-bottom:1px solid #ddd; padding-bottom:2pt; margin-bottom:3pt;
+  }
+  .back-row   { display:flex; justify-content:space-between; font-size:6.5pt; color:#333; margin-bottom:2pt; }
+  .back-label { color:#888; }
+  .back-val   { font-weight:600; color:#111; text-align:right; max-width:60%; }
+
+  .sig-box {
+    border:1px solid #ccc; height:18pt; margin-top:3pt;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .sig-label { font-size:5.5pt; color:#aaa; }
 </style>
 </head>
 <body>
-<div class="preview-label">Preview Kartu SIMPER — ${namaDisplay}</div>
 
-<div id="simper-card">
-  <!-- Logo -->
-  <div class="card-header">
-    <img src="LOGO_PLACEHOLDER" alt="STM"/>
-  </div>
-
-  <!-- Banner -->
+<h3>DEPAN</h3>
+<div class="simper-card" id="card-front">
+  <div class="card-logo"><img src="${logoUrl}" alt="STM"/></div>
   <div class="card-banner">SIMPER</div>
-
-  <!-- Konten -->
   <div class="card-body">
-    <div class="card-info-row">
-      <!-- Foto -->
-      <div class="card-foto">${fotoHtml}</div>
-      <!-- Field Info -->
-      <div class="card-fields">
-        <div class="field-nama">${namaDisplay}</div>
-        <div class="field-badge">${badgeNum}</div>
-        <div class="field-company">${company}</div>
-        <div class="field-kategori">${kategori}</div>
+    <div class="info-row">
+      <div class="foto-box">${fotoHtml}</div>
+      <div class="info-fields">
+        <div class="f-nama">${nama}</div>
+        <div class="f-badge">${badgeNum}</div>
+        <div class="f-company">${company}</div>
+        <div class="f-kat">${kategori}</div>
       </div>
     </div>
-
-    <!-- Expired -->
-    <div class="expired-bar">
-      <div class="expired-title">EXPIRED DATE</div>
-      <div class="expired-value">${expDate}</div>
+    <div class="exp-bar">
+      <div class="exp-title">EXPIRED DATE</div>
+      <div class="exp-val">${expDate}</div>
     </div>
-
-    <!-- Violation & Accident -->
-    <div class="violation-row">
-      <div class="viol-group">
-        <div class="viol-title">VIOLATION</div>
+    <div class="viol-row">
+      <div class="viol-grp">
+        <div class="viol-hdr">VIOLATION</div>
         <div class="viol-cells">${makeBoxes(3)}</div>
       </div>
-      <div class="viol-group">
-        <div class="viol-title">ACCIDENT</div>
+      <div class="viol-grp">
+        <div class="viol-hdr">ACCIDENT</div>
         <div class="viol-cells">${makeBoxes(3)}</div>
       </div>
     </div>
-
-    <div class="simper-num-footer">${simperNum}</div>
+    <div class="card-footer">${simperNum}</div>
   </div>
 </div>
 
-<button class="btn-download" onclick="downloadPDF()">⬇ Download PDF</button>
+<h3>BELAKANG</h3>
+<div class="simper-card" id="card-back">
+  <div class="card-back-header">
+    <span class="back-ktt">KTT</span>
+    <span style="font-size:6pt;font-weight:700;color:#1a3a6b;">HSR</span>
+    <span class="back-hsr">STM</span>
+  </div>
+  <div class="card-back-body">
+    <div class="back-simper-num">${simperNum}</div>
+
+    <div>
+      <div class="back-section-title">DETAILS</div>
+      <div class="back-row">
+        <span class="back-label">SIM Polisi</span>
+        <span class="back-val">${simDetail}</span>
+      </div>
+      <div class="back-row">
+        <span class="back-label">Expired</span>
+        <span class="back-val">${simExpiry}</span>
+      </div>
+      <div class="back-row">
+        <span class="back-label">Issued At</span>
+        <span class="back-val">NTB</span>
+      </div>
+    </div>
+
+    <div>
+      <div class="back-section-title">EQUIPMENT TYPE</div>
+      <div style="font-size:7pt;font-weight:700;color:#111;">${equipType}</div>
+    </div>
+
+    <div>
+      <div class="back-section-title">SIGNATURE</div>
+      <div class="sig-box"><span class="sig-label">Tanda Tangan</span></div>
+    </div>
+  </div>
+</div>
+
+<button class="btn-dl" onclick="downloadBothPDF()">⬇ Download PDF (Depan + Belakang)</button>
 
 <script>
-function downloadPDF() {
-  const el = document.getElementById('simper-card');
-  const opt = {
-    margin:       0,
-    filename:     'SIMPER_${namaDisplay.replace(/\s+/g,'_')}_${simperNum.replace(/\//g,'-')}.pdf',
-    image:        { type: 'jpeg', quality: 1 },
-    html2canvas:  {
-      scale: 4,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      width:  Math.round(5.38 * 37.795),
-      height: Math.round(8.56 * 37.795)
-    },
-    jsPDF: {
-      unit: 'cm',
-      format: [5.38, 8.56],
-      orientation: 'portrait'
-    }
+async function downloadBothPDF() {
+  const { jsPDF } = window.jspdf;
+  // html2pdf untuk depan
+  const optBase = {
+    margin: 0,
+    image: { type: 'jpeg', quality: 1 },
+    html2canvas: { scale: 4, useCORS: true, allowTaint: true, backgroundColor: '#fff',
+      width: Math.round(5.38 * 37.795), height: Math.round(8.56 * 37.795) },
+    jsPDF: { unit: 'cm', format: [5.38, 8.56], orientation: 'portrait' }
   };
-  html2pdf().set(opt).from(el).save();
+  // Buat PDF 2 halaman
+  const front = document.getElementById('card-front');
+  const back  = document.getElementById('card-back');
+  const pdf   = new jsPDF({ unit:'cm', format:[5.38,8.56], orientation:'portrait' });
+  
+  const canvas1 = await html2canvas(front, optBase.html2canvas);
+  pdf.addImage(canvas1.toDataURL('image/jpeg',1), 'JPEG', 0, 0, 5.38, 8.56);
+  pdf.addPage();
+  const canvas2 = await html2canvas(back, optBase.html2canvas);
+  pdf.addImage(canvas2.toDataURL('image/jpeg',1), 'JPEG', 0, 0, 5.38, 8.56);
+  pdf.save('SIMPER_${nama.replace(/\s+/g,'_')}_${simperNum.replace(/\//g,'-')}.pdf');
 }
 <\/script>
 </body>
 </html>`;
 
-    // Ganti placeholder logo dengan base64
-    const logoB64 = await fetch('/mnt/project/Fullcolour_logo_preferred.png')
-      .catch(() => null);
-
-    // Buka window baru dengan kartu
-    const win = window.open('', '_blank', 'width=400,height=680');
+    const win = window.open('', '_blank', 'width=450,height=900');
     if (!win) {
-      showToast('Pop-up diblokir browser! Izinkan pop-up untuk portalhsr.vercel.app', 'error');
+      showToast('Pop-up diblokir! Izinkan pop-up untuk portalhsr.vercel.app', 'error');
       return;
     }
-
-    // Load logo dari GitHub raw (sudah di-host di Vercel)
-    const logoUrl = 'https://raw.githubusercontent.com/decko28/portalhsr/main/Fullcolour_logo_preferred.png';
-    const finalHtml = cardHTML.replace('LOGO_PLACEHOLDER', logoUrl);
-    win.document.write(finalHtml);
+    win.document.write(cardHTML);
     win.document.close();
 
   } finally {
