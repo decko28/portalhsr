@@ -4272,16 +4272,52 @@ async function printSimperCard() {
       : '—';
 
     const makeBoxes = (n) => Array(n).fill('<div class="viol-cell"></div>').join('');
-    const logoUrl = 'https://raw.githubusercontent.com/decko28/portalhsr/main/Fullcolour_logo_preferred.png';
 
-    // Foto — gunakan pas_foto atau foto_id_badge
+    // Konversi foto ke base64 DI PORTAL (bukan di popup) untuk menghindari CORS
+    // Portal sudah punya akses ke URL Drive, popup tidak
+    async function urlToBase64(url) {
+      if (!url) return null;
+      try {
+        // Coba XMLHttpRequest — lebih reliable untuk Drive thumbnail
+        return await new Promise((resolve) => {
+          const xhr = new XMLHttpRequest();
+          xhr.onload = function() {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(xhr.response);
+          };
+          xhr.onerror = () => resolve(null);
+          xhr.open('GET', url);
+          xhr.responseType = 'blob';
+          xhr.timeout = 10000;
+          xhr.ontimeout = () => resolve(null);
+          xhr.send();
+        });
+      } catch(e) {
+        console.warn('urlToBase64 failed:', e);
+        return null;
+      }
+    }
+
+    // Foto karyawan — konversi ke base64 dulu
     const fotoSrc = r.pas_foto || r.foto_id_badge || '';
-    // Konversi URL Google Drive thumbnail ke URL yang bisa di-load dengan crossOrigin
-    // Gunakan proxy img tag di HTML — biarkan browser load langsung
-    const fotoImgTag = fotoSrc
-      ? `<img src="${fotoSrc}" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
-         <div style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-size:6pt;color:#aaa;">Foto</div>`
-      : `<div style="display:flex;width:100%;height:100%;align-items:center;justify-content:center;font-size:6pt;color:#aaa;">No Photo</div>`;
+    let fotoB64 = fotoSrc ? await urlToBase64(fotoSrc) : null;
+
+    // Logo STM — konversi ke base64 juga agar muncul di PDF
+    const logoRaw = 'https://raw.githubusercontent.com/decko28/portalhsr/main/Fullcolour_logo_preferred.png';
+    let logoB64 = await urlToBase64(logoRaw);
+
+    const fotoImgTag = fotoB64
+      ? `<img src="${fotoB64}" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block;"/>`
+      : `<div style="display:flex;width:100%;height:100%;align-items:center;justify-content:center;font-size:6pt;color:#aaa;flex-direction:column;">📷<br>No Photo</div>`;
+
+    const logoImgTag = logoB64
+      ? `<img src="${logoB64}" alt="STM" style="height:18pt;max-width:88%;object-fit:contain;"/>`
+      : `<span style="font-size:10pt;font-weight:900;color:#1a3a6b;">STM</span>`;
+
+    const logoBackTag = logoB64
+      ? `<img src="${logoB64}" alt="STM" style="height:16pt;object-fit:contain;"/>`
+      : `<span style="font-size:9pt;font-weight:900;color:#1a3a6b;">STM</span>`;
 
     const cardHTML = `<!DOCTYPE html>
 <html>
@@ -4301,32 +4337,23 @@ async function printSimperCard() {
     padding:24px; gap:12px;
   }
   h3 { font-size:11px; color:#555; letter-spacing:1px; text-transform:uppercase; margin-bottom:2px; }
-  .actions { display:flex; gap:10px; margin-top:8px; flex-wrap:wrap; align-items:center; }
   .btn-dl {
     background:#1a3a6b; color:#fff; border:none;
-    padding:11px 32px; font-size:13px; font-weight:700;
-    border-radius:6px; cursor:pointer; letter-spacing:1px;
+    padding:12px 36px; font-size:14px; font-weight:700;
+    border-radius:6px; cursor:pointer; letter-spacing:1px; margin-top:8px;
   }
   .btn-dl:hover { background:#0d2550; }
   .btn-dl:disabled { background:#888; cursor:not-allowed; }
-  .sig-input {
-    padding:8px 12px; border:1.5px solid #ccc; border-radius:6px;
-    font-size:12px; width:200px;
-  }
-  .sig-input:focus { border-color:#1a3a6b; outline:none; }
 
   .simper-card {
     width:5.38cm; height:8.56cm;
-    background:#fff;
-    border:1px solid #aaa; border-radius:3px;
-    display:flex; flex-direction:column;
-    overflow:hidden;
+    background:#fff; border:1px solid #aaa; border-radius:3px;
+    display:flex; flex-direction:column; overflow:hidden;
     box-shadow:0 4px 16px rgba(0,0,0,0.2);
   }
 
   /* DEPAN */
   .card-logo { padding:4pt 6pt 2pt; display:flex; align-items:center; justify-content:center; border-bottom:2px solid #1a3a6b; }
-  .card-logo img { height:18pt; max-width:88%; object-fit:contain; }
   .card-banner { background:#1a3a6b; color:#fff; text-align:center; font-size:10pt; font-weight:900; letter-spacing:4px; padding:3pt 0; }
   .card-body { flex:1; padding:4pt 5pt 2pt; display:flex; flex-direction:column; }
   .info-row { display:flex; gap:4pt; margin-bottom:4pt; }
@@ -4349,20 +4376,17 @@ async function printSimperCard() {
 
   /* BELAKANG */
   .back-logo-row { display:flex; align-items:center; justify-content:center; padding:4pt 6pt; border-bottom:2px solid #1a3a6b; }
-  .back-logo-row img { height:16pt; object-fit:contain; }
   .back-body { flex:1; padding:5pt 6pt; display:flex; flex-direction:column; }
   .back-simper-num { font-size:7pt; font-weight:700; color:#fff; text-align:center; padding:3pt 4pt; background:#1a3a6b; border-radius:2px; margin-bottom:5pt; }
   .back-sect-title { font-size:6pt; font-weight:700; color:#1a3a6b; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid #ddd; padding-bottom:2pt; margin-bottom:3pt; }
   .equip-tag { display:inline-block; background:#1a3a6b; color:#fff; font-size:5.5pt; font-weight:700; padding:1.5pt 4pt; border-radius:2px; margin:1pt 1pt 1pt 0; }
-  .sig-box { border:1px solid #ccc; flex:1; margin-top:3pt; display:flex; align-items:center; justify-content:center; min-height:18pt; }
-  .sig-content { font-size:7pt; color:#333; font-weight:600; text-align:center; padding:2pt; }
 </style>
 </head>
 <body>
 
 <h3>Sisi Depan</h3>
 <div class="simper-card" id="card-front">
-  <div class="card-logo"><img src="${logoUrl}" alt="STM" crossorigin="anonymous"/></div>
+  <div class="card-logo">${logoImgTag}</div>
   <div class="card-banner">SIMPER</div>
   <div class="card-body">
     <div class="info-row">
@@ -4388,37 +4412,23 @@ async function printSimperCard() {
 
 <h3>Sisi Belakang</h3>
 <div class="simper-card" id="card-back">
-  <div class="back-logo-row"><img src="${logoUrl}" alt="STM" crossorigin="anonymous"/></div>
+  <div class="back-logo-row">${logoBackTag}</div>
   <div class="back-body">
     <div class="back-simper-num">${simperNum}</div>
     <div class="back-sect-title">Kendaraan / Alat yang Diotorisasi</div>
     <div style="margin-bottom:5pt;">${vehicleTags || '<span style="font-size:6pt;color:#888;">—</span>'}</div>
     <div class="back-sect-title">Diterbitkan</div>
-    <div style="font-size:6pt;color:#333;margin-bottom:auto;">${issuedDate}</div>
-    <div class="back-sect-title" style="margin-top:5pt;">Tanda Tangan KTT / Admin</div>
-    <div class="sig-box"><div class="sig-content" id="sigDisplay"></div></div>
+    <div style="font-size:6pt;color:#333;">${issuedDate}</div>
   </div>
 </div>
 
-<div class="actions">
-  <div>
-    <label style="font-size:11px;color:#555;display:block;margin-bottom:4px;">Nama Penanda Tangan (Admin):</label>
-    <input class="sig-input" type="text" id="sigName" placeholder="Nama KTT / Admin..." oninput="document.getElementById('sigDisplay').textContent=this.value"/>
-  </div>
-  <button class="btn-dl" id="dlBtn" onclick="downloadPDF()">⬇ Download PDF</button>
-</div>
+<button class="btn-dl" id="dlBtn" onclick="downloadPDF()">⬇ Download PDF</button>
 
 <script>
-// Tunggu semua gambar selesai load sebelum aktifkan tombol download
-window.addEventListener('load', function() {
-  document.getElementById('dlBtn').disabled = false;
-});
-
 async function downloadPDF() {
   const btn = document.getElementById('dlBtn');
   btn.disabled = true;
   btn.textContent = 'Memproses...';
-
   try {
     const { jsPDF } = window.jspdf;
     const W = 5.38, H = 8.56;
@@ -4426,40 +4436,25 @@ async function downloadPDF() {
     const PX_H = Math.round(H * 37.795);
     const opt = {
       scale: 4,
-      useCORS: true,
+      useCORS: false,
       allowTaint: true,
       backgroundColor: '#ffffff',
-      width: PX_W,
-      height: PX_H,
-      logging: false,
-      imageTimeout: 0
+      width: PX_W, height: PX_H,
+      logging: false
     };
-
-    // Tunggu semua gambar load
-    const imgs = document.querySelectorAll('img');
-    await Promise.all([...imgs].map(img =>
-      img.complete ? Promise.resolve() : new Promise(r => { img.onload = r; img.onerror = r; })
-    ));
-
-    // Tambahkan delay agar rendering selesai
-    await new Promise(r => setTimeout(r, 800));
-
-    const front = document.getElementById('card-front');
-    const back  = document.getElementById('card-back');
-
-    const c1 = await html2canvas(front, opt);
-    const c2 = await html2canvas(back,  opt);
-
+    // Delay agar semua render selesai
+    await new Promise(r => setTimeout(r, 500));
+    const c1 = await html2canvas(document.getElementById('card-front'), opt);
+    const c2 = await html2canvas(document.getElementById('card-back'),  opt);
     const pdf = new jsPDF({ unit:'cm', format:[W,H], orientation:'portrait' });
     pdf.addImage(c1.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, W, H);
     pdf.addPage();
     pdf.addImage(c2.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, W, H);
     pdf.save('SIMPER_${nama.replace(/\s+/g,'_')}_${simperNum.replace(/\//g,'-')}.pdf');
-
     btn.textContent = '✅ Downloaded!';
     setTimeout(() => { btn.disabled = false; btn.textContent = '⬇ Download PDF'; }, 3000);
   } catch(e) {
-    console.error('PDF error:', e);
+    console.error(e);
     btn.textContent = '❌ ' + e.message;
     btn.disabled = false;
   }
