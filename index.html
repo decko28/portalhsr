@@ -1229,23 +1229,52 @@ tbody tr:hover { background: var(--surface2); }
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Jenis Equipment <span style="color:var(--red)">*</span></label>
+            <label class="form-label">Kategori SIMPER <span style="color:var(--red)">*</span></label>
             <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;">
-              <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Pilih semua jenis equipment yang diotorisasi (bisa lebih dari satu):</div>
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="equipCheckboxes">
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="F"/> F — Light Vehicle / Forklift</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="R"/> R — Rigid Dump Truck</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="G"/> G — Grader / Motor Grader</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="D"/> D — Dozer</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="E"/> E — Excavator</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="W"/> W — Wheel Loader</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="C"/> C — Crane</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="V"/> V — Vibro Compactor</label>
-                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="B"/> B — Bus / Minibus</label>
+              <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Pilih kategori SIMPER yang diajukan (bisa lebih dari satu, kartu tetap satu):</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;" id="equipCheckboxes">
+                <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;padding:10px 16px;background:var(--surface);border:2px solid var(--border);border-radius:var(--radius-sm);flex:1;min-width:100px;">
+                  <input type="checkbox" value="F" style="width:16px;height:16px;"/>
+                  <span><strong>F</strong> — Full</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;padding:10px 16px;background:var(--surface);border:2px solid var(--border);border-radius:var(--radius-sm);flex:1;min-width:100px;">
+                  <input type="checkbox" value="R" style="width:16px;height:16px;"/>
+                  <span><strong>R</strong> — Restricted</span>
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;padding:10px 16px;background:var(--surface);border:2px solid var(--border);border-radius:var(--radius-sm);flex:1;min-width:100px;">
+                  <input type="checkbox" value="G" style="width:16px;height:16px;"/>
+                  <span><strong>G</strong> — General</span>
+                </label>
               </div>
-              <div id="srEquipError" style="color:var(--red);font-size:12px;margin-top:6px;display:none;">Pilih minimal 1 jenis equipment!</div>
+              <div id="srEquipError" style="color:var(--red);font-size:12px;margin-top:6px;display:none;">Pilih minimal 1 kategori!</div>
             </div>
-            <div style="font-size:12px;color:var(--muted);margin-top:6px;">Satu SIMPER bisa mencakup beberapa jenis equipment</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:6px;">F=Full · R=Restricted · G=General. Satu SIMPER bisa mencakup lebih dari satu kategori</div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Jenis Kendaraan/Alat yang Diotorisasi <span style="color:var(--red)">*</span></label>
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 14px;">
+              <div style="font-size:12px;color:var(--muted);margin-bottom:10px;">Pilih semua kendaraan/alat yang boleh dikemudikan:</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="vehicleCheckboxes">
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="Light Vehicle"/> 🚗 Light Vehicle</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="Pickup Truck"/> 🛻 Pickup Truck</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="Bus"/> 🚌 Bus / Minibus</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="Forklift"/> 🏗️ Forklift</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="Rigid Dump Truck"/> 🚛 Rigid Dump Truck</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="Articulated Dump Truck"/> 🚜 Articulated Dump Truck</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="Bulldozer"/> 🔧 Bulldozer</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="Motor Grader"/> ⚙️ Motor Grader</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="Excavator"/> 🦾 Excavator</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="Wheel Loader"/> 🏗️ Wheel Loader</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="Vibro Compactor"/> 🔩 Vibro Compactor</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="Crane"/> 🏗️ Crane</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="Water Truck"/> 💧 Water Truck</label>
+                <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;"><input type="checkbox" value="Fuel Truck"/> ⛽ Fuel Truck</label>
+              </div>
+              <div id="srVehicleError" style="color:var(--red);font-size:12px;margin-top:6px;display:none;">Pilih minimal 1 jenis kendaraan!</div>
+            </div>
           </div>
         </div>
 
@@ -1333,7 +1362,7 @@ tbody tr:hover { background: var(--surface2); }
           <table>
             <thead>
               <tr>
-                <th>ID</th><th>Nama</th><th>No. Badge</th><th>Kategori</th><th>Company</th><th>Tgl Daftar</th>
+                <th>ID</th><th>Nama</th><th>No. Badge</th><th>Jenis SIMPER</th><th>Company</th><th>Tgl Daftar</th>
                 <th>Badge Expiry</th><th>Status</th><th>Aksi</th>
               </tr>
             </thead>
@@ -1493,7 +1522,8 @@ tbody tr:hover { background: var(--surface2); }
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
       <div class="car-detail-item"><label>Nama</label><p id="srdNama">—</p></div>
       <div class="car-detail-item"><label>No. Badge</label><p id="srdNoBadge" style="font-family:'Syne',sans-serif;color:var(--teal)">—</p></div>
-      <div class="car-detail-item"><label>Jenis Equipment</label><p id="srdKategori" style="font-size:15px;font-weight:900;color:#e8b800;line-height:1.4;">—</p></div>
+      <div class="car-detail-item"><label>Kategori SIMPER</label><p id="srdKategori" style="font-size:15px;font-weight:900;color:#e8b800;line-height:1.4;">—</p></div>
+      <div class="car-detail-item" style="grid-column:span 2;"><label>Kendaraan/Alat Diotorisasi</label><p id="srdVehicles" style="font-size:12px;color:var(--text);">—</p></div>
       <div class="car-detail-item"><label>Company</label><p id="srdCompany">—</p></div>
       <div class="car-detail-item"><label>Jabatan</label><p id="srdJabatan">—</p></div>
       <div class="car-detail-item"><label>Jenis</label><p id="srdJenis">—</p></div>
@@ -3515,18 +3545,26 @@ async function submitSimperRegistration() {
   const badgeExpiry = document.getElementById('srBadgeExpiry').value;
   const simExpiry   = document.getElementById('srSimPolisiExpiry').value;
 
-  // Baca equipment checkboxes
+  // Baca kategori SIMPER (F/R/G)
   const equipChecked = [...document.querySelectorAll('#equipCheckboxes input[type=checkbox]:checked')].map(cb => cb.value);
-  const kategori = equipChecked[0] || ''; // Kategori utama = yang pertama dipilih
+  const kategori = equipChecked[0] || '';
+
+  // Baca jenis kendaraan
+  const vehicleChecked = [...document.querySelectorAll('#vehicleCheckboxes input[type=checkbox]:checked')].map(cb => cb.value);
 
   // Validasi
   if (!nama)     return showToast('Nama lengkap wajib diisi!', 'error');
   if (!noBadge)  return showToast('Nomor badge wajib diisi!', 'error');
   if (equipChecked.length === 0) {
     document.getElementById('srEquipError').style.display = '';
-    return showToast('Pilih minimal 1 jenis equipment!', 'error');
+    return showToast('Pilih minimal 1 kategori SIMPER!', 'error');
   }
   document.getElementById('srEquipError').style.display = 'none';
+  if (vehicleChecked.length === 0) {
+    document.getElementById('srVehicleError').style.display = '';
+    return showToast('Pilih minimal 1 jenis kendaraan!', 'error');
+  }
+  document.getElementById('srVehicleError').style.display = 'none';
   if (isPerpanjang && !simperLama) return showToast('Nomor SIMPER lama wajib diisi!', 'error');
   if (!uploadFiles['srPasFoto'])      return showToast('Pas foto wajib diupload!', 'error');
   if (!uploadFiles['srDocPengajuan']) return showToast('Dokumen pengajuan wajib diupload!', 'error');
@@ -3569,6 +3607,7 @@ async function submitSimperRegistration() {
       jabatan:           jabatan,
       kategori:          kategori,
       equipment_types:   JSON.stringify(equipChecked),
+      vehicle_types:     JSON.stringify(vehicleChecked),
       company:           company,
       email:             currentUser.email,
       pas_foto:          urlPasFoto,
@@ -3593,6 +3632,7 @@ async function submitSimperRegistration() {
     });
     // Reset checkboxes
     document.querySelectorAll('#equipCheckboxes input[type=checkbox]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('#vehicleCheckboxes input[type=checkbox]').forEach(cb => cb.checked = false);
     ['srPasFoto','srDocPengajuan','srSimPolisi','srIdBadge'].forEach(id => { uploadFiles[id] = null; });
     ['srPasFotoLabel','srDocPengajuanLabel','srSimPolisiLabel','srIdBadgeLabel'].forEach(id => {
       const el = document.getElementById(id); if (el) el.innerHTML = el.dataset.orig || el.innerHTML;
@@ -3638,7 +3678,8 @@ function renderSimperRegTable() {
       <td style="font-size:12px;color:var(--teal)">${r.no_badge||'—'}</td>
       <td>${(() => {
         const types = r.equipment_types ? (Array.isArray(r.equipment_types) ? r.equipment_types : JSON.parse(r.equipment_types||'[]')) : (r.kategori ? [r.kategori] : []);
-        return types.map(t => `<span style="font-weight:900;color:#e8b800;font-size:13px;">${t}</span>`).join(' ');
+        const em = { F:'Full', R:'Restricted', G:'General' };
+        return types.map(t => `<span style="font-weight:900;color:#e8b800;font-size:13px;" title="${em[t]||t}">${t}</span>`).join(' · ');
       })()}</td>
       <td>${r.company||'—'}</td>
       <td>${tgl}</td>
@@ -3824,13 +3865,24 @@ function openSimperRegDetail(id) {
   document.getElementById('srdNama').innerText     = r.nama     || '—';
   document.getElementById('srdNoBadge').innerText  = r.no_badge || '—';
 
-  // Equipment types
+  // Kategori SIMPER (F/R/G)
   const equipEl = document.getElementById('srdKategori');
   if (equipEl) {
     const types = r.equipment_types
       ? (Array.isArray(r.equipment_types) ? r.equipment_types : JSON.parse(r.equipment_types || '[]'))
       : (r.kategori ? [r.kategori] : []);
     equipEl.innerHTML = types.join(' · ') || '—';
+  }
+
+  // Kendaraan yang diotorisasi
+  const vehicleEl = document.getElementById('srdVehicles');
+  if (vehicleEl) {
+    const vehs = r.vehicle_types
+      ? (Array.isArray(r.vehicle_types) ? r.vehicle_types : JSON.parse(r.vehicle_types || '[]'))
+      : [];
+    vehicleEl.innerHTML = vehs.length > 0
+      ? vehs.map(v => `<span style="display:inline-block;background:var(--surface2);border:1px solid var(--border);padding:2px 8px;border-radius:4px;margin:2px;font-size:11px;">${v}</span>`).join('')
+      : '—';
   }
   document.getElementById('srdJabatan').innerText  = r.jabatan  || '—';
   document.getElementById('srdCompany').innerText  = r.company  || '—';
@@ -4181,21 +4233,59 @@ async function printSimperCard() {
       ? `<img src="${fotoDataUrl}" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block;"/>`
       : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:6pt;color:#aaa;text-align:center;">Foto</div>`;
 
-    const kategori  = r.kategori    || 'F';
     const simperNum = r.simper_number || '—';
     const nama      = r.nama        || '—';
     const badgeNum  = r.no_badge    || '—';
     const company   = r.company     || '—';
 
-    // Multi-equipment: ambil dari kolom equipment_types (array) atau fallback ke kategori
-    const equipList = r.equipment_types
-      ? (Array.isArray(r.equipment_types) ? r.equipment_types : JSON.parse(r.equipment_types || '[]'))
-      : [kategori];
-    const equipMap = { G:'Grader', R:'Rigid Dump Truck', F:'Light Vehicle / Forklift',
-      B:'Bus', D:'Dozer', E:'Excavator', W:'Wheel Loader', V:'Vibro Compactor', C:'Crane' };
-    const equipTags = equipList.map(e =>
-      `<span class="equip-tag">${e} — ${equipMap[e] || e}</span>`
-    ).join('');
+    // Fetch semua SIMPER Diterbitkan milik karyawan ini (by no_badge)
+    let allKategori = [];
+    let allVehicles = [];
+    try {
+      const { data: allSimper } = await supabaseClient
+        .from('simper_registration')
+        .select('equipment_types, vehicle_types, kategori, status')
+        .eq('no_badge', badgeNum)
+        .eq('status', 'Diterbitkan');
+
+      if (allSimper && allSimper.length > 0) {
+        const katSet = new Set();
+        const vehSet = new Set();
+        allSimper.forEach(s => {
+          // Kategori SIMPER (F/R/G)
+          const kats = s.equipment_types
+            ? (Array.isArray(s.equipment_types) ? s.equipment_types : JSON.parse(s.equipment_types || '[]'))
+            : (s.kategori ? [s.kategori] : []);
+          kats.forEach(k => katSet.add(k));
+
+          // Kendaraan
+          if (s.vehicle_types) {
+            const vehs = Array.isArray(s.vehicle_types) ? s.vehicle_types : JSON.parse(s.vehicle_types || '[]');
+            vehs.forEach(v => vehSet.add(v));
+          }
+        });
+        allKategori = [...katSet].sort();
+        allVehicles = [...vehSet].sort();
+      }
+    } catch(e) { console.warn('Gagal fetch semua SIMPER:', e); }
+
+    // Fallback ke data record saat ini
+    if (allKategori.length === 0) {
+      allKategori = r.equipment_types
+        ? (Array.isArray(r.equipment_types) ? r.equipment_types : JSON.parse(r.equipment_types || '[]'))
+        : (r.kategori ? [r.kategori] : ['F']);
+    }
+    if (allVehicles.length === 0 && r.vehicle_types) {
+      allVehicles = Array.isArray(r.vehicle_types) ? r.vehicle_types : JSON.parse(r.vehicle_types || '[]');
+    }
+
+    // Tampilan depan: kategori SIMPER (F / R / G)
+    const kategoriDisplay = allKategori.join(' / ');
+
+    // Tampilan belakang: kendaraan yang diotorisasi
+    const vehicleTags = allVehicles.length > 0
+      ? allVehicles.map(v => `<span class="equip-tag">${v}</span>`).join('')
+      : allKategori.map(k => `<span class="equip-tag">${k === 'F' ? 'Full' : k === 'R' ? 'Restricted' : 'General'}</span>`).join('');
 
     // Issued date
     const issuedDate = r.issued_date
@@ -4260,7 +4350,7 @@ async function printSimperCard() {
   .f-nama    { font-size:8pt;  font-weight:700; color:#111; margin-bottom:2pt; line-height:1.2; }
   .f-badge   { font-size:7pt;  color:#333; margin-bottom:2pt; }
   .f-company { font-size:6.5pt;color:#555; margin-bottom:3pt; }
-  .f-kat     { font-size:18pt; font-weight:900; color:#e8b800; line-height:1; }
+  .f-kat     { font-size:14pt; font-weight:900; color:#e8b800; line-height:1.2; letter-spacing:2px; margin-top:2pt; }
   .exp-bar {
     border-top:1.5px solid #1a3a6b; border-bottom:1.5px solid #1a3a6b;
     text-align:center; padding:2.5pt 0; margin:2.5pt 0;
@@ -4319,7 +4409,7 @@ async function printSimperCard() {
         <div class="f-nama">${nama}</div>
         <div class="f-badge">${badgeNum}</div>
         <div class="f-company">${company}</div>
-        <div class="f-kat">${kategori}</div>
+        <div class="f-kat">${kategoriDisplay}</div>
       </div>
     </div>
     <div class="exp-bar">
@@ -4349,8 +4439,8 @@ async function printSimperCard() {
   <div class="back-body">
     <div class="back-simper-num">${simperNum}</div>
 
-    <div class="back-sect-title">Equipment Type</div>
-    <div style="margin-bottom:5pt;">${equipTags}</div>
+    <div class="back-sect-title">Kendaraan / Alat yang Diotorisasi</div>
+    <div style="margin-bottom:5pt;">${vehicleTags}</div>
 
     <div class="back-sect-title">Issued</div>
     <div style="font-size:6pt;color:#333;margin-bottom:5pt;">${issuedDate}</div>
