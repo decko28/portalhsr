@@ -4279,10 +4279,47 @@ async function generateSimperWord() {
 
     const kategoriDisplay = allKategori.join(' / ');
     const vehicleList = allVehicles.length > 0 ? allVehicles : allKategori.map(k => k === 'F' ? 'Full' : k === 'R' ? 'Restricted' : 'General');
-    const fotoB64 = r.pas_foto || null;
+    const tahun = new Date().getFullYear().toString();
 
-    // Gunakan fallback HTML Word (reliable, tidak butuh API)
-    _generateSimperWordHTML(nama, badgeNum, company, jabatan, simperNum, kategoriDisplay, expDate, issuedDate, vehicleList, fotoB64);
+    // Kirim ke GAS untuk generate docx dari Google Docs template
+    showToast('Menghubungi server... mohon tunggu (~30 detik)', 'success');
+
+    const gasPayload = {
+      action: 'generate_simper',
+      data: {
+        nama, no_badge: badgeNum, company, jabatan,
+        simper_num: simperNum, kategori: kategoriDisplay,
+        exp_date: expDate, issued_date: issuedDate,
+        vehicle_list: vehicleList, tahun,
+      }
+    };
+
+    const res = await fetch(GAS_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(gasPayload),
+      redirect: 'follow',
+    });
+
+    const result = await res.json();
+
+    if (result.status === 'success' && result.docxBase64) {
+      const binary = atob(result.docxBase64);
+      const bytes  = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      const blob = new Blob([bytes], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      });
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement('a');
+      a.href    = url;
+      a.download = `SIMPER_${nama.replace(/\s+/g,'_')}_${simperNum.replace(/\//g,'-')}.docx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('SIMPER.docx berhasil didownload! ✅');
+    } else {
+      throw new Error(result.message || 'GAS gagal generate dokumen');
+    }
 
   } catch(e) {
     console.error('generateSimperWord error:', e);
