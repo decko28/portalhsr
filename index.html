@@ -4318,12 +4318,14 @@ async function generateSimperWord() {
       URL.revokeObjectURL(url);
       showToast('SIMPER.docx berhasil didownload! ✅');
     } else {
+      // Tampilkan error detail untuk debugging
+      console.error('GAS error:', result.message);
       throw new Error(result.message || 'GAS gagal generate dokumen');
     }
 
   } catch(e) {
     console.error('generateSimperWord error:', e);
-    showToast('Gagal generate dokumen. Coba lagi.', 'error');
+    showToast(`Gagal: ${e.message}`, 'error');
   } finally {
     setLoader(false);
   }
