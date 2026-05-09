@@ -1,16 +1,19 @@
 // api/simper.js — Vercel Serverless Function
-// Download template_simper.docx dari GitHub, replace placeholders, return docx
+// Download template_simper.docx dari GitHub, replace placeholders + foto, return docx
 
 const https = require('https');
-const { Readable } = require('stream');
 
-// ── Download file dari URL sebagai Buffer ──────────────────────
+const TEMPLATE_URL = 'https://raw.githubusercontent.com/decko28/portalhsr/main/template_simper.docx';
+// image2.png = foto karyawan di template
+const FOTO_IMAGE_NAME = 'word/media/image2.png';
+
 function downloadBuffer(url) {
   return new Promise((resolve, reject) => {
     https.get(url, (res) => {
-      if (res.statusCode === 302 || res.statusCode === 301) {
+      if (res.statusCode === 301 || res.statusCode === 302) {
         return downloadBuffer(res.headers.location).then(resolve).catch(reject);
       }
+      if (res.statusCode !== 200) return reject(new Error('HTTP ' + res.statusCode));
       const chunks = [];
       res.on('data', c => chunks.push(c));
       res.on('end', () => resolve(Buffer.concat(chunks)));
@@ -19,7 +22,6 @@ function downloadBuffer(url) {
   });
 }
 
-// ── Escape XML special chars ───────────────────────────────────
 function escXml(s) {
   return String(s || '')
     .replace(/&/g, '&amp;')
@@ -29,51 +31,46 @@ function escXml(s) {
     .replace(/'/g, '&apos;');
 }
 
-// ── Replace placeholder yang mungkin terfragmentasi oleh XML tags ──
-// Word sering memecah text runs, misal {{NAMA}} jadi <w:t>{{</w:t><w:t>NAMA</w:t><w:t>}}</w:t>
-// Solusi: clean XML dulu, replace, lalu restore
+// Replace placeholders — handle fragmentasi XML Word
 function replacePlaceholders(xml, data) {
-  // Step 1: Gabungkan fragmented runs dalam satu paragraph
-  // Hapus penutup/pembuka run tag yang memisahkan placeholder
-  // Pattern: tutup w:t, tutup w:r, buka w:r baru, buka w:t
-  let cleaned = xml;
+  // Bersihkan fragmentasi: Word kadang pecah {{NAMA}} jadi
+  // {{<tag>NAM</tag>A}} dst. Gabungkan dulu dalam w:t runs.
+  // Strategi: hapus XML tags DI ANTARA karakter { } [A-Z_]
+  // Step 1: collapse fragmented runs inside placeholder context
+  let out = xml;
 
-  // Step 2: Dulu bersihkan karakter invisible di antara {{ dan }}
-  // Ganti semua {{...}} yang mungkin terpotong XML tags
-  // Teknik: hapus semua XML tags DI DALAM area placeholder
-  cleaned = cleaned.replace(/\{\{([^}]*)\}\}/g, (match) => match); // no-op dulu
+  // Gabungkan runs yang memisahkan placeholder
+  // Pattern: closing w:t + optional w:r tags + opening w:t
+  const runSep = /(<\/w:t>(?:<\/w:r>)?(?:<w:r[^>]*>)?(?:<w:rPr>[\s\S]*?<\/w:rPr>)?(?:<w:t[^>]*>)?)/g;
 
-  // Step 3: Handle fragmented placeholders
-  // Word memecah text seperti: {</w:t></w:r><w:r><w:t>{NAMA}}</w:t>
-  // Kita remove closing/opening tags di antara karakter placeholder
-  const placeholderPattern = /(\{)(<\/w:t>(?:<\/w:r>)?(?:<w:r[^>]*>)?(?:<w:rPr>[^<]*(?:<[^>]+>[^<]*)*<\/w:rPr>)?(?:<w:t[^>]*>)?)+(\{[A-Z_]+\}\})/g;
-  cleaned = cleaned.replace(placeholderPattern, '$1$3');
+  // Cari semua {{ ... }} termasuk yang terpecah tag XML
+  // Kita extract text content dulu, cari posisi placeholder, lalu replace di raw XML
+  // Teknik paling robust: hapus tags di dalam window {{ ... }}
+  out = out.replace(/\{\{([\s\S]*?)\}\}/g, (match) => {
+    // Hapus XML tags di dalam placeholder
+    const clean = match.replace(/<[^>]+>/g, '');
+    return clean; // misal {{KATEGORI}} setelah dibersihkan
+  });
 
-  const closingPattern = /(\{\{[A-Z_]+\})(<\/w:t>(?:<\/w:r>)?(?:<w:r[^>]*>)?(?:<w:rPr>[^<]*(?:<[^>]+>[^<]*)*<\/w:rPr>)?(?:<w:t[^>]*>)?)+(\})/g;
-  cleaned = cleaned.replace(closingPattern, '$1$3');
-
-  // Step 4: Replace placeholders dengan data
   const map = {
-    '{{NAMA}}': escXml(data.nama),
-    '{{NO_BADGE}}': escXml(data.no_badge),
-    '{{COMPANY}}': escXml(data.company),
-    '{{JABATAN}}': escXml(data.jabatan),
-    '{{SIMPER_NUM}}': escXml(data.simper_num),
-    '{{KATEGORI}}': escXml(data.kategori),
-    '{{EXP_DATE}}': escXml(data.exp_date),
-    '{{ISSUED_DATE}}': escXml(data.issued_date),
+    '{{NAMA}}':         escXml(data.nama),
+    '{{NO_BADGE}}':     escXml(data.no_badge),
+    '{{COMPANY}}':      escXml(data.company),
+    '{{JABATAN}}':      escXml(data.jabatan),
+    '{{SIMPER_NUM}}':   escXml(data.simper_num),
+    '{{KATEGORI}}':     escXml(data.kategori),
+    '{{EXP_DATE}}':     escXml(data.exp_date),
+    '{{ISSUED_DATE}}':  escXml(data.issued_date),
     '{{VEHICLE_LIST}}': escXml((data.vehicle_list || []).join(', ')),
-    '{{TAHUN}}': escXml(String(new Date().getFullYear())),
+    '{{TAHUN}}':        escXml(String(new Date().getFullYear())),
   };
 
-  for (const [placeholder, value] of Object.entries(map)) {
-    cleaned = cleaned.split(placeholder).join(value);
+  for (const [key, val] of Object.entries(map)) {
+    out = out.split(key).join(val);
   }
-
-  return cleaned;
+  return out;
 }
 
-// ── Main Handler ───────────────────────────────────────────────
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
@@ -83,31 +80,26 @@ module.exports = async (req, res) => {
 
   try {
     const data = req.body;
-    if (!data || !data.nama) {
-      return res.status(400).json({ status: 'error', message: 'Data tidak lengkap' });
-    }
+    if (!data || !data.nama) return res.status(400).json({ status: 'error', message: 'Data tidak lengkap' });
 
-    // Download template dari GitHub
-    const templateUrl = 'https://raw.githubusercontent.com/decko28/portalhsr/main/template_simper.docx';
-    const templateBuffer = await downloadBuffer(templateUrl);
+    // Download template
+    const templateBuffer = await downloadBuffer(TEMPLATE_URL);
 
-    // Unzip docx (docx adalah ZIP)
+    // Proses ZIP (docx = ZIP)
     const AdmZip = require('adm-zip');
     const zip = new AdmZip(templateBuffer);
-    const zipEntries = zip.getEntries();
 
-    // Replace placeholders di word/document.xml
-    const docXmlEntry = zip.getEntry('word/document.xml');
-    if (!docXmlEntry) throw new Error('word/document.xml tidak ditemukan di template');
-
-    let docXml = docXmlEntry.getData().toString('utf8');
+    // 1. Replace placeholders di document.xml
+    const docEntry = zip.getEntry('word/document.xml');
+    if (!docEntry) throw new Error('word/document.xml tidak ditemukan');
+    let docXml = docEntry.getData().toString('utf8');
     docXml = replacePlaceholders(docXml, data);
     zip.updateFile('word/document.xml', Buffer.from(docXml, 'utf8'));
 
-    // Juga replace di header/footer jika ada
-    for (const entry of zipEntries) {
+    // 2. Replace juga di header/footer jika ada
+    for (const entry of zip.getEntries()) {
       const name = entry.entryName;
-      if (name.startsWith('word/header') || name.startsWith('word/footer')) {
+      if ((name.startsWith('word/header') || name.startsWith('word/footer')) && name.endsWith('.xml')) {
         try {
           let content = entry.getData().toString('utf8');
           content = replacePlaceholders(content, data);
@@ -116,7 +108,26 @@ module.exports = async (req, res) => {
       }
     }
 
-    // Output sebagai buffer
+    // 3. Replace foto karyawan (image2.png) jika ada pas_foto
+    if (data.foto_b64 && data.foto_b64.startsWith('data:')) {
+      const b64 = data.foto_b64.split(',')[1];
+      const fotoBuffer = Buffer.from(b64, 'base64');
+
+      // Tentukan ekstensi dari mime type
+      const mimeType = data.foto_b64.split(';')[0].split(':')[1]; // image/jpeg atau image/png
+      const ext = mimeType.includes('png') ? 'png' : 'jpeg';
+      const targetName = ext === 'png' ? FOTO_IMAGE_NAME : FOTO_IMAGE_NAME.replace('.png', '.jpeg');
+
+      if (ext === 'png') {
+        // Langsung replace image2.png
+        zip.updateFile(FOTO_IMAGE_NAME, fotoBuffer);
+      } else {
+        // Foto JPEG: update image2.png dengan bytes JPEG (Word tetap bisa baca)
+        // Atau rename relationship
+        zip.updateFile(FOTO_IMAGE_NAME, fotoBuffer);
+      }
+    }
+
     const outputBuffer = zip.toBuffer();
     const filename = `SIMPER_${(data.nama || '').replace(/\s+/g, '_')}_${(data.simper_num || '').replace(/\//g, '-')}.docx`;
 
