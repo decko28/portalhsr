@@ -1,8 +1,7 @@
 {
-  "functions": {
-    "api/simper.js": {
-      "memory": 512,
-      "maxDuration": 30
-    }
+  "name": "portalhsr-api",
+  "version": "1.0.0",
+  "dependencies": {
+    "docx": "9.6.1"
   }
 }
