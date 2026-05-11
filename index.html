@@ -1120,36 +1120,48 @@ tbody tr:hover { background: var(--surface2); }
         <div class="card-title"><span class="card-title-dot"></span>Tambah User Baru</div>
         <div style="background:rgba(14,165,160,0.08);border:1px solid rgba(14,165,160,0.25);
           border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:16px;font-size:13px;color:var(--muted);">
-          💡 Setelah user ditambahkan, daftarkan email di <strong style="color:var(--text)">Supabase → Authentication → Users → Add User</strong>
-          dengan password default: <strong style="color:var(--teal);font-family:'Syne',sans-serif;">Sumbawa@12345</strong>
-          — minta user ganti password setelah login pertama.
+          💡 Isi form di bawah untuk membuat akun baru. User bisa langsung login dengan email & password yang diset di sini.
         </div>
         <div class="form-row-3">
           <div class="form-group">
-            <label class="form-label">Email</label>
+            <label class="form-label">Nama Lengkap <span style="color:var(--red)">*</span></label>
+            <input id="uNama" type="text" class="form-input" placeholder="Nama lengkap"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Email <span style="color:var(--red)">*</span></label>
             <input id="uEmail" type="email" class="form-input" placeholder="email@company.com"/>
           </div>
           <div class="form-group">
-            <label class="form-label">Company</label>
+            <label class="form-label">Password <span style="color:var(--red)">*</span></label>
+            <div style="position:relative;">
+              <input id="uPassword" type="password" class="form-input" placeholder="Min. 8 karakter" style="padding-right:40px;"/>
+              <span onclick="togglePassVis('uPassword',this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:16px;user-select:none;">👁</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">Company <span style="color:var(--red)">*</span></label>
             <select id="uCompany" class="form-input"></select>
           </div>
           <div class="form-group">
-            <label class="form-label">Level Akses</label>
+            <label class="form-label">Level Akses <span style="color:var(--red)">*</span></label>
             <select id="uLevel" class="form-input">
               <option value="User">User</option>
               <option value="Admin">Admin</option>
               <option value="Superadmin">Superadmin</option>
             </select>
           </div>
+          <div class="form-group" style="display:flex;align-items:flex-end;">
+            <button class="btn-submit" onclick="submitNewUser()" style="width:100%;">➕ Tambah User</button>
+          </div>
         </div>
-        <hr class="divider"/>
-        <button class="btn-submit" onclick="submitNewUser()">Tambah & Kirim Undangan</button>
       </div>
       <div class="card">
         <div class="card-title"><span class="card-title-dot"></span>Daftar User</div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Email</th><th>Company</th><th>Level</th><th>Aksi</th></tr></thead>
+            <thead><tr><th>Nama</th><th>Email</th><th>Company</th><th>Level</th><th>Aksi</th></tr></thead>
             <tbody id="userTableBody"></tbody>
           </table>
         </div>
@@ -1321,13 +1333,14 @@ tbody tr:hover { background: var(--surface2); }
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Foto ID Badge <span style="color:var(--red)">*</span></label>
+            <label class="form-label">ID Badge <span style="color:var(--red)">*</span></label>
             <div class="file-drop">
-              <input type="file" id="srIdBadge" accept=".jpg,.jpeg,.png" onchange="previewImg(this,'srIdBadgePreview'); updateFileLabel(this,'srIdBadgeLabel')"/>
+              <input type="file" id="srIdBadge" accept=".jpg,.jpeg,.png,.pdf" onchange="handleIdBadgeUpload(this)"/>
               <div class="file-drop-icon">🪪</div>
-              <div class="file-drop-text" id="srIdBadgeLabel">Foto ID Badge perusahaan<br><strong>JPG, PNG</strong></div>
+              <div class="file-drop-text" id="srIdBadgeLabel">Upload ID Badge perusahaan<br><strong>JPG, PNG, atau PDF</strong></div>
             </div>
             <img id="srIdBadgePreview" class="preview-img hidden"/>
+            <div id="srIdBadgePdfLabel" style="display:none;font-size:12px;color:var(--green);margin-top:6px;">📄 File PDF terpilih</div>
           </div>
           <div class="form-group">
             <label class="form-label">Masa Aktif ID Badge <span style="color:var(--red)">*</span></label>
@@ -3312,58 +3325,86 @@ async function loadUsers() {
   const { data } = await supabaseClient.from('users').select('*').order('email');
   const tbody = document.getElementById('userTableBody');
   tbody.innerHTML = (data || []).map(u => `<tr>
-    <td style="font-weight:500">${u.email}</td>
-    <td>${u.company || '<span style="color:var(--muted);font-style:italic">Belum diset</span>'}</td>
+    <td style="font-weight:500">${u.nama || '—'}</td>
+    <td>${u.email}</td>
+    <td>${u.company || '<span style="color:var(--muted);font-style:italic">—</span>'}</td>
     <td><span class="badge badge-warning">${u.level || 'User'}</span></td>
-    <td style="display:flex;gap:8px;">
+    <td style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn-amber" onclick="openEditUser('${u.email}','${u.company||''}','${u.level||'User'}')">Edit</button>
+      <button class="btn-submit" style="padding:5px 10px;font-size:11px;background:var(--navy);" onclick="resetUserPassword('${u.email}')">Reset PW</button>
       <button class="btn-remove" onclick="deleteUser('${u.email}')">Hapus</button>
     </td>
   </tr>`).join('');
 }
 
 async function submitNewUser() {
+  const nama    = document.getElementById('uNama').value.trim();
   const email   = document.getElementById('uEmail').value.trim();
+  const password= document.getElementById('uPassword').value;
   const company = document.getElementById('uCompany').value;
   const level   = document.getElementById('uLevel').value;
-  if (!email || !company) return showToast('Email dan company wajib diisi!', 'error');
+
+  if (!nama)     return showToast('Nama lengkap wajib diisi!', 'error');
+  if (!email)    return showToast('Email wajib diisi!', 'error');
+  if (!password || password.length < 8) return showToast('Password minimal 8 karakter!', 'error');
+  if (!company)  return showToast('Company wajib dipilih!', 'error');
 
   setLoader(true);
   try {
-    // 1. Simpan profile di tabel users
+    // 1. Buat akun di Supabase Auth
+    const { data: authData, error: authErr } = await supabaseClient.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: nama } }
+    });
+
+    if (authErr) {
+      if (authErr.message?.includes('already registered')) throw new Error('Email sudah terdaftar di sistem!');
+      throw authErr;
+    }
+
+    // 2. Simpan profile di tabel users
     const { error: profileErr } = await supabaseClient
       .from('users')
-      .insert([{ email, company, level, status: 'Active' }]);
+      .upsert([{ email, nama, company, level, status: 'Active' }], { onConflict: 'email' });
 
-    if (profileErr) {
-      if (profileErr.code === '23505') throw new Error('Email sudah terdaftar!');
-      throw profileErr;
-    }
+    if (profileErr) throw profileErr;
 
-    showToast(`User ${email} berhasil ditambahkan! ✅`);
-    document.getElementById('uEmail').value = '';
+    // 3. Reset form
+    document.getElementById('uNama').value     = '';
+    document.getElementById('uEmail').value    = '';
+    document.getElementById('uPassword').value = '';
+
+    showToast(`✅ User ${email} berhasil dibuat! User bisa langsung login.`);
     await loadUsers();
-
-    // 2. Coba kirim email reset — jika gagal tampilkan info default password
-    try {
-      const { error: authErr } = await supabaseClient.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin,
-      });
-      if (!authErr) {
-        showToast(`Email undangan dikirim ke ${email} 📧`, 'success');
-      } else {
-        showToast(`User tersimpan. Email gagal — daftarkan di Supabase Auth dengan password default: Sumbawa@12345`, 'warning');
-      }
-    } catch(emailErr) {
-      showToast(`User tersimpan. Daftarkan manual di Supabase Auth, password default: Sumbawa@12345`, 'warning');
-    }
 
   } catch (e) {
     console.error(e);
-    showToast(`Gagal: ${e.message || 'cek console'}`, 'error');
+    showToast(`Gagal: ${e.message || 'Cek console'}`, 'error');
   } finally {
     setLoader(false);
   }
+}
+
+async function resetUserPassword(email) {
+  const newPw = prompt(`Reset password untuk ${email}\n\nMasukkan password baru (min. 8 karakter):`);
+  if (!newPw) return;
+  if (newPw.length < 8) return showToast('Password minimal 8 karakter!', 'error');
+  const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '?reset=1'
+  });
+  if (error) {
+    showToast(`Gagal kirim email reset: ${error.message}`, 'error');
+  } else {
+    showToast(`✅ Email reset password dikirim ke ${email}`);
+  }
+}
+
+function togglePassVis(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+  else { inp.type = 'password'; btn.textContent = '👁'; }
 }
 
 async function deleteUser(email) {
@@ -3775,12 +3816,17 @@ function buildAdminAction(r) {
 
   // Determine what action is available based on current status
   if (r.status === 'Menunggu Ujian Tulis' || r.status === 'Ujian Tulis Tidak Lulus') {
+    const today = new Date().toISOString().split('T')[0];
     return `
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;">
-        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px;">Input Hasil Ujian Tulis</div>
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px;">📝 Input Hasil Ujian Tulis</div>
         <div class="form-row">
           <div class="form-group" style="margin:0">
-            <label class="form-label">Hasil</label>
+            <label class="form-label">Tanggal Pelaksanaan <span style="color:var(--red)">*</span></label>
+            <input id="srTglTulis" type="date" class="form-input" value="${today}" max="${today}"/>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Hasil <span style="color:var(--red)">*</span></label>
             <select id="srAdminResult" class="form-input">
               <option value="">Pilih Hasil</option>
               <option value="Lulus">✅ Lulus</option>
@@ -3798,12 +3844,17 @@ function buildAdminAction(r) {
   }
 
   if (r.status === 'Menunggu Ujian Praktik' || r.status === 'Ujian Praktik Tidak Lulus') {
+    const today = new Date().toISOString().split('T')[0];
     return `
       <div style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;">
-        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px;">Input Hasil Ujian Praktik</div>
+        <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:12px;">🔧 Input Hasil Ujian Praktik</div>
         <div class="form-row">
           <div class="form-group" style="margin:0">
-            <label class="form-label">Hasil</label>
+            <label class="form-label">Tanggal Pelaksanaan <span style="color:var(--red)">*</span></label>
+            <input id="srTglPraktik" type="date" class="form-input" value="${today}" max="${today}"/>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Hasil <span style="color:var(--red)">*</span></label>
             <select id="srAdminResult" class="form-input">
               <option value="">Pilih Hasil</option>
               <option value="Lulus">✅ Lulus</option>
@@ -3976,8 +4027,10 @@ function openSimperRegDetail(id) {
 }
 
 async function submitUjianTulis(id) {
+  const tgl   = document.getElementById('srTglTulis')?.value;
   const hasil = document.getElementById('srAdminResult').value;
   const note  = document.getElementById('srAdminNote')?.value?.trim() || '';
+  if (!tgl)   return showToast('Tanggal pelaksanaan wajib diisi!', 'error');
   if (!hasil) return showToast('Pilih hasil ujian!', 'error');
 
   setLoader(true);
@@ -3986,13 +4039,13 @@ async function submitUjianTulis(id) {
     const { error } = await supabaseClient.from('simper_registration').update({
       ujian_tulis:      hasil,
       ujian_tulis_note: note,
-      ujian_tulis_date: new Date().toISOString(),
+      ujian_tulis_date: tgl,          // tanggal pelaksanaan dari input admin
       ujian_tulis_by:   currentUser.email,
       status:           newStatus,
     }).eq('id', id);
     if (error) throw error;
 
-    showToast(`Hasil ujian tulis disimpan: ${hasil} ✅`);
+    showToast(`Hasil ujian tulis ${tgl} disimpan: ${hasil} ✅`);
     document.getElementById('simperRegModal').classList.add('hidden');
     await loadSimperRegPage();
   } catch(e) {
@@ -4004,8 +4057,10 @@ async function submitUjianTulis(id) {
 }
 
 async function submitUjianPraktik(id) {
+  const tgl   = document.getElementById('srTglPraktik')?.value;
   const hasil = document.getElementById('srAdminResult').value;
   const note  = document.getElementById('srAdminNote')?.value?.trim() || '';
+  if (!tgl)   return showToast('Tanggal pelaksanaan wajib diisi!', 'error');
   if (!hasil) return showToast('Pilih hasil ujian!', 'error');
 
   setLoader(true);
@@ -4014,13 +4069,13 @@ async function submitUjianPraktik(id) {
     const { error } = await supabaseClient.from('simper_registration').update({
       ujian_praktik:      hasil,
       ujian_praktik_note: note,
-      ujian_praktik_date: new Date().toISOString(),
+      ujian_praktik_date: tgl,         // tanggal pelaksanaan dari input admin
       ujian_praktik_by:   currentUser.email,
       status:             newStatus,
     }).eq('id', id);
     if (error) throw error;
 
-    showToast(`Hasil ujian praktik disimpan: ${hasil} ✅`);
+    showToast(`Hasil ujian praktik ${tgl} disimpan: ${hasil} ✅`);
     document.getElementById('simperRegModal').classList.add('hidden');
     await loadSimperRegPage();
   } catch(e) {
@@ -4439,6 +4494,25 @@ function _generateSimperWordHTML(nama, badgeNum, company, jabatan, simperNum, ka
   URL.revokeObjectURL(url);
   showToast('File SIMPER.doc didownload ✅ (Buka dengan Word lalu Save As .docx)');
 }
+/* ══ HANDLE ID BADGE UPLOAD (foto atau PDF) ══ */
+function handleIdBadgeUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  updateFileLabel(input, 'srIdBadgeLabel');
+  const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+  const imgPreview = document.getElementById('srIdBadgePreview');
+  const pdfLabel   = document.getElementById('srIdBadgePdfLabel');
+  if (isPdf) {
+    imgPreview.classList.add('hidden');
+    pdfLabel.style.display = 'block';
+    pdfLabel.textContent = `📄 ${file.name} (${(file.size/1024).toFixed(0)} KB)`;
+  } else {
+    pdfLabel.style.display = 'none';
+    previewImg(input, 'srIdBadgePreview');
+  }
+  uploadFiles['srIdBadge'] = file;
+}
+
 /* ══ CLEAR FORMS ══ */
 function clearInspectionForm() {
   document.getElementById('adaTemuan').value = '';
