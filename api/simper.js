@@ -33,41 +33,50 @@ function escXml(s) {
 
 // Replace placeholders — handle fragmentasi XML Word
 function replacePlaceholders(xml, data) {
-  // Bersihkan fragmentasi: Word kadang pecah {{NAMA}} jadi
-  // {{<tag>NAM</tag>A}} dst. Gabungkan dulu dalam w:t runs.
-  // Strategi: hapus XML tags DI ANTARA karakter { } [A-Z_]
-  // Step 1: collapse fragmented runs inside placeholder context
   let out = xml;
 
-  // Gabungkan runs yang memisahkan placeholder
-  // Pattern: closing w:t + optional w:r tags + opening w:t
-  const runSep = /(<\/w:t>(?:<\/w:r>)?(?:<w:r[^>]*>)?(?:<w:rPr>[\s\S]*?<\/w:rPr>)?(?:<w:t[^>]*>)?)/g;
-
-  // Cari semua {{ ... }} termasuk yang terpecah tag XML
-  // Kita extract text content dulu, cari posisi placeholder, lalu replace di raw XML
-  // Teknik paling robust: hapus tags di dalam window {{ ... }}
+  // Bersihkan fragmentasi XML di dalam placeholder
   out = out.replace(/\{\{([\s\S]*?)\}\}/g, (match) => {
-    // Hapus XML tags di dalam placeholder
     const clean = match.replace(/<[^>]+>/g, '');
-    return clean; // misal {{KATEGORI}} setelah dibersihkan
+    return clean;
   });
 
+  // Map nilai teks biasa
   const map = {
-    '{{NAMA}}':         escXml(data.nama),
-    '{{NO_BADGE}}':     escXml(data.no_badge),
-    '{{COMPANY}}':      escXml(data.company),
-    '{{JABATAN}}':      escXml(data.jabatan),
-    '{{SIMPER_NUM}}':   escXml(data.simper_num),
-    '{{KATEGORI}}':     escXml(data.kategori),
-    '{{EXP_DATE}}':     escXml(data.exp_date),
-    '{{ISSUED_DATE}}':  escXml(data.issued_date),
-    '{{VEHICLE_LIST}}': escXml((data.vehicle_list || []).join(', ')),
-    '{{TAHUN}}':        escXml(String(new Date().getFullYear())),
+    '{{NAMA}}':        escXml(data.nama),
+    '{{NO_BADGE}}':    escXml(data.no_badge),
+    '{{COMPANY}}':     escXml(data.company),
+    '{{JABATAN}}':     escXml(data.jabatan),
+    '{{SIMPER_NUM}}':  escXml(data.simper_num),
+    '{{KATEGORI}}':    escXml(data.kategori),
+    '{{EXP_DATE}}':    escXml(data.exp_date),
+    '{{ISSUED_DATE}}': escXml(data.issued_date),
+    '{{TAHUN}}':       escXml(String(new Date().getFullYear())),
   };
 
   for (const [key, val] of Object.entries(map)) {
     out = out.split(key).join(val);
   }
+
+  // VEHICLE_LIST — inject XML <w:br/> untuk newline antar item
+  // Temukan placeholder {{VEHICLE_LIST}} yang sudah bersih dalam konteks <w:t>
+  // Ganti seluruh run yang berisi {{VEHICLE_LIST}} dengan multi-run yang punya <w:br/>
+  const vehicles = data.vehicle_list || [];
+  if (vehicles.length === 0) {
+    out = out.split('{{VEHICLE_LIST}}').join('—');
+  } else {
+    // Build XML: item pertama langsung, item berikutnya diawali <w:br/>
+    // Format: teks item1 </w:t></w:r> <w:r><w:br/></w:r> <w:r><w:t>item2
+    // Kita buat replacement sebagai teks dengan XML break
+    const vehicleXml = vehicles.map((v, i) => {
+      const escaped = escXml('- ' + v);
+      if (i === 0) return escaped;
+      // Inject line break: tutup w:t, tambah w:br run, buka w:t baru
+      return `</w:t></w:r><w:r><w:br/></w:r><w:r><w:t xml:space="preserve">${escaped}`;
+    }).join('');
+    out = out.split('{{VEHICLE_LIST}}').join(vehicleXml);
+  }
+
   return out;
 }
 
