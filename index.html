@@ -2,7 +2,16 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#1a3a6b"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="HSR Portal"/>
+<meta name="description" content="Portal Health, Safety & Risk - K3 Pertambangan"/>
+<link rel="manifest" href="/manifest.json"/>
+<link rel="apple-touch-icon" href="/icons/icon-192x192.png"/>
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png"/>
 <title>HSR Portal</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
 <script src="config.js"></script>
@@ -652,6 +661,9 @@ tbody tr:hover { background: var(--surface2); }
         style="width:100%;margin-bottom:8px;font-size:12px;padding:9px 12px;
         display:flex;align-items:center;gap:8px;justify-content:center;">
         <span>🔑</span> Ganti Password
+      </button>
+      <button id="pwaInstallBtn" onclick="installPWA()" style="display:none;width:100%;margin-top:4px;padding:10px 14px;background:linear-gradient(135deg,#1a3a6b,#0ea5a0);border:none;border-radius:var(--radius-sm);color:white;font-size:12px;font-weight:600;cursor:pointer;align-items:center;gap:8px;justify-content:center;">
+        📲 Install sebagai App
       </button>
       <button class="btn-logout" onclick="doLogout()">
         <span>🚪</span> Logout
@@ -4536,6 +4548,40 @@ function clearHazardForm() {
   document.getElementById('prevHazardAfterImg').classList.add('hidden');
   delete uploadFiles['hPhotoBefore'];
   delete uploadFiles['hPhotoAfter'];
+}
+
+// ══ PWA Service Worker Registration ══
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.warn('SW registration failed:', err));
+  });
+}
+
+// ══ PWA Install Prompt ══
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  // Tampilkan tombol install jika belum installed
+  const btn = document.getElementById('pwaInstallBtn');
+  if (btn) btn.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  const btn = document.getElementById('pwaInstallBtn');
+  if (btn) btn.style.display = 'none';
+  showToast('HSR Portal berhasil diinstall! 🎉');
+});
+
+function installPWA() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(choice => {
+    deferredPrompt = null;
+  });
 }
 </script>
 </body>
