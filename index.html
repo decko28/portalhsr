@@ -498,12 +498,78 @@ tbody tr:hover { background: var(--surface2); }
 /* ── DIVIDER ── */
 .divider { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
 
-/* ── RESPONSIVE ── */
+/* ── RESPONSIVE MOBILE ── */
+/* Hamburger button */
+.hamburger-btn {
+  display: none;
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 1100;
+  background: var(--navy);
+  border: none;
+  border-radius: 8px;
+  width: 42px;
+  height: 42px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+.hamburger-btn span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: white;
+  border-radius: 2px;
+  transition: all 0.3s;
+}
+.hamburger-btn.open span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+.hamburger-btn.open span:nth-child(2) { opacity: 0; }
+.hamburger-btn.open span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+
+/* Overlay saat sidebar terbuka di mobile */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 999;
+  backdrop-filter: blur(2px);
+}
+.sidebar-overlay.active { display: block; }
+
+/* Mobile layout */
 @media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); }
-  .main-content { margin-left: 0; padding: 20px; }
+  .hamburger-btn { display: flex; }
+
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.5);
+  }
+  .sidebar.mobile-open { transform: translateX(0); }
+
+  .main-content {
+    margin-left: 0;
+    padding: 16px;
+    padding-top: 64px; /* ruang untuk hamburger */
+  }
+
   .form-row, .form-row-3 { grid-template-columns: 1fr; }
   #carFilterGrid { grid-template-columns: 1fr 1fr !important; }
+
+  /* Tabel scroll horizontal di mobile */
+  .card { overflow-x: auto; }
+  table { min-width: 500px; }
+
+  /* Card lebih compact di mobile */
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .card { padding: 14px; }
 }
 </style>
 </head>
@@ -604,6 +670,14 @@ tbody tr:hover { background: var(--surface2); }
      MAIN APP
 ══════════════════════════════════════════ -->
 <div id="mainApp" class="hidden">
+
+  <!-- Hamburger button (mobile only) -->
+  <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMobileSidebar()" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+
+  <!-- Overlay (mobile only) -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
@@ -2076,6 +2150,9 @@ function switchPage(id) {
   if (target) target.classList.add('active');
   const navEl = document.getElementById('nav-' + id);
   if (navEl) navEl.classList.add('active');
+
+  // Auto-close sidebar di mobile saat menu dipilih
+  if (window.innerWidth <= 768) closeMobileSidebar();
 
   if (id === 'dashboard')      loadDashboard();
   if (id === 'inspectionList') loadInspectionList();
@@ -4549,6 +4626,33 @@ function clearHazardForm() {
   delete uploadFiles['hPhotoBefore'];
   delete uploadFiles['hPhotoAfter'];
 }
+
+// ══ MOBILE SIDEBAR ══
+function toggleMobileSidebar() {
+  const sidebar  = document.querySelector('.sidebar');
+  const overlay  = document.getElementById('sidebarOverlay');
+  const btn      = document.getElementById('hamburgerBtn');
+  const isOpen   = sidebar.classList.contains('mobile-open');
+  if (isOpen) {
+    closeMobileSidebar();
+  } else {
+    sidebar.classList.add('mobile-open');
+    overlay.classList.add('active');
+    btn.classList.add('open');
+  }
+}
+
+function closeMobileSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+  const btn     = document.getElementById('hamburgerBtn');
+  sidebar?.classList.remove('mobile-open');
+  overlay?.classList.remove('active');
+  btn?.classList.remove('open');
+}
+
+// Auto-close sidebar di mobile saat navigasi
+const _origSwitchPage = typeof switchPage === 'function' ? switchPage : null;
 
 // ══ PWA Service Worker Registration ══
 if ('serviceWorker' in navigator) {
