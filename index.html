@@ -621,6 +621,12 @@ tbody tr:hover { background: var(--surface2); }
 <!-- ══ LOADING ══ -->
 <div id="loadingOverlay" class="hidden">
   <div class="spinner"></div>
+  <div style="color:rgba(255,255,255,0.5);font-size:12px;margin-top:16px;text-align:center;">Memuat data...</div>
+  <button onclick="setLoader(false)" style="margin-top:20px;background:transparent;border:1px solid rgba(255,255,255,0.2);
+    color:rgba(255,255,255,0.4);font-size:11px;padding:6px 16px;border-radius:20px;cursor:pointer;
+    transition:all 0.2s;" onmouseover="this.style.color='white'" onmouseout="this.style.color='rgba(255,255,255,0.4)'">
+    ✕ Tutup
+  </button>
 </div>
 <div id="toast"></div>
 
@@ -1878,8 +1884,10 @@ let simperMasterData = [];
 let inspMasterData   = [];
 let hazardMasterData = [];
 let activeCarId      = null;
+let _pageLoading     = false;   // guard double-load
+let _loaderTimer     = null;    // auto-dismiss timer
 
-/* ══ SESSION PERSISTENCE — profile cache saja, auth dihandle Supabase ══ */
+/* ══ SESSION PERSISTENCE ══ */
 function saveSession(user) {
   try { sessionStorage.setItem('hsr_profile', JSON.stringify(user)); } catch(e) {}
 }
@@ -1893,6 +1901,25 @@ function clearSession() {
 /* ══ UTILS ══ */
 function setLoader(show) {
   document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+
+  // Auto-dismiss jika loader stuck > 10 detik
+  if (_loaderTimer) { clearTimeout(_loaderTimer); _loaderTimer = null; }
+  if (show) {
+    _loaderTimer = setTimeout(() => {
+      setLoader(false);
+      console.warn('Loader auto-dismissed after timeout');
+    }, 10000);
+  }
+}
+
+// Wrapper Supabase dengan timeout 8 detik
+function withTimeout(promise, ms = 8000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timeout — cek koneksi internet')), ms)
+    )
+  ]);
 }
 
 function showToast(msg, type = 'success') {
@@ -2058,9 +2085,16 @@ async function doLogin() {
 /* ══ LOGOUT — Supabase Auth ══ */
 async function doLogout() {
   setLoader(true);
-  await supabaseClient.auth.signOut();
-  // showLoginPage() dipanggil otomatis oleh onAuthStateChange
-  setLoader(false);
+  try {
+    await withTimeout(supabaseClient.auth.signOut(), 5000);
+  } catch(e) {
+    console.warn('Logout error:', e);
+  } finally {
+    setLoader(false);
+    // Force redirect ke login jika onAuthStateChange tidak trigger
+    clearSession();
+    showLoginPage();
+  }
 }
 
 /* ══ REPOPULATE FORM DROPDOWNS ══ */
@@ -2201,6 +2235,10 @@ function switchPage(id) {
 
   // Auto-close sidebar di mobile saat menu dipilih
   if (window.innerWidth <= 768) closeMobileSidebar();
+
+  // Reset loader state saat pindah halaman
+  setLoader(false);
+  _pageLoading = false;
 
   if (id === 'dashboard')      loadDashboard();
   if (id === 'inspectionList') loadInspectionList();
@@ -2664,12 +2702,12 @@ async function loadDashboard() {
   setLoader(true);
   try {
     const isAdmin = ['Admin','Superadmin'].includes(currentUser.level);
-    const [carRes, hazRes, insRes, simRes] = await Promise.all([
+    const [carRes, hazRes, insRes, simRes] = await withTimeout(Promise.all([
       supabaseClient.from('car_reports').select('status,date_raised,due_date,company,pic'),
       supabaseClient.from('hazard_reports').select('status,risk_level,date,company'),
       supabaseClient.from('inspections').select('date,company,has_finding'),
       supabaseClient.from('simper_validity').select('status,company,upload_date'),
-    ]);
+    ]));
 
     const cars  = (carRes.data  || []).filter(c => isAdmin || c.company === currentUser.company || c.pic === currentUser.company);
     const hazs  = (hazRes.data  || []).filter(h => isAdmin || h.company === currentUser.company);
