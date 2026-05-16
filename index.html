@@ -1543,6 +1543,11 @@ tbody tr:hover { background: var(--surface2); }
     </div>
 
     <div class="form-group">
+      <label class="form-label">Nama Lengkap <span style="color:var(--red)">*</span></label>
+      <input id="euNama" type="text" class="form-input" placeholder="Nama lengkap user"/>
+    </div>
+
+    <div class="form-group">
       <label class="form-label">Company</label>
       <select id="euCompany" class="form-input"></select>
     </div>
@@ -3462,7 +3467,7 @@ async function loadUsers() {
     <td>${u.company || '<span style="color:var(--muted);font-style:italic">—</span>'}</td>
     <td><span class="badge badge-warning">${u.level || 'User'}</span></td>
     <td style="display:flex;gap:8px;flex-wrap:wrap;">
-      <button class="btn-amber" onclick="openEditUser('${u.email}','${u.company||''}','${u.level||'User'}')">Edit</button>
+      <button class="btn-amber" onclick="openEditUser('${u.email}','${u.company||''}','${u.level||'User'}','${(u.nama||'').replace(/'/g,"\\'")}')">Edit</button>
       <button class="btn-submit" style="padding:5px 10px;font-size:11px;background:var(--navy);" onclick="resetUserPassword('${u.email}')">Reset PW</button>
       <button class="btn-remove" onclick="deleteUser('${u.email}')">Hapus</button>
     </td>
@@ -3558,18 +3563,15 @@ async function deleteUser(email) {
 
 let editingUserEmail = null;
 
-function openEditUser(email, company, level) {
+function openEditUser(email, company, level, nama) {
   editingUserEmail = email;
-  document.getElementById('euEmail').innerText = email;
-  document.getElementById('euLevel').value     = level || 'User';
+  document.getElementById('euEmail').innerText  = email;
+  document.getElementById('euNama').value       = nama || '';
+  document.getElementById('euLevel').value      = level || 'User';
 
-  // Populate dropdown company dari globalCompanies (kalau belum terisi)
   const sel = document.getElementById('euCompany');
-  if (sel.options.length <= 1) {
-    sel.innerHTML = '<option value="">Pilih Company</option>' +
-      globalCompanies.map(n => `<option value="${n}">${n}</option>`).join('');
-  }
-  // Set nilai — jika kosong biarkan placeholder tampil
+  sel.innerHTML = '<option value="">Pilih Company</option>' +
+    globalCompanies.map(n => `<option value="${n}">${n}</option>`).join('');
   sel.value = company || '';
 
   document.getElementById('editUserModal').classList.remove('hidden');
@@ -3598,24 +3600,27 @@ async function sendPasswordReset() {
 }
 
 async function submitEditUser() {
+  const nama    = document.getElementById('euNama').value.trim();
   const company = document.getElementById('euCompany').value;
   const level   = document.getElementById('euLevel').value;
+  if (!nama)    return showToast('Nama lengkap wajib diisi!', 'error');
   if (!company) return showToast('Pilih company!', 'error');
 
   setLoader(true);
   try {
-    // Update profile saja — password tidak disentuh sama sekali
     const { error } = await supabaseClient.from('users')
-      .update({ company, level })
+      .update({ nama, company, level })
       .eq('email', editingUserEmail);
     if (error) throw error;
 
     // Update cache session jika yang diedit adalah diri sendiri
     if (currentUser && currentUser.email === editingUserEmail) {
+      currentUser.nama    = nama;
       currentUser.company = company;
       currentUser.level   = level;
       saveSession(currentUser);
-      document.getElementById('displayUser').innerText  = company;
+      document.getElementById('displayName').innerText = nama;
+      document.getElementById('displayUser').innerText = company;
       document.getElementById('displayLevel').innerText = level;
     }
 
