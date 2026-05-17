@@ -43,15 +43,19 @@ function replacePlaceholders(xml, data) {
 
   // Map nilai teks biasa
   const map = {
-    '{{NAMA}}':        escXml(data.nama),
-    '{{NO_BADGE}}':    escXml(data.no_badge),
-    '{{COMPANY}}':     escXml(data.company),
-    '{{JABATAN}}':     escXml(data.jabatan),
-    '{{SIMPER_NUM}}':  escXml(data.simper_num),
-    '{{KATEGORI}}':    escXml(data.kategori),
-    '{{EXP_DATE}}':    escXml(data.exp_date),
-    '{{ISSUED_DATE}}': escXml(data.issued_date),
-    '{{TAHUN}}':       escXml(String(new Date().getFullYear())),
+    '{{NAMA}}':            escXml(data.nama),
+    '{{NO_BADGE}}':        escXml(data.no_badge),
+    '{{COMPANY}}':         escXml(data.company),
+    '{{JABATAN}}':         escXml(data.jabatan),
+    '{{SIMPER_NUM}}':      escXml(data.simper_num),
+    '{{KATEGORI}}':        escXml(data.kategori),
+    '{{EXP_DATE}}':        escXml(data.exp_date),
+    '{{ISSUED_DATE}}':     escXml(data.issued_date),
+    '{{JENIS_SIM}}':       escXml(data.jenis_sim       || '—'),
+    '{{NO_SIM}}':          escXml(data.no_sim           || '—'),
+    '{{SIM_DITERBITKAN}}': escXml(data.sim_diterbitkan  || '—'),
+    '{{SIM_EXPIRY}}':      escXml(data.sim_expiry        || '—'),
+    '{{TAHUN}}':           escXml(String(new Date().getFullYear())),
   };
 
   for (const [key, val] of Object.entries(map)) {
