@@ -1466,6 +1466,34 @@ tbody tr:hover { background: var(--surface2); }
           </div>
         </div>
 
+        <!-- Detail SIM Polisi -->
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">Jenis SIM Polisi <span style="color:var(--red)">*</span></label>
+            <select id="srJenisSim" class="form-input">
+              <option value="">Pilih Jenis SIM</option>
+              <option value="SIM A">SIM A</option>
+              <option value="SIM A Umum">SIM A Umum</option>
+              <option value="SIM B1">SIM B1</option>
+              <option value="SIM B1 Umum">SIM B1 Umum</option>
+              <option value="SIM B2">SIM B2</option>
+              <option value="SIM B2 Umum">SIM B2 Umum</option>
+              <option value="SIM C">SIM C</option>
+              <option value="SIM C1">SIM C1</option>
+              <option value="SIM C2">SIM C2</option>
+              <option value="SIM D">SIM D</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nomor SIM Polisi <span style="color:var(--red)">*</span></label>
+            <input id="srNoSim" type="text" class="form-input" placeholder="Contoh: 1234567890123456"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Diterbitkan di <span style="color:var(--red)">*</span></label>
+            <input id="srSimDiterbitkan" type="text" class="form-input" placeholder="Contoh: Semarang, NTB, Jakarta"/>
+          </div>
+        </div>
+
         <div class="form-row">
           <div class="form-group">
             <label class="form-label">ID Badge <span style="color:var(--red)">*</span></label>
@@ -1685,6 +1713,10 @@ tbody tr:hover { background: var(--surface2); }
       <div class="car-detail-item"><label>Badge Expiry</label><p id="srdExpiry">—</p></div>
       <div class="car-detail-item"><label>SIM Polisi Expiry</label><p id="srdSimExpiry">—</p></div>
       <div class="car-detail-item"><label>SIMPER Expired</label><p id="srdSimperExpiry" style="color:var(--amber);font-weight:600;">—</p></div>
+      <!-- Detail SIM Polisi -->
+      <div class="car-detail-item"><label>Jenis SIM Polisi</label><p id="srdJenisSim" style="font-weight:600;color:var(--teal);">—</p></div>
+      <div class="car-detail-item"><label>Nomor SIM Polisi</label><p id="srdNoSim" style="font-family:'Syne',sans-serif;font-size:12px;">—</p></div>
+      <div class="car-detail-item"><label>Diterbitkan di</label><p id="srdSimDiterbitkan">—</p></div>
     </div>
     <!-- SIMPER Lama (untuk perpanjangan) -->
     <div id="srdSimperLamaWrap" style="display:none;margin-bottom:12px;">
@@ -3763,6 +3795,9 @@ async function submitSimperRegistration() {
   const company     = document.getElementById('srCompany').value;
   const badgeExpiry = document.getElementById('srBadgeExpiry').value;
   const simExpiry   = document.getElementById('srSimPolisiExpiry').value;
+  const jenisSim    = document.getElementById('srJenisSim').value;
+  const noSim       = document.getElementById('srNoSim').value.trim();
+  const simDiterbitkan = document.getElementById('srSimDiterbitkan').value.trim();
 
   // Baca kategori SIMPER (F/R/G)
   const equipChecked = [...document.querySelectorAll('#equipCheckboxes input[type=checkbox]:checked')].map(cb => cb.value);
@@ -3790,8 +3825,11 @@ async function submitSimperRegistration() {
   if (!uploadFiles['srDocPengajuan']) return showToast('Dokumen pengajuan wajib diupload!', 'error');
   if (!uploadFiles['srSimPolisi'])    return showToast('SIM Polisi wajib diupload!', 'error');
   if (!uploadFiles['srIdBadge'])      return showToast('Foto ID Badge wajib diupload!', 'error');
-  if (!badgeExpiry) return showToast('Masa aktif ID Badge wajib diisi!', 'error');
-  if (!simExpiry)   return showToast('Masa berlaku SIM Polisi wajib diisi!', 'error');
+  if (!badgeExpiry)      return showToast('Masa aktif ID Badge wajib diisi!', 'error');
+  if (!simExpiry)        return showToast('Masa berlaku SIM Polisi wajib diisi!', 'error');
+  if (!jenisSim)         return showToast('Jenis SIM Polisi wajib dipilih!', 'error');
+  if (!noSim)            return showToast('Nomor SIM Polisi wajib diisi!', 'error');
+  if (!simDiterbitkan)   return showToast('Kota penerbitan SIM Polisi wajib diisi!', 'error');
 
   if (new Date(badgeExpiry) < new Date()) return showToast('ID Badge sudah kadaluarsa!', 'error');
   if (new Date(simExpiry) < new Date())   return showToast('SIM Polisi sudah kadaluarsa!', 'error');
@@ -3837,6 +3875,9 @@ async function submitSimperRegistration() {
       doc_pengajuan:     urlDoc,
       sim_polisi:        urlSim,
       sim_polisi_expiry: simExpiry,
+      jenis_sim:         jenisSim,
+      no_sim:            noSim,
+      sim_diterbitkan:   simDiterbitkan,
       foto_id_badge:     urlBadge,
       id_badge_expiry:   badgeExpiry,
       simper_expiry:     simperExpiry,
@@ -3850,9 +3891,12 @@ async function submitSimperRegistration() {
     showToast(`${isPerpanjang ? 'Perpanjangan' : 'Pendaftaran'} berhasil dikirim! ✅`);
 
     // Reset form
-    ['srNama','srNoBadge','srJabatan','srBadgeExpiry','srSimPolisiExpiry','srSimperLama'].forEach(id => {
+    ['srNama','srNoBadge','srJabatan','srBadgeExpiry','srSimPolisiExpiry','srSimperLama',
+     'srNoSim','srSimDiterbitkan'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';
     });
+    const jSimEl = document.getElementById('srJenisSim');
+    if (jSimEl) jSimEl.value = '';
     // Reset checkboxes
     document.querySelectorAll('#equipCheckboxes input[type=checkbox]').forEach(cb => cb.checked = false);
     document.querySelectorAll('#vehicleCheckboxes input[type=radio]').forEach(r => r.checked = false);
@@ -4135,10 +4179,18 @@ function openSimperRegDetail(id) {
   document.getElementById('srdExpiry').innerText = r.id_badge_expiry
     ? new Date(r.id_badge_expiry).toLocaleDateString('id-ID') : '—';
 
-  // SIM Polisi expiry — tampilkan jika ada
+  // SIM Polisi expiry
   const simExpiryEl = document.getElementById('srdSimExpiry');
   if (simExpiryEl) simExpiryEl.innerText = r.sim_polisi_expiry
     ? new Date(r.sim_polisi_expiry).toLocaleDateString('id-ID') : '—';
+
+  // SIM Polisi detail
+  const jSimEl = document.getElementById('srdJenisSim');
+  if (jSimEl) jSimEl.innerText = r.jenis_sim || '—';
+  const noSimEl = document.getElementById('srdNoSim');
+  if (noSimEl) noSimEl.innerText = r.no_sim || '—';
+  const simDitEl = document.getElementById('srdSimDiterbitkan');
+  if (simDitEl) simDitEl.innerText = r.sim_diterbitkan || '—';
 
   // SIMPER expiry (otomatis = whichever comes first)
   const simperExpiryEl = document.getElementById('srdSimperExpiry');
@@ -4519,6 +4571,11 @@ async function generateSimperWord() {
       exp_date: expDate, issued_date: issuedDate,
       vehicle_list: vehicleList,
       foto_b64: r.pas_foto || null,
+      jenis_sim:       r.jenis_sim       || '—',
+      no_sim:          r.no_sim          || '—',
+      sim_diterbitkan: r.sim_diterbitkan || '—',
+      sim_expiry:      r.sim_polisi_expiry
+        ? new Date(r.sim_polisi_expiry).toLocaleDateString('id-ID') : '—',
     };
 
     const res = await fetch('/api/simper', {
