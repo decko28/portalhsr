@@ -2239,7 +2239,7 @@ function setLoader(show) {
 }
 
 // Wrapper Supabase dengan timeout 8 detik
-function withTimeout(promise, ms = 8000) {
+function withTimeout(promise, ms = 15000) {
   return Promise.race([
     promise,
     new Promise((_, reject) =>
@@ -5087,10 +5087,7 @@ async function loadDbSimper() {
     const { data, error } = await withTimeout(
       supabaseClient
         .from('simper_registration')
-        .select(`id,nama,no_badge,company,simper_num,kategori,jenis_sim,no_sim,
-                 sim_polisi_expiry,id_badge_expiry,simper_expiry,status,
-                 violation_count,accident_count,simper_dicabut_sampai,
-                 jenis_pendaftaran,created_at`)
+        .select('id,nama,no_badge,company,simper_num,kategori,jenis_sim,no_sim,sim_polisi_expiry,id_badge_expiry,simper_expiry,status,violation_count,accident_count,simper_dicabut_sampai,jenis_pendaftaran,created_at')
         .order('nama', { ascending: true })
     );
     if (error) throw error;
