@@ -5092,12 +5092,10 @@ let _dbSimperSortAsc = true;
 async function loadDbSimper() {
   setLoader(true);
   try {
-    const { data, error } = await withTimeout(
-      supabaseClient
-        .from('simper_registration')
-        .select('id,nama,no_badge,company,simper_number,kategori,jenis_sim,no_sim,sim_polisi_expiry,id_badge_expiry,simper_expiry,status,violation_count,accident_count,simper_dicabut_sampai,jenis_pendaftaran,created_at')
-        .order('nama', { ascending: true })
-    );
+    const { data, error } = await supabaseClient
+      .from('simper_registration')
+      .select('id,nama,no_badge,company,simper_number,kategori,jenis_sim,no_sim,sim_polisi_expiry,id_badge_expiry,simper_expiry,status,violation_count,accident_count,simper_dicabut_sampai,jenis_pendaftaran,created_at')
+      .order('nama', { ascending: true });
     if (error) throw error;
 
     _dbSimperAll = data || [];
@@ -5132,11 +5130,12 @@ function filterDbSimper() {
 
   // Sort
   _dbSimperFiltered.sort((a, b) => {
-    let va = a[_dbSimperSortCol] || '';
-    let vb = b[_dbSimperSortCol] || '';
-    if (typeof va === 'string') va = va.toLowerCase();
-    if (typeof vb === 'string') vb = vb.toLowerCase();
-    return _dbSimperSortAsc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+    // Primary sort: no_badge (group by badge)
+    const ba = (a.no_badge || '').toLowerCase();
+    const bb = (b.no_badge || '').toLowerCase();
+    if (ba !== bb) return ba > bb ? 1 : -1;
+    // Secondary: created_at descending (newest first per badge)
+    return (b.created_at || '') > (a.created_at || '') ? 1 : -1;
   });
 
   _dbSimperPage = 1;
@@ -5216,7 +5215,30 @@ function renderDbSimper() {
     tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--muted);">
       Tidak ada data yang sesuai filter</td></tr>`;
   } else {
+    let lastBadge = null;
+    let rowNum = start;
+
     tbody.innerHTML = pageData.map((r, i) => {
+      rowNum++;
+      const isNewBadge = r.no_badge !== lastBadge;
+      lastBadge = r.no_badge;
+
+      // Hitung berapa record dengan badge yang sama
+      const badgeCount = _dbSimperFiltered.filter(x => x.no_badge === r.no_badge).length;
+      const badgeIndex = _dbSimperFiltered.filter((x, idx) => x.no_badge === r.no_badge && idx < start + i).length;
+
+      // Group header row jika badge baru
+      const groupHeader = isNewBadge && badgeCount > 1 ? `
+        <tr>
+          <td colspan="11" style="background:rgba(14,165,160,0.08);border-top:2px solid rgba(14,165,160,0.3);
+            padding:8px 16px;font-size:12px;">
+            <span style="font-weight:600;color:var(--teal);">🪪 ${r.no_badge}</span>
+            <span style="color:var(--muted);margin-left:8px;">${r.nama}</span>
+            <span style="margin-left:8px;background:var(--teal);color:white;
+              padding:1px 8px;border-radius:20px;font-size:11px;">${badgeCount} pengajuan</span>
+          </td>
+        </tr>` : '';
+
       // Status badge
       const statusColor = {
         'Diterbitkan':              'background:rgba(34,197,94,0.15);color:#22c55e',
@@ -5248,11 +5270,17 @@ function renderDbSimper() {
         ? `<span style="font-size:11px;">🔴×${vCount} 💥×${aCount}</span>`
         : `<span style="color:var(--muted);font-size:11px;">—</span>`;
 
-      return `<tr style="${r.status === 'SIMPER Dicabut' ? 'opacity:0.7;' : ''}">
-        <td style="color:var(--muted);font-size:12px;">${start + i + 1}</td>
-        <td>
+      // Indent jika bagian dari group
+      const indent = badgeCount > 1 ? 'padding-left:24px;border-left:3px solid rgba(14,165,160,0.2);' : '';
+
+      return `${groupHeader}<tr style="${r.status === 'SIMPER Dicabut' ? 'opacity:0.7;' : ''}">
+        <td style="color:var(--muted);font-size:12px;">${rowNum}</td>
+        <td style="${indent}">
           <div style="font-weight:600;font-size:13px;">${r.nama || '—'}</div>
-          <div style="font-size:11px;color:var(--muted);">${r.jenis_pendaftaran === 'perpanjang' ? '🔄 Perpanjang' : '🆕 Baru'}</div>
+          <div style="font-size:11px;color:var(--muted);">
+            ${r.jenis_pendaftaran === 'perpanjang' ? '🔄 Perpanjang' : '🆕 Baru'}
+            ${badgeCount > 1 ? `· <span style="color:var(--teal);">${r.company}</span>` : ''}
+          </div>
         </td>
         <td style="font-family:'Syne',sans-serif;font-size:13px;">${r.no_badge || '—'}</td>
         <td style="font-size:13px;">${r.company || '—'}</td>
@@ -5608,12 +5636,11 @@ function closePelanggaranModal() {
 async function loadPelanggaranSimper() {
   setLoader(true);
   try {
-    const { data, error } = await withTimeout(
-      supabaseClient.from('pelanggaran_simper')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100)
-    );
+    const { data, error } = await supabaseClient
+      .from('pelanggaran_simper')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100);
     if (error) throw error;
 
     const tbody = document.getElementById('pelanggaranTableBody');
