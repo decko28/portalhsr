@@ -4444,9 +4444,17 @@ function buildAdminAction(r) {
   return '';
 }
 
-function openSimperRegDetail(id) {
-  const r = simperRegMasterData.find(x => x.id === id);
-  activeSimperRegId = id;
+function openSimperRegDetail(idOrData) {
+  // Bisa dipanggil dengan id string atau data object langsung
+  let r;
+  if (typeof idOrData === 'object' && idOrData !== null) {
+    r = idOrData;
+    activeSimperRegId = r.id;
+  } else {
+    r = simperRegMasterData.find(x => x.id === idOrData);
+    activeSimperRegId = idOrData;
+  }
+  if (!r) return;
 
   document.getElementById('srdId').innerText       = r.id;
   document.getElementById('srdNama').innerText     = r.nama     || '—';
