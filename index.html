@@ -774,6 +774,9 @@ tbody tr:hover { background: var(--surface2); }
       </div>
 
       <div class="nav-section-label" id="adminNavLabel" style="display:none">Admin</div>
+      <div class="nav-item" onclick="switchPage('pelanggaranSimper')" id="nav-pelanggaranSimper" style="display:none">
+        <span class="nav-item-icon">🔴</span> Pelanggaran SIMPER
+      </div>
       <div class="nav-item" onclick="switchPage('userMgmt')" id="nav-userMgmt" style="display:none">
         <span class="nav-item-icon">👥</span> User Management
       </div>
@@ -1246,6 +1249,203 @@ tbody tr:hover { background: var(--surface2); }
     </div>
 
     <!-- ══ PAGE: USER MANAGEMENT ══ -->
+    <!-- ══ PELANGGARAN SIMPER ══ -->
+    <div id="page_pelanggaranSimper" class="page">
+      <div class="page-header">
+        <div>
+          <h1>🔴 Pelanggaran SIMPER</h1>
+          <p>Catat pelanggaran/incident & berikan lubang pada kartu SIMPER</p>
+        </div>
+        <button class="btn-submit" onclick="openTambahPelanggaran()">
+          ➕ Tambah Pelanggaran
+        </button>
+      </div>
+
+      <!-- Info tabel sanksi -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title"><span class="card-title-dot"></span>Tabel Sanksi Pelanggaran</div>
+        <div style="overflow-x:auto;">
+          <table style="min-width:700px;">
+            <thead>
+              <tr>
+                <th rowspan="2" style="vertical-align:middle;">Pelanggaran</th>
+                <th colspan="2" style="text-align:center;border-bottom:1px solid var(--border);">Delik Pertama</th>
+                <th colspan="2" style="text-align:center;border-bottom:1px solid var(--border);">Delik Kedua</th>
+                <th colspan="2" style="text-align:center;border-bottom:1px solid var(--border);">Delik Ketiga</th>
+              </tr>
+              <tr>
+                <th>Level</th><th>Konsekuensi</th>
+                <th>Level</th><th>Konsekuensi</th>
+                <th>Level</th><th>Konsekuensi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="badge" style="background:rgba(34,197,94,0.15);color:#22c55e;">Ringan</span></td>
+                <td>Level 1</td><td>Masa percobaan 30 hari</td>
+                <td>Level 2</td><td>Probation 3 bln + SIMPER dicabut 1 bln</td>
+                <td>Level 3</td><td>Probation 6 bln + SIMPER dicabut 3 bln. Harus daftar ulang.</td>
+              </tr>
+              <tr>
+                <td><span class="badge badge-warning">Berat</span></td>
+                <td>Level 2</td><td>Probation 3 bln + SIMPER dicabut 1 bln. Harus daftar ulang.</td>
+                <td>Level 3</td><td>Probation 6 bln + SIMPER dicabut 3 bln. Kemungkinan PHK. Harus daftar ulang.</td>
+                <td>—</td><td>—</td>
+              </tr>
+              <tr>
+                <td><span class="badge" style="background:rgba(239,68,68,0.15);color:#ef4444;">Sangat Berat</span></td>
+                <td>Level 3</td><td>Probation 6 bln + SIMPER dicabut 3 bln. Kemungkinan PHK. Harus daftar ulang.</td>
+                <td colspan="2" style="background:rgba(239,68,68,0.08);color:#ef4444;font-weight:600;text-align:center;">PHK — Pemutusan Hubungan Kerja</td>
+                <td>—</td><td>—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Daftar pelanggaran -->
+      <div class="card">
+        <div class="card-title"><span class="card-title-dot"></span>Riwayat Pelanggaran</div>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Tanggal</th>
+                <th>Nama / Badge</th>
+                <th>Jenis</th>
+                <th>Kategori</th>
+                <th>Delik</th>
+                <th>Level</th>
+                <th>Konsekuensi</th>
+                <th>Status SIMPER</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="pelanggaranTableBody">
+              <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px;">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ MODAL TAMBAH PELANGGARAN ══ -->
+    <div id="pelanggaranModal" class="modal-overlay hidden">
+      <div class="modal-box" style="max-width:560px;max-height:90vh;overflow-y:auto;">
+        <div class="modal-header">
+          <div class="modal-title">🔴 Catat Pelanggaran SIMPER</div>
+          <button class="modal-close" onclick="closePelanggaranModal()">✕</button>
+        </div>
+
+        <!-- Cari pemilik SIMPER -->
+        <div class="form-group">
+          <label class="form-label">Cari Pemilik SIMPER <span style="color:var(--red)">*</span></label>
+          <div style="display:flex;gap:8px;">
+            <input id="pelNoBadge" type="text" class="form-input" placeholder="Ketik No. Badge atau Nama..." style="flex:1"
+              oninput="searchSimperForPelanggaran(this.value)"/>
+          </div>
+          <div id="pelSimperResult" style="margin-top:8px;"></div>
+        </div>
+
+        <!-- Info SIMPER terpilih -->
+        <div id="pelSimperInfo" class="hidden" style="background:var(--surface2);border:1px solid var(--border);
+          border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;">
+            <div>
+              <div style="font-weight:600;font-size:15px;" id="pelInfoNama">—</div>
+              <div style="font-size:13px;color:var(--muted);" id="pelInfoBadge">—</div>
+              <div style="font-size:13px;color:var(--muted);" id="pelInfoCompany">—</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:12px;color:var(--muted);">SIMPER No.</div>
+              <div style="font-weight:600;color:var(--teal);font-size:13px;" id="pelInfoSimperNum">—</div>
+              <div style="font-size:12px;margin-top:4px;" id="pelInfoLubang">Lubang: <strong>0</strong></div>
+            </div>
+          </div>
+          <!-- Visualisasi lubang kartu -->
+          <div style="margin-top:12px;display:flex;gap:16px;">
+            <div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">VIOLATION</div>
+              <div style="display:flex;gap:6px;" id="pelViolationBoxes"></div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">ACCIDENT</div>
+              <div style="display:flex;gap:6px;" id="pelAccidentBoxes"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Tanggal Kejadian <span style="color:var(--red)">*</span></label>
+            <input id="pelTanggal" type="date" class="form-input"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Jenis <span style="color:var(--red)">*</span></label>
+            <select id="pelJenis" class="form-input" onchange="updateKonsekuensi()">
+              <option value="">Pilih Jenis</option>
+              <option value="Violation">🚦 Violation</option>
+              <option value="Accident">💥 Accident</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Kategori Pelanggaran <span style="color:var(--red)">*</span></label>
+            <select id="pelKategori" class="form-input" onchange="updateKonsekuensi()">
+              <option value="">Pilih Kategori</option>
+              <option value="Ringan">Ringan</option>
+              <option value="Berat">Berat</option>
+              <option value="Sangat Berat">Sangat Berat</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Deskripsi Kejadian <span style="color:var(--red)">*</span></label>
+            <input id="pelDeskripsi" type="text" class="form-input" placeholder="Ringkasan kejadian..."/>
+          </div>
+        </div>
+
+        <!-- Konsekuensi otomatis -->
+        <div id="pelKonsekuensiBox" class="hidden" style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);
+          border-radius:var(--radius-sm);padding:14px;margin-bottom:16px;">
+          <div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:8px;">⚠️ KONSEKUENSI OTOMATIS</div>
+          <div style="font-size:13px;color:var(--text);" id="pelKonsekuensiText">—</div>
+          <div style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap;">
+            <div>
+              <div style="font-size:11px;color:var(--muted);">Level Sanksi</div>
+              <div style="font-weight:700;font-size:16px;color:var(--red);" id="pelLevelText">—</div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--muted);">Lubang ke-</div>
+              <div style="font-weight:700;font-size:16px;color:var(--amber);" id="pelLubangText">—</div>
+            </div>
+            <div id="pelCabutBox" class="hidden">
+              <div style="font-size:11px;color:var(--muted);">SIMPER Dicabut</div>
+              <div style="font-weight:700;font-size:14px;color:var(--red);" id="pelCabutText">—</div>
+            </div>
+            <div id="pelProbationBox" class="hidden">
+              <div style="font-size:11px;color:var(--muted);">Masa Percobaan</div>
+              <div style="font-weight:700;font-size:14px;color:var(--amber);" id="pelProbationText">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Catatan Tambahan</label>
+          <textarea id="pelCatatan" class="form-input" rows="2" placeholder="Catatan admin, saksi, lokasi, dll..."></textarea>
+        </div>
+
+        <hr class="divider"/>
+        <div style="display:flex;gap:12px;">
+          <button class="btn-submit" onclick="submitPelanggaran()" style="flex:1;background:linear-gradient(135deg,#dc2626,#991b1b);">
+            🔴 Catat Pelanggaran & Beri Lubang
+          </button>
+          <button class="btn-secondary" onclick="closePelanggaranModal()" style="flex:0 0 auto;">Batal</button>
+        </div>
+      </div>
+    </div>
+
     <div id="page_userMgmt" class="page">
       <div class="page-header">
         <h1>User Management</h1>
@@ -2045,8 +2245,9 @@ async function onAuthSuccess(authUser) {
     document.getElementById('displayLevel').innerText = currentUser.level;
 
     if (['Admin','Superadmin'].includes(currentUser.level)) {
-      document.getElementById('adminNavLabel').style.display = '';
-      document.getElementById('nav-userMgmt').style.display  = '';
+      document.getElementById('adminNavLabel').style.display          = '';
+      document.getElementById('nav-userMgmt').style.display           = '';
+      document.getElementById('nav-pelanggaranSimper').style.display  = '';
     }
 
     // Selalu jalankan initData + repopulateFormDropdowns
@@ -2064,8 +2265,9 @@ function showLoginPage() {
   globalCompanies = []; globalLocs = []; uploadFiles = {};
   carMasterData = []; simperMasterData = []; inspMasterData = []; hazardMasterData = [];
   clearSession();
-  document.getElementById('adminNavLabel').style.display = 'none';
-  document.getElementById('nav-userMgmt').style.display  = 'none';
+  document.getElementById('adminNavLabel').style.display          = 'none';
+  document.getElementById('nav-userMgmt').style.display           = 'none';
+  document.getElementById('nav-pelanggaranSimper').style.display  = 'none';
   document.getElementById('loginPage').style.display     = '';
   document.getElementById('mainApp').classList.add('hidden');
   // Reset ke view login (bukan lupa password)
@@ -2278,7 +2480,8 @@ function switchPage(id) {
   if (id === 'carList')        loadCarPage();
   if (id === 'simper')         loadSimperPage();
   if (id === 'simperReg')      loadSimperRegPage();
-  if (id === 'userMgmt')       loadUsers();
+  if (id === 'userMgmt')            loadUsers();
+  if (id === 'pelanggaranSimper')   loadPelanggaranSimper();
   if (id === 'inspection' || id === 'hazard') repopulateFormDropdowns();
 }
 
@@ -4770,7 +4973,357 @@ function clearHazardForm() {
   delete uploadFiles['hPhotoAfter'];
 }
 
-// ══ MOBILE SIDEBAR ══
+/* ══════════════════════════════════════════
+   PELANGGARAN SIMPER
+══════════════════════════════════════════ */
+
+// Tabel sanksi berdasarkan kategori + delik
+const SANKSI_TABLE = {
+  'Ringan': {
+    1: { level: 1, probation: '30 hari',  cabut: null,    keterangan: 'Masa percobaan 30 hari' },
+    2: { level: 2, probation: '3 bulan',  cabut: '1 bulan', keterangan: 'Probation 3 bln + SIMPER dicabut 1 bln' },
+    3: { level: 3, probation: '6 bulan',  cabut: '3 bulan', keterangan: 'Probation 6 bln + SIMPER dicabut 3 bln. Harus daftar ulang.' },
+  },
+  'Berat': {
+    1: { level: 2, probation: '3 bulan',  cabut: '1 bulan', keterangan: 'Probation 3 bln + SIMPER dicabut 1 bln. Harus daftar ulang.' },
+    2: { level: 3, probation: '6 bulan',  cabut: '3 bulan', keterangan: 'Probation 6 bln + SIMPER dicabut 3 bln. Kemungkinan PHK. Harus daftar ulang.' },
+    3: null,
+  },
+  'Sangat Berat': {
+    1: { level: 3, probation: '6 bulan',  cabut: '3 bulan', keterangan: 'Probation 6 bln + SIMPER dicabut 3 bln. Kemungkinan PHK. Harus daftar ulang.' },
+    2: { level: 3, probation: null, cabut: null, keterangan: '⚠️ PHK — Pemutusan Hubungan Kerja', phk: true },
+    3: null,
+  },
+};
+
+let selectedSimperForPelanggaran = null;
+let _pelSearchTimeout = null;
+
+// Render kotak lubang visual
+function renderLubangBoxes(violation = 0, accident = 0) {
+  const MAX = 3;
+  const mkBoxes = (filled, containerId) => {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = Array.from({ length: MAX }, (_, i) => {
+      const isPunched = i < filled;
+      return `<div style="width:28px;height:28px;border:2px solid ${isPunched ? '#ef4444' : 'var(--border)'};
+        border-radius:4px;background:${isPunched ? 'rgba(239,68,68,0.2)' : 'var(--surface2)'};
+        display:flex;align-items:center;justify-content:center;font-size:16px;">
+        ${isPunched ? '🔴' : ''}
+      </div>`;
+    }).join('');
+  };
+  mkBoxes(violation, 'pelViolationBoxes');
+  mkBoxes(accident,  'pelAccidentBoxes');
+}
+
+// Cari SIMPER saat input
+async function searchSimperForPelanggaran(q) {
+  if (_pelSearchTimeout) clearTimeout(_pelSearchTimeout);
+  if (!q || q.length < 2) {
+    document.getElementById('pelSimperResult').innerHTML = '';
+    return;
+  }
+  _pelSearchTimeout = setTimeout(async () => {
+    const { data } = await supabaseClient
+      .from('simper_registration')
+      .select('id,nama,no_badge,company,simper_num,status,kategori,violation_count,accident_count')
+      .or(`no_badge.ilike.%${q}%,nama.ilike.%${q}%`)
+      .eq('status', 'Diterbitkan')
+      .limit(5);
+
+    const res = document.getElementById('pelSimperResult');
+    if (!data || data.length === 0) {
+      res.innerHTML = `<div style="font-size:13px;color:var(--muted);padding:8px;">
+        Tidak ditemukan SIMPER aktif dengan badge/nama tersebut.</div>`;
+      return;
+    }
+    res.innerHTML = data.map(r => `
+      <div onclick="selectSimperForPelanggaran(${JSON.stringify(JSON.stringify(r))})"
+        style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border);
+        border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer;transition:border-color 0.2s;"
+        onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-weight:600;font-size:14px;">${r.nama} <span style="color:var(--muted);font-size:12px;">(${r.no_badge})</span></div>
+        <div style="font-size:12px;color:var(--muted);">${r.company} • SIMPER: ${r.simper_num || '—'} • Kategori: ${r.kategori || '—'}</div>
+        <div style="font-size:12px;margin-top:4px;">
+          🔴 Violation: <strong>${r.violation_count || 0}</strong> &nbsp;
+          💥 Accident: <strong>${r.accident_count || 0}</strong>
+        </div>
+      </div>`).join('');
+  }, 400);
+}
+
+function selectSimperForPelanggaran(rStr) {
+  const r = JSON.parse(rStr);
+  selectedSimperForPelanggaran = r;
+
+  document.getElementById('pelNoBadge').value      = `${r.nama} (${r.no_badge})`;
+  document.getElementById('pelSimperResult').innerHTML = '';
+  document.getElementById('pelSimperInfo').classList.remove('hidden');
+  document.getElementById('pelInfoNama').innerText    = r.nama;
+  document.getElementById('pelInfoBadge').innerText   = r.no_badge;
+  document.getElementById('pelInfoCompany').innerText = r.company;
+  document.getElementById('pelInfoSimperNum').innerText = r.simper_num || '—';
+  document.getElementById('pelInfoLubang').innerHTML  =
+    `Violation: <strong>${r.violation_count||0}</strong> &nbsp; Accident: <strong>${r.accident_count||0}</strong>`;
+
+  renderLubangBoxes(r.violation_count || 0, r.accident_count || 0);
+  updateKonsekuensi();
+}
+
+function updateKonsekuensi() {
+  if (!selectedSimperForPelanggaran) return;
+
+  const jenis    = document.getElementById('pelJenis').value;
+  const kategori = document.getElementById('pelKategori').value;
+  const box      = document.getElementById('pelKonsekuensiBox');
+
+  if (!jenis || !kategori) { box.classList.add('hidden'); return; }
+
+  // Hitung delik berikutnya
+  const r = selectedSimperForPelanggaran;
+  const currentCount = jenis === 'Violation'
+    ? (r.violation_count || 0)
+    : (r.accident_count || 0);
+  const nextDelik = currentCount + 1;
+
+  const sanksiKat = SANKSI_TABLE[kategori];
+  if (!sanksiKat) { box.classList.add('hidden'); return; }
+
+  const sanksi = sanksiKat[nextDelik] || sanksiKat[Math.max(...Object.keys(sanksiKat).map(Number))];
+  if (!sanksi) {
+    box.classList.remove('hidden');
+    document.getElementById('pelKonsekuensiText').innerText = '⚠️ Batas delik sudah terlampaui — lihat kebijakan PHK.';
+    document.getElementById('pelLevelText').innerText  = '—';
+    document.getElementById('pelLubangText').innerText = nextDelik;
+    document.getElementById('pelCabutBox').classList.add('hidden');
+    document.getElementById('pelProbationBox').classList.add('hidden');
+    return;
+  }
+
+  box.classList.remove('hidden');
+  document.getElementById('pelKonsekuensiText').innerText = sanksi.keterangan;
+  document.getElementById('pelLevelText').innerText  = `Level ${sanksi.level}`;
+  document.getElementById('pelLubangText').innerText = `Lubang ke-${nextDelik}`;
+
+  const cabutBox     = document.getElementById('pelCabutBox');
+  const probationBox = document.getElementById('pelProbationBox');
+
+  if (sanksi.cabut) {
+    cabutBox.classList.remove('hidden');
+    document.getElementById('pelCabutText').innerText = sanksi.cabut;
+  } else { cabutBox.classList.add('hidden'); }
+
+  if (sanksi.probation) {
+    probationBox.classList.remove('hidden');
+    document.getElementById('pelProbationText').innerText = sanksi.probation;
+  } else { probationBox.classList.add('hidden'); }
+}
+
+async function submitPelanggaran() {
+  if (!selectedSimperForPelanggaran) return showToast('Pilih pemilik SIMPER dulu!', 'error');
+
+  const tanggal  = document.getElementById('pelTanggal').value;
+  const jenis    = document.getElementById('pelJenis').value;
+  const kategori = document.getElementById('pelKategori').value;
+  const deskripsi = document.getElementById('pelDeskripsi').value.trim();
+  const catatan  = document.getElementById('pelCatatan').value.trim();
+
+  if (!tanggal)  return showToast('Tanggal kejadian wajib diisi!', 'error');
+  if (!jenis)    return showToast('Pilih jenis pelanggaran!', 'error');
+  if (!kategori) return showToast('Pilih kategori pelanggaran!', 'error');
+  if (!deskripsi) return showToast('Deskripsi kejadian wajib diisi!', 'error');
+
+  const r = selectedSimperForPelanggaran;
+  const isViolation = jenis === 'Violation';
+  const currentCount = isViolation ? (r.violation_count || 0) : (r.accident_count || 0);
+  const nextDelik    = currentCount + 1;
+
+  const sanksiKat = SANKSI_TABLE[kategori];
+  const sanksi    = sanksiKat
+    ? (sanksiKat[nextDelik] || sanksiKat[Math.max(...Object.keys(sanksiKat).map(Number))])
+    : null;
+
+  setLoader(true);
+  try {
+    // 1. Insert ke tabel pelanggaran_simper
+    const { error: pelErr } = await supabaseClient.from('pelanggaran_simper').insert([{
+      simper_id:       r.id,
+      simper_num:      r.simper_num,
+      no_badge:        r.no_badge,
+      nama:            r.nama,
+      company:         r.company,
+      tanggal:         tanggal,
+      jenis:           jenis,
+      kategori:        kategori,
+      delik:           nextDelik,
+      level_sanksi:    sanksi?.level || 3,
+      probation:       sanksi?.probation || null,
+      cabut_simper:    sanksi?.cabut || null,
+      deskripsi:       deskripsi,
+      catatan:         catatan,
+      is_phk:          sanksi?.phk || false,
+      dicatat_oleh:    currentUser.email,
+      created_at:      new Date().toISOString(),
+    }]);
+    if (pelErr) throw pelErr;
+
+    // 2. Update counter lubang di simper_registration
+    const updateData = isViolation
+      ? { violation_count: nextDelik }
+      : { accident_count: nextDelik };
+
+    // Jika ada pencabutan SIMPER, update status juga
+    if (sanksi?.cabut) {
+      const cabutBulan = parseInt(sanksi.cabut);
+      const cabutSampai = new Date();
+      cabutSampai.setMonth(cabutSampai.getMonth() + cabutBulan);
+      updateData.status = 'SIMPER Dicabut';
+      updateData.simper_dicabut_sampai = cabutSampai.toISOString().split('T')[0];
+    }
+
+    const { error: updateErr } = await supabaseClient
+      .from('simper_registration')
+      .update(updateData)
+      .eq('id', r.id);
+    if (updateErr) throw updateErr;
+
+    // 3. Feedback ke user
+    let pesan = `✅ Pelanggaran dicatat. Lubang ke-${nextDelik} diberikan.`;
+    if (sanksi?.phk) pesan += '\n⚠️ PERINGATAN: Delik ini berpotensi PHK — koordinasikan dengan HR.';
+    if (sanksi?.cabut) pesan += `\nSIMPER dicabut selama ${sanksi.cabut}.`;
+
+    showToast(pesan);
+    closePelanggaranModal();
+    await loadPelanggaranSimper();
+
+  } catch(e) {
+    console.error(e);
+    showToast('Gagal mencatat pelanggaran: ' + (e.message || 'Unknown error'), 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+function openTambahPelanggaran() {
+  selectedSimperForPelanggaran = null;
+  document.getElementById('pelNoBadge').value       = '';
+  document.getElementById('pelSimperResult').innerHTML = '';
+  document.getElementById('pelSimperInfo').classList.add('hidden');
+  document.getElementById('pelTanggal').value        = new Date().toISOString().split('T')[0];
+  document.getElementById('pelJenis').value          = '';
+  document.getElementById('pelKategori').value       = '';
+  document.getElementById('pelDeskripsi').value      = '';
+  document.getElementById('pelCatatan').value        = '';
+  document.getElementById('pelKonsekuensiBox').classList.add('hidden');
+  document.getElementById('pelanggaranModal').classList.remove('hidden');
+}
+
+function closePelanggaranModal() {
+  document.getElementById('pelanggaranModal').classList.add('hidden');
+  selectedSimperForPelanggaran = null;
+}
+
+async function loadPelanggaranSimper() {
+  setLoader(true);
+  try {
+    const { data, error } = await withTimeout(
+      supabaseClient.from('pelanggaran_simper')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100)
+    );
+    if (error) throw error;
+
+    const tbody = document.getElementById('pelanggaranTableBody');
+    if (!data || data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px;">
+        Belum ada pelanggaran tercatat</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.map(p => {
+      const jenisBadge = p.jenis === 'Violation'
+        ? `<span class="badge badge-warning">🚦 Violation</span>`
+        : `<span class="badge" style="background:rgba(239,68,68,0.15);color:#ef4444;">💥 Accident</span>`;
+
+      const katBadge = {
+        'Ringan':       `<span class="badge" style="background:rgba(34,197,94,0.15);color:#22c55e;">Ringan</span>`,
+        'Berat':        `<span class="badge badge-warning">Berat</span>`,
+        'Sangat Berat': `<span class="badge" style="background:rgba(239,68,68,0.15);color:#ef4444;">Sangat Berat</span>`,
+      }[p.kategori] || p.kategori;
+
+      const statusBadge = p.cabut_simper
+        ? `<span class="badge" style="background:rgba(239,68,68,0.15);color:#ef4444;">Dicabut ${p.cabut_simper}</span>`
+        : p.is_phk
+        ? `<span class="badge" style="background:rgba(239,68,68,0.3);color:#ef4444;">⚠️ PHK</span>`
+        : `<span class="badge" style="background:rgba(34,197,94,0.15);color:#22c55e;">Aktif</span>`;
+
+      const tgl = p.tanggal ? new Date(p.tanggal).toLocaleDateString('id-ID') : '—';
+
+      return `<tr>
+        <td style="white-space:nowrap">${tgl}</td>
+        <td>
+          <div style="font-weight:600;font-size:13px;">${p.nama}</div>
+          <div style="font-size:12px;color:var(--muted);">${p.no_badge} • ${p.company}</div>
+        </td>
+        <td>${jenisBadge}</td>
+        <td>${katBadge}</td>
+        <td style="text-align:center;font-weight:700;">Ke-${p.delik}</td>
+        <td style="text-align:center;">
+          <span style="font-weight:700;color:var(--red);">Level ${p.level_sanksi}</span>
+        </td>
+        <td style="font-size:12px;max-width:200px;">
+          ${p.probation ? `Probation: <strong>${p.probation}</strong><br>` : ''}
+          ${p.cabut_simper ? `Cabut: <strong>${p.cabut_simper}</strong><br>` : ''}
+          <span style="color:var(--muted);">${p.deskripsi || '—'}</span>
+        </td>
+        <td>${statusBadge}</td>
+        <td>
+          <button class="btn-remove" style="font-size:11px;padding:5px 10px;"
+            onclick="hapusPelanggaran('${p.id}','${p.simper_id}','${p.jenis}',${p.delik})">
+            Hapus
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    console.error(e);
+    showToast('Gagal memuat data pelanggaran', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+async function hapusPelanggaran(id, simperId, jenis, delik) {
+  if (!confirm(`Hapus catatan pelanggaran ini?\nLubang ke-${delik} akan dihapus dari kartu SIMPER.`)) return;
+  setLoader(true);
+  try {
+    const { error } = await supabaseClient.from('pelanggaran_simper').delete().eq('id', id);
+    if (error) throw error;
+
+    // Kurangi counter
+    const field = jenis === 'Violation' ? 'violation_count' : 'accident_count';
+    const { data: sr } = await supabaseClient.from('simper_registration')
+      .select(field).eq('id', simperId).single();
+    if (sr) {
+      const newCount = Math.max(0, (sr[field] || 0) - 1);
+      await supabaseClient.from('simper_registration')
+        .update({ [field]: newCount }).eq('id', simperId);
+    }
+
+    showToast('Pelanggaran berhasil dihapus ✅');
+    await loadPelanggaranSimper();
+  } catch(e) {
+    console.error(e);
+    showToast('Gagal menghapus pelanggaran', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+/* ══ END PELANGGARAN SIMPER ══ */
 function toggleMobileSidebar() {
   const sidebar  = document.querySelector('.sidebar');
   const overlay  = document.getElementById('sidebarOverlay');
