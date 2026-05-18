@@ -774,6 +774,9 @@ tbody tr:hover { background: var(--surface2); }
       </div>
 
       <div class="nav-section-label" id="adminNavLabel" style="display:none">Admin</div>
+      <div class="nav-item" onclick="switchPage('dbSimper')" id="nav-dbSimper" style="display:none">
+        <span class="nav-item-icon">🗄️</span> Database SIMPER
+      </div>
       <div class="nav-item" onclick="switchPage('pelanggaranSimper')" id="nav-pelanggaranSimper" style="display:none">
         <span class="nav-item-icon">🔴</span> Pelanggaran SIMPER
       </div>
@@ -1249,6 +1252,97 @@ tbody tr:hover { background: var(--surface2); }
     </div>
 
     <!-- ══ PAGE: USER MANAGEMENT ══ -->
+    <!-- ══ DATABASE SIMPER ══ -->
+    <div id="page_dbSimper" class="page">
+      <div class="page-header">
+        <div>
+          <h1>🗄️ Database SIMPER</h1>
+          <p>Seluruh data SIMPER yang terdaftar di sistem</p>
+        </div>
+        <button class="btn-submit" onclick="exportDbSimper()" style="background:var(--navy);">
+          ⬇️ Export Excel
+        </button>
+      </div>
+
+      <!-- Filter & Search -->
+      <div class="card" style="margin-bottom:16px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:12px;align-items:flex-end;">
+          <!-- Search -->
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">Cari</label>
+            <input id="dbSimperSearch" type="text" class="form-input"
+              placeholder="Nama, No. Badge, No. SIMPER..."
+              oninput="filterDbSimper()"/>
+          </div>
+          <!-- Filter Company -->
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">Perusahaan</label>
+            <select id="dbSimperCompany" class="form-input" onchange="filterDbSimper()">
+              <option value="">Semua Perusahaan</option>
+            </select>
+          </div>
+          <!-- Filter Status -->
+          <div class="form-group" style="margin:0;">
+            <label class="form-label">Status SIMPER</label>
+            <select id="dbSimperStatus" class="form-input" onchange="filterDbSimper()">
+              <option value="">Semua Status</option>
+              <option value="Diterbitkan">✅ Diterbitkan</option>
+              <option value="Menunggu Verifikasi">⏳ Menunggu Verifikasi</option>
+              <option value="Menunggu Ujian Tulis">📝 Menunggu Ujian Tulis</option>
+              <option value="Ujian Tulis Tidak Lulus">❌ Ujian Tulis TL</option>
+              <option value="Menunggu Ujian Praktik">🔧 Menunggu Ujian Praktik</option>
+              <option value="Ujian Praktik Tidak Lulus">❌ Ujian Praktik TL</option>
+              <option value="Siap Diterbitkan">🖨️ Siap Diterbitkan</option>
+              <option value="SIMPER Dicabut">🚫 SIMPER Dicabut</option>
+              <option value="Ditolak">❌ Ditolak</option>
+            </select>
+          </div>
+          <!-- Reset -->
+          <button class="btn-secondary" onclick="resetFilterDbSimper()" style="white-space:nowrap;padding:11px 16px;">
+            ↺ Reset
+          </button>
+        </div>
+
+        <!-- Stats bar -->
+        <div style="margin-top:14px;display:flex;gap:16px;flex-wrap:wrap;" id="dbSimperStats">
+          <div style="font-size:13px;color:var(--muted);">Memuat statistik...</div>
+        </div>
+      </div>
+
+      <!-- Tabel -->
+      <div class="card" style="padding:0;overflow:hidden;">
+        <div style="overflow-x:auto;">
+          <table id="dbSimperTable" style="min-width:900px;">
+            <thead>
+              <tr>
+                <th style="cursor:pointer;" onclick="sortDbSimper('no')">No.</th>
+                <th style="cursor:pointer;" onclick="sortDbSimper('nama')">Nama ↕</th>
+                <th style="cursor:pointer;" onclick="sortDbSimper('no_badge')">No. Badge ↕</th>
+                <th>Perusahaan</th>
+                <th>No. SIMPER</th>
+                <th>Kategori</th>
+                <th>Jenis SIM</th>
+                <th style="cursor:pointer;" onclick="sortDbSimper('simper_expiry')">Expired ↕</th>
+                <th>Lubang</th>
+                <th style="cursor:pointer;" onclick="sortDbSimper('status')">Status ↕</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="dbSimperBody">
+              <tr><td colspan="11" style="text-align:center;padding:40px;color:var(--muted);">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;
+          border-top:1px solid var(--border);flex-wrap:wrap;gap:10px;">
+          <div style="font-size:13px;color:var(--muted);" id="dbSimperInfo">—</div>
+          <div style="display:flex;gap:8px;" id="dbSimperPagination"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- ══ PELANGGARAN SIMPER ══ -->
     <div id="page_pelanggaranSimper" class="page">
       <div class="page-header">
@@ -2246,6 +2340,7 @@ async function onAuthSuccess(authUser) {
 
     if (['Admin','Superadmin'].includes(currentUser.level)) {
       document.getElementById('adminNavLabel').style.display          = '';
+      document.getElementById('nav-dbSimper').style.display           = '';
       document.getElementById('nav-userMgmt').style.display           = '';
       document.getElementById('nav-pelanggaranSimper').style.display  = '';
     }
@@ -2266,6 +2361,7 @@ function showLoginPage() {
   carMasterData = []; simperMasterData = []; inspMasterData = []; hazardMasterData = [];
   clearSession();
   document.getElementById('adminNavLabel').style.display          = 'none';
+  document.getElementById('nav-dbSimper').style.display           = 'none';
   document.getElementById('nav-userMgmt').style.display           = 'none';
   document.getElementById('nav-pelanggaranSimper').style.display  = 'none';
   document.getElementById('loginPage').style.display     = '';
@@ -2482,6 +2578,7 @@ function switchPage(id) {
   if (id === 'simperReg')      loadSimperRegPage();
   if (id === 'userMgmt')            loadUsers();
   if (id === 'pelanggaranSimper')   loadPelanggaranSimper();
+  if (id === 'dbSimper')            loadDbSimper();
   if (id === 'inspection' || id === 'hazard') repopulateFormDropdowns();
 }
 
@@ -4974,8 +5071,286 @@ function clearHazardForm() {
 }
 
 /* ══════════════════════════════════════════
-   PELANGGARAN SIMPER
+   DATABASE SIMPER
 ══════════════════════════════════════════ */
+
+let _dbSimperAll    = [];   // semua data dari DB
+let _dbSimperFiltered = []; // setelah filter
+let _dbSimperPage   = 1;
+const DB_SIMPER_PER_PAGE = 25;
+let _dbSimperSortCol = 'nama';
+let _dbSimperSortAsc = true;
+
+async function loadDbSimper() {
+  setLoader(true);
+  try {
+    const { data, error } = await withTimeout(
+      supabaseClient
+        .from('simper_registration')
+        .select(`id,nama,no_badge,company,simper_num,kategori,jenis_sim,no_sim,
+                 sim_polisi_expiry,id_badge_expiry,simper_expiry,status,
+                 violation_count,accident_count,simper_dicabut_sampai,
+                 jenis_pendaftaran,created_at`)
+        .order('nama', { ascending: true })
+    );
+    if (error) throw error;
+
+    _dbSimperAll = data || [];
+
+    // Populate filter company
+    const companies = [...new Set(_dbSimperAll.map(r => r.company).filter(Boolean))].sort();
+    const selComp = document.getElementById('dbSimperCompany');
+    selComp.innerHTML = '<option value="">Semua Perusahaan</option>' +
+      companies.map(c => `<option value="${c}">${c}</option>`).join('');
+
+    filterDbSimper();
+  } catch(e) {
+    console.error(e);
+    showToast('Gagal memuat database SIMPER', 'error');
+  } finally {
+    setLoader(false);
+  }
+}
+
+function filterDbSimper() {
+  const q       = (document.getElementById('dbSimperSearch')?.value || '').toLowerCase().trim();
+  const company = document.getElementById('dbSimperCompany')?.value || '';
+  const status  = document.getElementById('dbSimperStatus')?.value || '';
+
+  _dbSimperFiltered = _dbSimperAll.filter(r => {
+    const matchQ = !q || [r.nama, r.no_badge, r.simper_num, r.no_sim, r.jenis_sim]
+      .some(v => (v || '').toLowerCase().includes(q));
+    const matchC = !company || r.company === company;
+    const matchS = !status  || r.status  === status;
+    return matchQ && matchC && matchS;
+  });
+
+  // Sort
+  _dbSimperFiltered.sort((a, b) => {
+    let va = a[_dbSimperSortCol] || '';
+    let vb = b[_dbSimperSortCol] || '';
+    if (typeof va === 'string') va = va.toLowerCase();
+    if (typeof vb === 'string') vb = vb.toLowerCase();
+    return _dbSimperSortAsc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+  });
+
+  _dbSimperPage = 1;
+  renderDbSimper();
+  renderDbSimperStats();
+}
+
+function sortDbSimper(col) {
+  if (_dbSimperSortCol === col) {
+    _dbSimperSortAsc = !_dbSimperSortAsc;
+  } else {
+    _dbSimperSortCol = col;
+    _dbSimperSortAsc = true;
+  }
+  filterDbSimper();
+}
+
+function resetFilterDbSimper() {
+  document.getElementById('dbSimperSearch').value   = '';
+  document.getElementById('dbSimperCompany').value  = '';
+  document.getElementById('dbSimperStatus').value   = '';
+  filterDbSimper();
+}
+
+function renderDbSimperStats() {
+  const total     = _dbSimperFiltered.length;
+  const aktif     = _dbSimperFiltered.filter(r => r.status === 'Diterbitkan').length;
+  const dicabut   = _dbSimperFiltered.filter(r => r.status === 'SIMPER Dicabut').length;
+  const proses    = _dbSimperFiltered.filter(r =>
+    ['Menunggu Verifikasi','Menunggu Ujian Tulis','Menunggu Ujian Praktik','Siap Diterbitkan'].includes(r.status)
+  ).length;
+
+  // Cek yang akan expired dalam 30 hari
+  const now     = new Date();
+  const in30    = new Date(); in30.setDate(now.getDate() + 30);
+  const expSoon = _dbSimperFiltered.filter(r => {
+    if (r.status !== 'Diterbitkan') return false;
+    const exp = r.simper_expiry || r.sim_polisi_expiry;
+    if (!exp) return false;
+    const d = new Date(exp);
+    return d >= now && d <= in30;
+  }).length;
+
+  document.getElementById('dbSimperStats').innerHTML = `
+    <div style="display:flex;gap:20px;flex-wrap:wrap;">
+      <span style="font-size:13px;">
+        📊 Total: <strong style="color:var(--text)">${total}</strong>
+      </span>
+      <span style="font-size:13px;">
+        ✅ Aktif: <strong style="color:#22c55e">${aktif}</strong>
+      </span>
+      <span style="font-size:13px;">
+        ⏳ Proses: <strong style="color:var(--amber)">${proses}</strong>
+      </span>
+      <span style="font-size:13px;">
+        🚫 Dicabut: <strong style="color:#ef4444">${dicabut}</strong>
+      </span>
+      ${expSoon > 0 ? `<span style="font-size:13px;background:rgba(245,158,11,0.15);
+        padding:3px 10px;border-radius:20px;border:1px solid rgba(245,158,11,0.3);">
+        ⚠️ Expired ≤30 hari: <strong style="color:var(--amber)">${expSoon}</strong>
+      </span>` : ''}
+    </div>`;
+}
+
+function renderDbSimper() {
+  const total = _dbSimperFiltered.length;
+  const totalPages = Math.max(1, Math.ceil(total / DB_SIMPER_PER_PAGE));
+  const start = (_dbSimperPage - 1) * DB_SIMPER_PER_PAGE;
+  const pageData = _dbSimperFiltered.slice(start, start + DB_SIMPER_PER_PAGE);
+
+  const now = new Date();
+  const in30 = new Date(); in30.setDate(now.getDate() + 30);
+
+  const tbody = document.getElementById('dbSimperBody');
+
+  if (pageData.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--muted);">
+      Tidak ada data yang sesuai filter</td></tr>`;
+  } else {
+    tbody.innerHTML = pageData.map((r, i) => {
+      // Status badge
+      const statusColor = {
+        'Diterbitkan':              'background:rgba(34,197,94,0.15);color:#22c55e',
+        'SIMPER Dicabut':           'background:rgba(239,68,68,0.15);color:#ef4444',
+        'Ditolak':                  'background:rgba(239,68,68,0.15);color:#ef4444',
+        'Siap Diterbitkan':         'background:rgba(14,165,160,0.15);color:var(--teal)',
+        'Menunggu Verifikasi':      'background:rgba(245,158,11,0.15);color:var(--amber)',
+        'Menunggu Ujian Tulis':     'background:rgba(245,158,11,0.15);color:var(--amber)',
+        'Menunggu Ujian Praktik':   'background:rgba(245,158,11,0.15);color:var(--amber)',
+        'Ujian Tulis Tidak Lulus':  'background:rgba(239,68,68,0.15);color:#ef4444',
+        'Ujian Praktik Tidak Lulus':'background:rgba(239,68,68,0.15);color:#ef4444',
+      }[r.status] || 'background:var(--surface2);color:var(--muted)';
+
+      // Expiry check
+      const expDate = r.simper_expiry || r.sim_polisi_expiry || r.id_badge_expiry;
+      let expDisplay = '—';
+      let expStyle   = '';
+      if (expDate) {
+        const d = new Date(expDate);
+        expDisplay = d.toLocaleDateString('id-ID');
+        if (d < now)  expStyle = 'color:#ef4444;font-weight:600;';
+        else if (d <= in30) expStyle = 'color:var(--amber);font-weight:600;';
+      }
+
+      // Lubang visual
+      const vCount = r.violation_count || 0;
+      const aCount = r.accident_count  || 0;
+      const lubang = vCount + aCount > 0
+        ? `<span style="font-size:11px;">🔴×${vCount} 💥×${aCount}</span>`
+        : `<span style="color:var(--muted);font-size:11px;">—</span>`;
+
+      return `<tr style="${r.status === 'SIMPER Dicabut' ? 'opacity:0.7;' : ''}">
+        <td style="color:var(--muted);font-size:12px;">${start + i + 1}</td>
+        <td>
+          <div style="font-weight:600;font-size:13px;">${r.nama || '—'}</div>
+          <div style="font-size:11px;color:var(--muted);">${r.jenis_pendaftaran === 'perpanjang' ? '🔄 Perpanjang' : '🆕 Baru'}</div>
+        </td>
+        <td style="font-family:'Syne',sans-serif;font-size:13px;">${r.no_badge || '—'}</td>
+        <td style="font-size:13px;">${r.company || '—'}</td>
+        <td style="font-size:12px;color:var(--teal);">${r.simper_num || '—'}</td>
+        <td style="text-align:center;">
+          ${r.kategori ? `<span style="font-weight:700;font-size:15px;color:var(--amber);">${r.kategori}</span>` : '—'}
+        </td>
+        <td style="font-size:12px;">${r.jenis_sim || '—'}</td>
+        <td style="${expStyle}font-size:12px;">${expDisplay}</td>
+        <td style="text-align:center;">${lubang}</td>
+        <td><span class="badge" style="${statusColor};font-size:11px;">${r.status || '—'}</span></td>
+        <td>
+          <button class="btn-amber" style="font-size:11px;padding:5px 10px;"
+            onclick="viewSimperDetail('${r.id}')">Detail</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Info & Pagination
+  document.getElementById('dbSimperInfo').innerText =
+    `Menampilkan ${start + 1}–${Math.min(start + DB_SIMPER_PER_PAGE, total)} dari ${total} data`;
+
+  // Render pagination buttons
+  const pag = document.getElementById('dbSimperPagination');
+  if (totalPages <= 1) { pag.innerHTML = ''; return; }
+
+  let pages = [];
+  pages.push(1);
+  for (let p = _dbSimperPage - 2; p <= _dbSimperPage + 2; p++) {
+    if (p > 1 && p < totalPages) pages.push(p);
+  }
+  pages.push(totalPages);
+  pages = [...new Set(pages)].sort((a, b) => a - b);
+
+  pag.innerHTML = pages.map((p, idx) => {
+    const prev = pages[idx - 1];
+    const gap  = prev && p - prev > 1 ? `<span style="color:var(--muted);padding:0 4px;">…</span>` : '';
+    const active = p === _dbSimperPage;
+    return `${gap}<button onclick="goDbSimperPage(${p})"
+      style="min-width:32px;height:32px;border-radius:6px;border:1px solid ${active ? 'var(--teal)' : 'var(--border)'};
+      background:${active ? 'var(--teal)' : 'var(--surface2)'};color:${active ? 'white' : 'var(--text)'};
+      font-size:13px;cursor:pointer;padding:0 8px;">${p}</button>`;
+  }).join('');
+}
+
+function goDbSimperPage(p) {
+  _dbSimperPage = p;
+  renderDbSimper();
+  // Scroll ke atas tabel
+  document.getElementById('dbSimperTable')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// View detail — reuse modal SIMPER registration yang sudah ada
+async function viewSimperDetail(id) {
+  const r = _dbSimperAll.find(x => x.id === id);
+  if (!r) return;
+  // Ambil data lengkap
+  const { data } = await supabaseClient
+    .from('simper_registration')
+    .select('*')
+    .eq('id', id)
+    .single();
+  if (data) openSimperRegDetail(data);
+}
+
+// Export ke CSV (bisa dibuka di Excel)
+function exportDbSimper() {
+  if (_dbSimperFiltered.length === 0) return showToast('Tidak ada data untuk diexport', 'error');
+
+  const headers = ['No','Nama','No Badge','Perusahaan','No SIMPER','Kategori',
+    'Jenis SIM','No SIM','Expired SIMPER','Status','Violation','Accident'];
+
+  const rows = _dbSimperFiltered.map((r, i) => {
+    const exp = r.simper_expiry || r.sim_polisi_expiry || r.id_badge_expiry || '';
+    return [
+      i + 1,
+      r.nama || '',
+      r.no_badge || '',
+      r.company || '',
+      r.simper_num || '',
+      r.kategori || '',
+      r.jenis_sim || '',
+      r.no_sim || '',
+      exp ? new Date(exp).toLocaleDateString('id-ID') : '',
+      r.status || '',
+      r.violation_count || 0,
+      r.accident_count  || 0,
+    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(',');
+  });
+
+  const csv  = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `Database_SIMPER_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`✅ Export ${_dbSimperFiltered.length} data berhasil!`);
+}
+
+/* ══ END DATABASE SIMPER ══ */
 
 // Tabel sanksi berdasarkan kategori + delik
 const SANKSI_TABLE = {
