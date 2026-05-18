@@ -5087,7 +5087,7 @@ async function loadDbSimper() {
     const { data, error } = await withTimeout(
       supabaseClient
         .from('simper_registration')
-        .select('id,nama,no_badge,company,simper_num,kategori,jenis_sim,no_sim,sim_polisi_expiry,id_badge_expiry,simper_expiry,status,violation_count,accident_count,simper_dicabut_sampai,jenis_pendaftaran,created_at')
+        .select('id,nama,no_badge,company,simper_number,kategori,jenis_sim,no_sim,sim_polisi_expiry,id_badge_expiry,simper_expiry,status,violation_count,accident_count,simper_dicabut_sampai,jenis_pendaftaran,created_at')
         .order('nama', { ascending: true })
     );
     if (error) throw error;
@@ -5115,7 +5115,7 @@ function filterDbSimper() {
   const status  = document.getElementById('dbSimperStatus')?.value || '';
 
   _dbSimperFiltered = _dbSimperAll.filter(r => {
-    const matchQ = !q || [r.nama, r.no_badge, r.simper_num, r.no_sim, r.jenis_sim]
+    const matchQ = !q || [r.nama, r.no_badge, r.simper_number, r.no_sim, r.jenis_sim]
       .some(v => (v || '').toLowerCase().includes(q));
     const matchC = !company || r.company === company;
     const matchS = !status  || r.status  === status;
@@ -5248,7 +5248,7 @@ function renderDbSimper() {
         </td>
         <td style="font-family:'Syne',sans-serif;font-size:13px;">${r.no_badge || '—'}</td>
         <td style="font-size:13px;">${r.company || '—'}</td>
-        <td style="font-size:12px;color:var(--teal);">${r.simper_num || '—'}</td>
+        <td style="font-size:12px;color:var(--teal);">${r.simper_number || '—'}</td>
         <td style="text-align:center;">
           ${r.kategori ? `<span style="font-weight:700;font-size:15px;color:var(--amber);">${r.kategori}</span>` : '—'}
         </td>
@@ -5325,7 +5325,7 @@ function exportDbSimper() {
       r.nama || '',
       r.no_badge || '',
       r.company || '',
-      r.simper_num || '',
+      r.simper_number || '',
       r.kategori || '',
       r.jenis_sim || '',
       r.no_sim || '',
@@ -5400,7 +5400,7 @@ async function searchSimperForPelanggaran(q) {
   _pelSearchTimeout = setTimeout(async () => {
     const { data } = await supabaseClient
       .from('simper_registration')
-      .select('id,nama,no_badge,company,simper_num,status,kategori,violation_count,accident_count')
+      .select('id,nama,no_badge,company,simper_number,status,kategori,violation_count,accident_count')
       .or(`no_badge.ilike.%${q}%,nama.ilike.%${q}%`)
       .eq('status', 'Diterbitkan')
       .limit(5);
@@ -5417,7 +5417,7 @@ async function searchSimperForPelanggaran(q) {
         border-radius:var(--radius-sm);margin-bottom:6px;cursor:pointer;transition:border-color 0.2s;"
         onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--border)'">
         <div style="font-weight:600;font-size:14px;">${r.nama} <span style="color:var(--muted);font-size:12px;">(${r.no_badge})</span></div>
-        <div style="font-size:12px;color:var(--muted);">${r.company} • SIMPER: ${r.simper_num || '—'} • Kategori: ${r.kategori || '—'}</div>
+        <div style="font-size:12px;color:var(--muted);">${r.company} • SIMPER: ${r.simper_number || '—'} • Kategori: ${r.kategori || '—'}</div>
         <div style="font-size:12px;margin-top:4px;">
           🔴 Violation: <strong>${r.violation_count || 0}</strong> &nbsp;
           💥 Accident: <strong>${r.accident_count || 0}</strong>
@@ -5436,7 +5436,7 @@ function selectSimperForPelanggaran(rStr) {
   document.getElementById('pelInfoNama').innerText    = r.nama;
   document.getElementById('pelInfoBadge').innerText   = r.no_badge;
   document.getElementById('pelInfoCompany').innerText = r.company;
-  document.getElementById('pelInfoSimperNum').innerText = r.simper_num || '—';
+  document.getElementById('pelInfoSimperNum').innerText = r.simper_number || '—';
   document.getElementById('pelInfoLubang').innerHTML  =
     `Violation: <strong>${r.violation_count||0}</strong> &nbsp; Accident: <strong>${r.accident_count||0}</strong>`;
 
@@ -5522,7 +5522,7 @@ async function submitPelanggaran() {
     // 1. Insert ke tabel pelanggaran_simper
     const { error: pelErr } = await supabaseClient.from('pelanggaran_simper').insert([{
       simper_id:       r.id,
-      simper_num:      r.simper_num,
+      simper_num:      r.simper_number,
       no_badge:        r.no_badge,
       nama:            r.nama,
       company:         r.company,
